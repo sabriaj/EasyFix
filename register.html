@@ -74,6 +74,14 @@
         body: JSON.stringify(data)
       });
 
+       let stripeLink = '';
+        if (plani === 'mujor') {
+          stripeLink = 'https://buy.stripe.com/test_6oUaEP63Q2Ci1ak0bn';  // vendos linkun mujor
+        } else {
+          stripeLink = 'https://buy.stripe.com/test_dR68yXgxI51y2yU5kl';  // vendos linkun vjetor
+        }
+
+
       if (response.ok) {
         status.textContent = "Firma u regjistrua me sukses! Faleminderit.";
         status.style.color = 'green';

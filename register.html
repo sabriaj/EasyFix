@@ -19,6 +19,7 @@
 
     <p class="mb-3 font-semibold">Zgjidh planin e abonimit (duhet domosdoshmërisht):</p>
     <div class="flex justify-between mb-4">
+      
       <button type="button" data-plan="mujor" data-price="20" class="planBtn bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition">Plan Mujor $20</button>
       <button type="button" data-plan="vjetor" data-price="200" class="planBtn bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">Plan Vjetor $200</button>
     </div>
@@ -74,13 +75,13 @@
         body: JSON.stringify(data)
       });
 
-       let stripeLink = '';
+      
+ let stripeLink = 'flex justify-between mb-4';
         if (plani === 'mujor') {
           stripeLink = 'https://buy.stripe.com/test_6oUaEP63Q2Ci1ak0bn';  // vendos linkun mujor
         } else {
           stripeLink = 'https://buy.stripe.com/test_dR68yXgxI51y2yU5kl';  // vendos linkun vjetor
         }
-
 
       if (response.ok) {
         status.textContent = "Firma u regjistrua me sukses! Faleminderit.";

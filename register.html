@@ -51,51 +51,67 @@
   </footer>
 
 <script>
-  firmForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  registerStatus.textContent = "Duke regjistruar firmën...";
 
-  const data = {
-    emri: firmForm.emri.value.trim(),
-    adresa: firmForm.adresa.value.trim(),
-    telefoni: firmForm.telefoni.value.trim(),
-    email: firmForm.email.value.trim(),
-    kategoria: firmForm.kategoria.value.trim()
-  };
+  const firmForm = document.getElementById('firmForm');
+  const registerSection = document.getElementById('registerSection');
+  const subscriptionSection = document.getElementById('subscriptionSection');
+  const registerStatus = document.getElementById('registerStatus');
+  const subscriptionStatus = document.getElementById('subscriptionStatus');
 
-  try {
-    const response = await fetch('https://script.google.com/macros/s/AKfycbzSIFWVRTI79FFgeiAGveHQhEBvZRIMhxJWz3elzIZIO5ZjqyrvnU5zVeMcH_tjCmKFNA/exec', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-      mode: 'no-cors'
+  let selectedPlan = null;
+
+  // Klikimi i planit e ruan planin e zgjedhur
+  document.querySelectorAll('.planBtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedPlan = btn.getAttribute('data-plan');
+      const price = btn.getAttribute('data-price');
+
+      subscriptionStatus.style.color = 'green';
+      subscriptionStatus.textContent = `Zgjodhe planin: ${selectedPlan} - $${price}. Tani plotëso të dhënat e firmës.`;
     });
+  });
 
-    registerStatus.style.color = 'green';
-    registerStatus.textContent = "Firma u regjistrua! Tani zgjidh planin e abonimit.";
-    registerSection.classList.add('hidden');
-    subscriptionSection.classList.remove('hidden');
+  firmForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-  } catch (err) {
-    registerStatus.style.color = 'red';
-    registerStatus.textContent = "Dështoi regjistrimi – provo përsëri.";
-    console.error(err);
-  }
-});
+    if (!selectedPlan) {
+      registerStatus.style.color = 'red';
+      registerStatus.textContent = "Duhet të zgjedhësh një plan abonimi për të vazhduar.";
+      return;
+    }
 
-// Trajto klikimin për plan abonimi
-document.querySelectorAll('.planBtn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const plan = btn.getAttribute('data-plan');
+    registerStatus.textContent = "Duke regjistruar firmën...";
 
-    // Redirekto në linkun përkatës të Stripe
-    if (plan === 'monthly') {
-      window.location.href = 'https://buy.stripe.com/test_6oUaEP63Q2Ci1ak0bn0Ba00'; // vendos linkun tënd këtu
-    } else if (plan === 'yearly') {
-      window.location.href = 'https://buy.stripe.com/test_5kQ28j4ZM3Gm7yI2jv0Ba01'; // vendos linkun tënd këtu
+    const data = {
+      emri: firmForm.emri.value.trim(),
+      adresa: firmForm.adresa.value.trim(),
+      telefoni: firmForm.telefoni.value.trim(),
+      email: firmForm.email.value.trim(),
+      kategoria: firmForm.kategoria.value.trim(),
+      plani: selectedPlan  // Dërgojmë edhe planin
+    };
+
+    try {
+      const response = await fetch('https://script.google.com/macros/s/AKfycbzSIFWVRTI79FFgeiAGveHQhEBvZRIMhxJWz3elzIZIO5ZjqyrvnU5zVeMcH_tjCmKFNA/exec', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (response.ok) {
+        registerStatus.style.color = 'green';
+        registerStatus.textContent = "Firma u regjistrua me sukses!";
+        firmForm.reset();
+      } else {
+        throw new Error('Gabim në regjistrim');
+      }
+    } catch (err) {
+      registerStatus.style.color = 'red';
+      registerStatus.textContent = "Dështoi regjistrimi, provo përsëri.";
+      console.error(err);
     }
   });
-});
+
 
 </script>
 </body>

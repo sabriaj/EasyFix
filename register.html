@@ -8,7 +8,7 @@
 </head>
 <body class="bg-gray-100 p-6 flex flex-col items-center min-h-screen">
 
-  <h1 class="text-3xl font-bold mb-6">Regjistro Firmën dhe Zgjidh Planin</h1>
+  <h1 class="text-3xl font-bold mb-6 text-center">Regjistro Firmën dhe Zgjidh Planin</h1>
 
   <form id="firmForm" class="bg-white p-6 rounded shadow-md w-full max-w-md">
     <input type="text" name="emri" placeholder="Emri i firmës" required class="w-full mb-3 p-2 border rounded" />
@@ -18,77 +18,80 @@
     <input type="text" name="kategoria" placeholder="Kategoria (p.sh. Elektricist)" required class="w-full mb-3 p-2 border rounded" />
 
     <p class="mb-3 font-semibold">Zgjidh planin e abonimit (duhet domosdoshmërisht):</p>
-    <div class="mb-4 space-y-2">
-      <label class="flex items-center space-x-2">
-        <input type="radio" name="plan" value="mujor" class="planRadio accent-green-500" />
-        <span>Plan Mujor $20</span>
-      </label>
-      <label class="flex items-center space-x-2">
-        <input type="radio" name="plan" value="vjetor" class="planRadio accent-blue-500" />
-        <span>Plan Vjetor $200</span>
-      </label>
+    <div class="flex justify-between mb-4">
+      <button type="button" data-plan="mujor" data-price="20" class="planBtn bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition">Plan Mujor $20</button>
+      <button type="button" data-plan="vjetor" data-price="200" class="planBtn bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">Plan Vjetor $200</button>
     </div>
+
+    <input type="hidden" name="plan" id="selectedPlan" required />
 
     <button type="submit" id="submitBtn" disabled class="bg-gray-400 text-white py-2 rounded w-full cursor-not-allowed">Regjistrohu</button>
 
     <p id="status" class="mt-4 text-center font-semibold"></p>
   </form>
 
-  <script>
-    const planRadios = document.querySelectorAll('.planRadio');
-    const submitBtn = document.getElementById('submitBtn');
-    const status = document.getElementById('status');
+<script>
+  const planButtons = document.querySelectorAll('.planBtn');
+  const selectedPlanInput = document.getElementById('selectedPlan');
+  const submitBtn = document.getElementById('submitBtn');
+  const status = document.getElementById('status');
 
-    planRadios.forEach(radio => {
-      radio.addEventListener('change', () => {
-        submitBtn.disabled = false;
-        submitBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
-        submitBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+  planButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      planButtons.forEach(b => b.classList.remove('ring-4', 'ring-yellow-400'));
+      btn.classList.add('ring-4', 'ring-yellow-400');
+
+      selectedPlanInput.value = btn.dataset.plan;
+
+      submitBtn.disabled = false;
+      submitBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+      submitBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+    });
+  });
+
+  const firmForm = document.getElementById('firmForm');
+
+  firmForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    status.textContent = "Duke regjistruar firmën...";
+    status.style.color = 'black';
+
+    const formData = new FormData(firmForm);
+    const data = {};
+    formData.forEach((v, k) => data[k] = v.trim());
+
+    if (!data.plan) {
+      status.textContent = "Ju lutem zgjidhni planin e abonimit!";
+      status.style.color = 'red';
+      return;
+    }
+
+    try {
+      const response = await fetch('https://script.google.com/macros/s/AKfycbxgxqaTnP8b0JbgDxbrXAncX_ZiRvWtI5XzblXV04JcuwFRI9fvA8VX9GAVcqJ3ERfJZw/exec', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
       });
-    });
 
-    const firmForm = document.getElementById('firmForm');
-
-    firmForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      status.textContent = "Duke regjistruar firmën...";
-      status.style.color = 'black';
-
-      const formData = new FormData(firmForm);
-      const data = {};
-      formData.forEach((v, k) => data[k] = v.trim());
-
-      if (!data.plan) {
-        status.textContent = "Ju lutem zgjidhni planin e abonimit!";
-        status.style.color = 'red';
-        return;
+      if (response.ok) {
+        status.textContent = "Firma u regjistrua me sukses! Faleminderit.";
+        status.style.color = 'green';
+        firmForm.reset();
+        submitBtn.disabled = true;
+        submitBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+        submitBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+        planButtons.forEach(b => b.classList.remove('ring-4', 'ring-yellow-400'));
+        selectedPlanInput.value = '';
+      } else {
+        throw new Error('Dështoi regjistrimi');
       }
-
-      try {
-        const response = await fetch('https://script.google.com/macros/s/AKfycbxgxqaTnP8b0JbgDxbrXAncX_ZiRvWtI5XzblXV04JcuwFRI9fvA8VX9GAVcqJ3ERfJZw/exec', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(data)
-        });
-
-        if (response.ok) {
-          status.textContent = "Firma u regjistrua me sukses! Faleminderit për abonimin.";
-          status.style.color = 'green';
-          firmForm.reset();
-          submitBtn.disabled = true;
-          submitBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
-          submitBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-        } else {
-          throw new Error('Dështoi regjistrimi');
-        }
-      } catch(err) {
-        status.textContent = "Gabim gjatë regjistrimit, provo përsëri.";
-        status.style.color = 'red';
-        console.error(err);
-      }
-    });
-  </script>
+    } catch(err) {
+      status.textContent = "Gabim gjatë regjistrimit, provo përsëri.";
+      status.style.color = 'red';
+      console.error(err);
+    }
+  });
+</script>
 
 </body>
 </html>

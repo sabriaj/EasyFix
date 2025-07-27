@@ -83,6 +83,22 @@
   }
 });
 
+// Trajto klikimin për plan abonimi
+document.querySelectorAll('.planBtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const plan = btn.getAttribute('data-plan');
+
+    // Redirekto në linkun përkatës të Stripe
+    if (plan === 'monthly') {
+      window.location.href = 'https://buy.stripe.com/test_mujore123'; // vendos linkun tënd këtu
+    } else if (plan === 'yearly') {
+      window.location.href = 'https://buy.stripe.com/test_vjetore456'; // vendos linkun tënd këtu
+    }
+  });
+});
+
 </script>
 </body>
 </html>
+
+

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="sq" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EasyFix - Kërko Majstorë Profesionalë</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+  <header class="bg-blue-700 text-white py-6 shadow-md">
+    <div class="container mx-auto px-4 flex justify-between items-center">
+      <h1 class="text-3xl font-extrabold tracking-tight">EasyFix</h1>
+      <nav>
+        <ul class="flex space-x-6 text-lg">
+          <li><a href="index.html" class="hover:underline">Kryefaqja</a></li>
+          <li><a href="register.html" class="hover:underline">Regjistro Firmën</a></li>
+          <li><a href="#" class="hover:underline">Kontakt</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-10 flex-grow">
+    <h2 class="text-4xl font-bold text-blue-900 mb-8 text-center">Gjej majstorin që të duhet me shpejtësi</h2>
+
+    <section class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8">
+      <div class="flex flex-col md:flex-row md:space-x-6 mb-6">
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="Kërko firmë ose shërbim..."
+          class="flex-grow border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 md:mb-0"
+        />
+        <select
+          id="categorySelect"
+          class="border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Të gjitha kategoritë</option>
+        </select>
+      </div>
+
+      <table class="w-full text-left table-auto border-collapse">
+        <thead>
+          <tr class="bg-blue-600 text-white text-lg">
+            <th class="py-3 px-4 rounded-tl-lg">Emri i Firmës</th>
+            <th class="py-3 px-4">Adresa / Qyteti</th>
+            <th class="py-3 px-4">Telefoni</th>
+            <th class="py-3 px-4">Email</th>
+            <th class="py-3 px-4 rounded-tr-lg">Kategoria</th>
+          </tr>
+        </thead>
+        <tbody id="firmsTableBody" class="divide-y divide-gray-200">
+          <!-- Rreshtat do shtohen me JS -->
+        </tbody>
+      </table>
+
+      <p id="noResults" class="text-center text-gray-500 mt-4 hidden">Nuk u gjetën firma për kriteret e kërkimit.</p>
+    </section>
+  </main>
+
+  <footer class="bg-blue-700 text-white text-center py-6 mt-auto">
+    &copy; 2025 EasyFix.mk - Ndihma për çdo shtëpi
+  </footer>
+
+<script>
+  const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQZ2xFOOINcnsM3YcC4utl8HkpK--kQp_ioddGQHeWCXTwRc0YU_wF58qN0VJMLJC2Fnaeo5EplmtCQ/pub?gid=0&single=true&output=csv';
+
+  let allFirms = [];
+
+  const categorySelect = document.getElementById('categorySelect');
+  const searchInput = document.getElementById('searchInput');
+  const firmsTableBody = document.getElementById('firmsTableBody');
+  const noResults = document.getElementById('noResults');
+
+  function sanitize(text) {
+    return text ? text.toString().trim() : '';
+  }
+
+  function populateCategoryFilter(firms) {
+    const categories = [...new Set(firms.map(f => sanitize(f.kategoria)))].sort();
+    categories.forEach(cat => {
+      if (cat) {
+        const option = document.createElement('option');
+        option.value = cat;
+        option.textContent = cat;
+        categorySelect.appendChild(option);
+      }
+    });
+  }
+
+  function renderTable(firms) {
+    firmsTableBody.innerHTML = '';
+    if (firms.length === 0) {
+      noResults.classList.remove('hidden');
+      return;
+    } else {
+      noResults.classList.add('hidden');
+    }
+
+    firms.forEach(firm => {
+      const tr = document.createElement('tr');
+      tr.classList.add('hover:bg-blue-50', 'cursor-pointer');
+      tr.innerHTML = `
+        <td class="py-3 px-4 font-semibold text-blue-700">${sanitize(firm.emri)}</td>
+        <td class="py-3 px-4">${sanitize(firm.adresa)}</td>
+        <td class="py-3 px-4">${sanitize(firm.telefoni)}</td>
+        <td class="py-3 px-4 text-blue-600 underline"><a href="mailto:${sanitize(firm.email)}">${sanitize(firm.email)}</a></td>
+        <td class="py-3 px-4">${sanitize(firm.kategoria)}</td>
+      `;
+      firmsTableBody.appendChild(tr);
+    });
+  }
+
+  function filterFirms() {
+    const searchText = searchInput.value.toLowerCase();
+    const selectedCategory = categorySelect.value;
+
+    const filtered = allFirms.filter(firm => {
+      const nameMatch = sanitize(firm.emri).toLowerCase().includes(searchText);
+      const categoryMatch = !selectedCategory || sanitize(firm.kategoria) === selectedCategory;
+      return nameMatch && categoryMatch;
+    });
+
+    renderTable(filtered);
+  }
+
+  fetch(csvUrl)
+    .then(res => res.text())
+    .then(data => {
+      const rows = data.trim().split('\n');
+      const headers = rows[0].split(',');
+
+      allFirms = rows.slice(1).map(row => {
+        const cols = row.split(',');
+        return {
+          emri: cols[0],
+          adresa: cols[1],
+          telefoni: cols[2],
+          email: cols[3],
+          kategoria: cols[4]
+        };
+      });
+
+      populateCategoryFilter(allFirms);
+      renderTable(allFirms);
+    })
+    .catch(err => {
+      console.error('Gabim në marrjen e CSV:', err);
+      noResults.textContent = "Gabim në marrjen e të dhënave. Provo përsëri më vonë.";
+      noResults.classList.remove('hidden');
+    });
+
+  searchInput.addEventListener('input', filterFirms);
+  categorySelect.addEventListener('change', filterFirms);
+</script>
+
+</body>
+</html>

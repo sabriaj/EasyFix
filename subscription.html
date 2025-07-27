@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EasyFix – Regjistrim & Abonim</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f0f4f8; padding: 20px; }
+    header { background: #007bff; color: white; padding: 15px; text-align: center; border-radius: 8px; }
+    .box { background: white; padding: 20px; max-width: 500px; margin: 20px auto; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+    button { background-color: #007bff; color: white; border: none; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
+    .hidden { display: none; }
+    .plans { display: flex; justify-content: space-around; gap: 10px; }
+    .plan { border: 1px solid #ccc; border-radius: 8px; padding: 10px; flex: 1; cursor: pointer; text-align: center; }
+    .plan:hover { background: #e6f0ff; }
+    #status { text-align: center; margin-top: 10px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Regjistrohu dhe Abonohu në EasyFix</h1>
+  </header>
+
+  <div class="box" id="regjForm">
+    <h3>Plotëso të dhënat e firmës</h3>
+    <input type="text" id="emri" placeholder="Emri i firmës" required />
+    <input type="text" id="adresa" placeholder="Adresa / Qyteti" required />
+    <input type="tel" id="telefoni" placeholder="Numër telefoni" required />
+    <input type="email" id="email" placeholder="Email" required />
+    <input type="text" id="kategoria" placeholder="Kategoria (p.sh. Elektricist)" required />
+    <button onclick="shfaqPlanet()">Vazhdo</button>
+    <div id="status"></div>
+  </div>
+
+  <div class="box hidden" id="abonimBox">
+    <h3>Zgjidh Planin e Abonimit</h3>
+    <div class="plans">
+      <div class="plan" onclick="abonohu('mujor')">
+        <h4>Mujor</h4>
+        <p>$20 / muaj</p>
+      </div>
+      <div class="plan" onclick="abonohu('vjetor')">
+        <h4>Vjetor</h4>
+        <p>$200 / vit</p>
+      </div>
+    </div>
+    <div id="abonimStatus"></div>
+  </div>
+
+  <script>
+    let firmaData = {};
+
+    function shfaqPlanet() {
+      const emri = document.getElementById('emri').value.trim();
+      const adresa = document.getElementById('adresa').value.trim();
+      const telefoni = document.getElementById('telefoni').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const kategoria = document.getElementById('kategoria').value.trim();
+
+      if (!emri || !adresa || !telefoni || !email || !kategoria) {
+        document.getElementById('status').style.color = 'red';
+        document.getElementById('status').textContent = 'Ju lutem plotësoni të gjitha fushat.';
+        return;
+      }
+
+      firmaData = { emri, adresa, telefoni, email, kategoria };
+      document.getElementById('regjForm').classList.add('hidden');
+      document.getElementById('abonimBox').classList.remove('hidden');
+    }
+
+    async function abonohu(plani) {
+      document.getElementById('abonimStatus').textContent = "Duke regjistruar...";
+
+      // Ruaj të dhënat në Google Sheet
+      try {
+        await fetch('https://script.google.com/macros/s/AKfycbxX5XvHZ953xSinriv-IFKEcMnEslMIqUXM6ON46NS3Ut9evEzKHtMJKURzRaPtEXbxFA/exec', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(firmaData)
+        });
+
+        // Hap linkun për pagesë sipas planit
+        let stripeLink = '';
+        if (plani === 'mujor') {
+          stripeLink = 'https://buy.stripe.com/test_6oUaEP63Q2Ci1ak0bn';  // vendos linkun mujor
+        } else {
+          stripeLink = 'https://buy.stripe.com/test_dR68yXgxI51y2yU5kl';  // vendos linkun vjetor
+        }
+
+        document.getElementById('abonimStatus').style.color = 'green';
+        document.getElementById('abonimStatus').textContent = "Profili u ruajt. Po hapet pagesa...";
+        setTimeout(() => window.location.href = stripeLink, 2000);
+
+      } catch (err) {
+        document.getElementById('abonimStatus').style.color = 'red';
+        document.getElementById('abonimStatus').textContent = "Dështoi regjistrimi – provo përsëri.";
+      }
+    }
+  </script>
+</body>
+</html>

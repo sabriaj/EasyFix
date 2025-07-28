@@ -17,40 +17,46 @@
     <input type="email" name="email" placeholder="Email" required class="w-full mb-3 p-2 border rounded" />
     <input type="text" name="kategoria" placeholder="Kategoria (p.sh. Elektricist)" required class="w-full mb-3 p-2 border rounded" />
 
-    <p class="mb-3 font-semibold">Zgjidh planin e abonimit (duhet domosdoshmërisht):</p>
+    <p class="mb-3 font-semibold">Zgjidh planin e abonimit:</p>
     <div class="mb-4 space-y-2">
       <label class="flex items-center space-x-2">
-        <input type="radio" name="plan" value="mujor" class="planRadio accent-green-500" />
+        <input 
+          type="radio" 
+          name="plan" 
+          value="mujor" 
+          class="planRadio accent-green-500" 
+          data-url="https://buy.stripe.com/test_6oUaEP63Q2Ci1ak0bn0Ba00" />
         <span>Plan Mujor $20</span>
       </label>
       <label class="flex items-center space-x-2">
-        <input type="radio" name="plan" value="vjetor" class="planRadio accent-blue-500" />
+        <input 
+          type="radio" 
+          name="plan" 
+          value="vjetor" 
+          class="planRadio accent-blue-500" 
+          data-url="https://buy.stripe.com/test_5kQ28j4ZM3Gm7yI2jv0Ba01" />
         <span>Plan Vjetor $200</span>
       </label>
     </div>
 
-    <button type="submit" id="submitBtn" disabled class="bg-gray-400 text-white py-2 rounded w-full cursor-not-allowed">Regjistrohu</button>
+    <button type="submit" id="submitBtn" class="bg-blue-600 text-white py-2 rounded w-full hover:bg-blue-700 transition">Regjistrohu</button>
 
     <p id="status" class="mt-4 text-center font-semibold"></p>
   </form>
 
   <script>
-    const planRadios = document.querySelectorAll('.planRadio');
-    const submitBtn = document.getElementById('submitBtn');
-    const status = document.getElementById('status');
-
-    planRadios.forEach(radio => {
-      radio.addEventListener('change', () => {
-        submitBtn.disabled = false;
-        submitBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
-        submitBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
-      });
-    });
-
     const firmForm = document.getElementById('firmForm');
+    const status = document.getElementById('status');
 
     firmForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      const selectedRadio = document.querySelector('input[name="plan"]:checked');
+      if (!selectedRadio) {
+        status.textContent = "Ju lutem zgjidhni një plan abonimi!";
+        status.style.color = 'red';
+        return;
+      }
 
       status.textContent = "Duke regjistruar firmën...";
       status.style.color = 'black';
@@ -58,12 +64,6 @@
       const formData = new FormData(firmForm);
       const data = {};
       formData.forEach((v, k) => data[k] = v.trim());
-
-      if (!data.plan) {
-        status.textContent = "Ju lutem zgjidhni planin e abonimit!";
-        status.style.color = 'red';
-        return;
-      }
 
       try {
         const response = await fetch('https://script.google.com/macros/s/AKfycbxgxqaTnP8b0JbgDxbrXAncX_ZiRvWtI5XzblXV04JcuwFRI9fvA8VX9GAVcqJ3ERfJZw/exec', {
@@ -73,12 +73,12 @@
         });
 
         if (response.ok) {
-          status.textContent = "Firma u regjistrua me sukses! Faleminderit për abonimin.";
+          status.textContent = "Firma u regjistrua me sukses! Po të dërgojmë për pagesë...";
           status.style.color = 'green';
-          firmForm.reset();
-          submitBtn.disabled = true;
-          submitBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
-          submitBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+
+          setTimeout(() => {
+            window.location.href = selectedRadio.dataset.url;
+          }, 1500);
         } else {
           throw new Error('Dështoi regjistrimi');
         }
@@ -92,3 +92,4 @@
 
 </body>
 </html>
+

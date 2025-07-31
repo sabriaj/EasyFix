@@ -102,10 +102,10 @@
     email: document.getElementById("email").value,
     kategoria: document.getElementById("kategoria").value,
     plan: selectedPlan,
-    priceId: selectedPlan === "mujor" ? "price_123..." : "price_456..." // vendos real priceId nga Stripe
+    priceId: selectedPlan === "mujor" ? "price_1Rp6AR0dGhXMJMbD2RELKKAh" : "price_1RpFj70dGhXMJMbDekAbEq3E" // vendos real priceId nga Stripe
   };
 
-  const response = await fetch("https://script.google.com/macros/s/AKfycb.../exec", {
+  const response = await fetch("https://script.google.com/macros/s/AKfycbx91-EJmmZ56ae0wTEFgGO2qL9lGOFSQNiAet9LvKeLYkK-pmrRDr7cmsPhBx60sFEisg/exec", {
     method: "POST",
     body: JSON.stringify(data)
   });

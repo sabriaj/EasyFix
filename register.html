@@ -43,7 +43,9 @@
 
     planButtons.forEach(btn => {
       btn.addEventListener('click', () => {
+        // Hiq stilin aktiv nga të tjerët
         planButtons.forEach(b => b.classList.remove('ring', 'ring-offset-2'));
+        // Shto stilin aktiv
         btn.classList.add('ring', 'ring-offset-2');
         selectedPlanInput.value = btn.dataset.plan;
         selectedUrlInput.value = btn.dataset.url;
@@ -52,6 +54,7 @@
 
     document.getElementById('firmForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+
       const emri = document.getElementById('emri').value.trim();
       const adresa = document.getElementById('adresa').value.trim();
       const telefoni = document.getElementById('telefoni').value.trim();
@@ -61,7 +64,7 @@
       const url = selectedUrlInput.value;
 
       if (!plan) {
-        status.textContent = "Zgjidh planin!";
+        status.textContent = "Zgjidh planin para regjistrimit!";
         status.style.color = 'red';
         return;
       }

@@ -1,94 +1,136 @@
 <!DOCTYPE html>
 <html lang="sq">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EasyFix - Regjistro dhe Abono</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Regjistrimi - EasyFix</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: #fff;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .plans {
+      display: flex;
+      justify-content: space-between;
+      margin: 15px 0;
+    }
+    .plan-btn {
+      flex: 1;
+      margin: 0 5px;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: all 0.2s ease;
+    }
+    .plan-btn:hover {
+      transform: scale(1.05);
+    }
+    .plan-btn.active {
+      background: #007bff;
+      color: #fff;
+    }
+    button[type="submit"] {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: #28a745;
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    button[type="submit"]:hover {
+      background: #218838;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 p-6 flex flex-col items-center min-h-screen">
-  <h1 class="text-3xl font-bold mb-6">Regjistro Firmën dhe Zgjidh Planin</h1>
+<body>
+  <div class="container">
+    <h2>Regjistrohu</h2>
+    <form id="registerForm">
+      <input type="text" name="name" placeholder="Emri" required>
+      <input type="email" name="email" placeholder="Email" required>
+      <input type="text" name="phone" placeholder="Nr. Telefoni" required>
+      <input type="text" name="company" placeholder="Kompania" required>
 
-  <form id="firmForm" class="bg-white p-6 rounded shadow-md w-full max-w-md">
-    <input id="emri" type="text" name="emri" placeholder="Emri i firmës" required class="w-full mb-3 p-2 border rounded" />
-    <input id="adresa" type="text" name="adresa" placeholder="Adresa / Qyteti" required class="w-full mb-3 p-2 border rounded" />
-    <input id="telefoni" type="tel" name="telefoni" placeholder="Numër telefoni" required class="w-full mb-3 p-2 border rounded" />
-    <input id="email" type="email" name="email" placeholder="Email" required class="w-full mb-3 p-2 border rounded" />
-    <input id="kategoria" type="text" name="kategoria" placeholder="Kategoria (p.sh. Elektricist)" required class="w-full mb-3 p-2 border rounded" />
+      <div class="plans">
+        <button type="button" class="plan-btn" onclick="selectPlan(this, 'Basic')">Basic</button>
+        <button type="button" class="plan-btn" onclick="selectPlan(this, 'Pro')">Pro</button>
+        <button type="button" class="plan-btn" onclick="selectPlan(this, 'Premium')">Premium</button>
+      </div>
 
-    <p class="mb-3 font-semibold">Zgjidh planin e abonimit:</p>
-    <div class="mb-4 flex gap-2">
-      <button type="button" class="planBtn bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600" data-plan="mujor" data-url="https://buy.stripe.com/test_6oUaEP63Q2Ci1ak0bn0Ba00">Plan Mujor $20</button>
-      <button type="button" class="planBtn bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" data-plan="vjetor" data-url="https://buy.stripe.com/test_5kQ28j4ZM3Gm7yI2jv0Ba01">Plan Vjetor $200</button>
-    </div>
+      <input type="hidden" name="plan" id="plan">
 
-    <input type="hidden" id="selectedPlan" name="plan" />
-    <button type="submit" id="submitBtn" class="bg-indigo-600 text-white py-2 rounded w-full hover:bg-indigo-700 transition">Regjistrohu</button>
-    <p id="status" class="mt-4 text-center font-semibold"></p>
-  </form>
+      <button type="submit">Regjistrohu</button>
+    </form>
+  </div>
 
   <script>
-    const firmForm = document.getElementById('firmForm');
-    const status = document.getElementById('status');
-    const selectedPlanInput = document.getElementById('selectedPlan');
-    let selectedPlanURL = '';
+    const scriptURL = "https://script.google.com/macros/s/AKfycbw8Qd1L4PBLPuLveY_EkMp0ispvV6Du1mjIuA7hZteWirWogAjipjxwHvLFhbRVOZjRmg/exec";
 
-    document.querySelectorAll('.planBtn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        selectedPlanInput.value = btn.dataset.plan;
-        selectedPlanURL = btn.dataset.url;
+    function selectPlan(button, plan) {
+      document.getElementById("plan").value = plan;
+      document.querySelectorAll(".plan-btn").forEach(btn => btn.classList.remove("active"));
+      button.classList.add("active");
+    }
 
-        document.querySelectorAll('.planBtn').forEach(b => b.classList.remove('ring-4', 'ring-offset-2'));
-        btn.classList.add('ring-4', 'ring-offset-2');
-      });
-    });
-
-    firmForm.addEventListener('submit', async (e) => {
+    document.getElementById("registerForm").addEventListener("submit", e => {
       e.preventDefault();
-
-      if (!selectedPlanInput.value) {
-        status.textContent = "Ju lutem zgjidhni një plan abonimi!";
-        status.style.color = 'red';
-        return;
-      }
-
-      status.textContent = "Duke regjistruar firmën...";
-      status.style.color = 'black';
+      const form = e.target;
 
       const data = {
-        emri: document.getElementById("emri").value.trim(),
-        adresa: document.getElementById("adresa").value.trim(),
-        telefoni: document.getElementById("telefoni").value.trim(),
-        email: document.getElementById("email").value.trim(),
-        kategoria: document.getElementById("kategoria").value.trim(),
-        plan: selectedPlanInput.value.trim()
+        name: form.name.value,
+        email: form.email.value,
+        phone: form.phone.value,
+        company: form.company.value,
+        plan: form.plan.value
       };
 
-      try {
-        const response = await fetch('https://script.google.com/macros/s/AKfycby0fILUoPIE7y--u0wD49nfwFg8_k22XPc4OCmuudVNlut9uhDbMcKOh3KhhspZLNqPXQ/exec', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(data)
-        });
-
-        if (response.ok) {
-          status.textContent = "Firma u regjistrua me sukses! Po të dërgojmë për pagesë...";
-          status.style.color = 'green';
-
-          setTimeout(() => {
-            window.location.href = selectedPlanURL;
-          }, 1500);
+      fetch(scriptURL, {
+        method: "POST",
+        body: JSON.stringify(data)
+      })
+      .then(res => res.json())
+      .then(r => {
+        if (r.status === "success") {
+          alert("✅ U regjistrua me sukses!");
+          form.reset();
+          document.querySelectorAll(".plan-btn").forEach(btn => btn.classList.remove("active"));
         } else {
-          throw new Error('Dështoi regjistrimi');
+          alert("⚠️ Gabim: " + r.message);
         }
-      } catch (err) {
-        status.textContent = "Gabim gjatë regjistrimit, provo përsëri.";
-        status.style.color = 'red';
-        console.error(err);
-      }
+      })
+      .catch(err => alert("❌ Error: " + err));
     });
   </script>
 </body>
 </html>
-
-

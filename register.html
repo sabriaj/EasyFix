@@ -4,105 +4,114 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EasyFix - Regjistro dhe Abono</title>
-  <style>
-    body{font-family:Arial, sans-serif;background:#f4f6f9;margin:0;padding:24px}
-    .wrap{max-width:420px;margin:0 auto;background:#fff;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.08);padding:24px}
-    h1{font-size:22px;margin:0 0 16px;text-align:center;color:#0f172a}
-    .in{width:100%;padding:12px 14px;border:1px solid #dfe3ea;border-radius:8px;margin-bottom:10px;font-size:14px}
-    .plans{display:flex;gap:10px;margin:10px 0 6px}
-    .plan-btn{flex:1;padding:12px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;cursor:pointer;font-weight:600}
-    .plan-btn.active{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
-    .submit{width:100%;padding:13px;border:none;border-radius:10px;background:#16a34a;color:#fff;font-weight:700;cursor:pointer}
-    .submit:disabled{background:#94a3b8;cursor:not-allowed}
-    .hint{font-size:13px;color:#475569;margin:6px 0 12px}
-    .status{margin-top:10px;text-align:center;font-weight:600}
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <div class="wrap">
-    <h1>Regjistro Firmën & Zgjidh Planin</h1>
+<body class="bg-gray-100 p-6 flex flex-col items-center min-h-screen">
 
-    <form id="registerForm" novalidate>
-      <input class="in" type="text" name="emri" placeholder="Emri i firmës" required />
-      <input class="in" type="text" name="adresa" placeholder="Adresa / Qyteti" required />
-      <input class="in" type="tel"  name="telefoni" placeholder="Numër telefoni" required />
-      <input class="in" type="email"name="email" placeholder="Email" required />
-      <input class="in" type="text" name="kategoria" placeholder="Kategoria (p.sh. Elektricist)" required />
+  <h1 class="text-3xl font-bold mb-6">Regjistro Firmën dhe Zgjidh Planin</h1>
 
-      <div class="hint">Zgjidh planin e abonimit (e detyrueshme):</div>
-      <div class="plans">
-        <button type="button" class="plan-btn" data-plan="mujor"  data-url="https://buy.stripe.com/test_6oUaEP63Q2Ci1ak0bn0Ba00">Mujor $20</button>
-        <button type="button" class="plan-btn" data-plan="vjetor" data-url="https://buy.stripe.com/test_5kQ28j4ZM3Gm7yI2jv0Ba01">Vjetor $200</button>
-      </div>
+  <form id="firmForm" class="bg-white p-6 rounded shadow-md w-full max-w-md">
+    <input type="text" name="emri" placeholder="Emri i firmës" required class="w-full mb-3 p-2 border rounded" />
+    <input type="text" name="adresa" placeholder="Adresa / Qyteti" required class="w-full mb-3 p-2 border rounded" />
+    <input type="tel" name="telefoni" placeholder="Numër telefoni" required class="w-full mb-3 p-2 border rounded" />
+    <input type="email" name="email" placeholder="Email" required class="w-full mb-3 p-2 border rounded" />
+    <input type="text" name="kategoria" placeholder="Kategoria (p.sh. Elektricist)" required class="w-full mb-3 p-2 border rounded" />
 
-      <input type="hidden" id="plan" name="plan" />
-      <button id="submitBtn" class="submit" type="submit">Regjistrohu</button>
-      <div id="status" class="status"></div>
-    </form>
-  </div>
+    <p class="mb-3 font-semibold">Zgjidh planin e abonimit (e detyrueshme):</p>
 
-  <script>
-    // ⛔ Zëvendëso me URL-n tënde të Apps Script (deployment "Web app")
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdhnv9nEfWPUQMIdL5SOoXvJ4-jinjDv5KcNsvrAJsQGdSqI1RI6mzXwINI2K41GCQMQ/exec";
+    <!-- BUTONA KATROR (jo të rrumbullakët) -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <button type="button"
+              class="planBtn px-4 py-3 border rounded-md font-medium hover:bg-green-50"
+              data-plan="mujor"
+              data-url="https://buy.stripe.com/test_6oUaEP63Q2Ci1ak0bn0Ba00">
+        Plan Mujor $20
+      </button>
 
-    const form = document.getElementById('registerForm');
-    const statusEl = document.getElementById('status');
-    const planInput = document.getElementById('plan');
-    const planButtons = document.querySelectorAll('.plan-btn');
-    let selectedStripeUrl = "";
+      <button type="button"
+              class="planBtn px-4 py-3 border rounded-md font-medium hover:bg-blue-50"
+              data-plan="vjetor"
+              data-url="https://buy.stripe.com/test_5kQ28j4ZM3Gm7yI2jv0Ba01">
+        Plan Vjetor $200
+      </button>
+    </div>
 
-    planButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        planButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        planInput.value = btn.dataset.plan;
-        selectedStripeUrl = btn.dataset.url;
+    <input type="hidden" id="selectedPlan" name="plan" required />
+
+    <button type="submit" id="submitBtn"
+            class="bg-blue-600 text-white py-2 rounded w-full hover:bg-blue-700 transition">
+      Regjistrohu
+    </button>
+
+    <p id="status" class="mt-4 text-center font-semibold"></p>
+  </form>
+
+<script>
+  // ⚠️ VENDOSE URL-n E WEB APP (Apps Script) KËTU:
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbyr4yTkW3qAYXdOkATQrIL2XAsXco7PyOZL3t8LgoOiEGBXOvEwI6izIh_ZAcVMJotZ/exec';
+
+  // Stilizim & përzgjedhje plani
+  const planBtns = document.querySelectorAll('.planBtn');
+  const selectedPlanInput = document.getElementById('selectedPlan');
+  planBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      planBtns.forEach(b => b.classList.remove('ring-2','ring-yellow-400','bg-yellow-50'));
+      btn.classList.add('ring-2','ring-yellow-400','bg-yellow-50');
+      selectedPlanInput.value = btn.dataset.plan;
+    });
+  });
+
+  const form = document.getElementById('firmForm');
+  const statusEl = document.getElementById('status');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (!selectedPlanInput.value) {
+      statusEl.textContent = 'Ju lutem zgjidhni një plan.';
+      statusEl.style.color = 'red';
+      return;
+    }
+
+    statusEl.textContent = 'Duke regjistruar...';
+    statusEl.style.color = 'black';
+
+    const fd = new FormData(form);
+    const payload = {};
+    fd.forEach((v,k) => payload[k] = String(v).trim());
+
+    try {
+      // Shmang CORS preflight -> text/plain
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
       });
-    });
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
+      const json = await res.json().catch(()=>null);
 
-      if (!planInput.value) {
-        statusEl.textContent = "Ju lutem zgjidhni një plan abonimi!";
-        statusEl.style.color = "red";
-        return;
+      if (res.ok && json && json.status === 'success') {
+        statusEl.textContent = 'U regjistruat me sukses! Po ju dërgojmë për pagesë...';
+        statusEl.style.color = 'green';
+
+        const chosen = document.querySelector('.planBtn.ring-yellow-400');
+        const stripeUrl = chosen ? chosen.dataset.url : null;
+
+        setTimeout(() => {
+          if (stripeUrl) window.location.href = stripeUrl;
+        }, 1200);
+      } else {
+        statusEl.textContent = 'Dështoi regjistrimi: ' + (json && json.message ? json.message : 'provo përsëri.');
+        statusEl.style.color = 'red';
+        console.error('Server response:', json);
       }
+    } catch (err) {
+      statusEl.textContent = 'Gabim gjatë regjistrimit. Provo përsëri.';
+      statusEl.style.color = 'red';
+      console.error(err);
+    }
+  });
+</script>
 
-      const data = {
-        emri: form.emri.value.trim(),
-        adresa: form.adresa.value.trim(),
-        telefoni: form.telefoni.value.trim(),
-        email: form.email.value.trim(),
-        kategoria: form.kategoria.value.trim(),
-        plan: planInput.value
-      };
-
-      // Bypass CORS: simple request (no preflight)
-      statusEl.textContent = "Duke regjistruar...";
-      statusEl.style.color = "#0f172a";
-
-      try {
-        await fetch(SCRIPT_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(data)
-        });
-        // Nuk mund ta lexojmë përgjigjen në no-cors, por rreshti do shtohet.
-        statusEl.textContent = "U regjistrua! Po hapet pagesa…";
-        statusEl.style.color = "green";
-
-        // Ridrejto te Stripe sipas planit
-        window.location.href = selectedStripeUrl;
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = "Gabim gjatë regjistrimit. Provo përsëri.";
-        statusEl.style.color = "red";
-      }
-    });
-  </script>
 </body>
 </html>
-
-

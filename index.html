@@ -1,45 +1,148 @@
 <!DOCTYPE html>
-<html lang="sq">
+<html lang="sq" class="scroll-smooth">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Firmat EasyFix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EasyFix - Kërko Mjeshtrin Profesionalë</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50">
-  <div class="container mx-auto p-6">
-    <h1 class="text-3xl font-bold mb-6 text-center">Firmat e Regjistruara</h1>
-    <div id="firmat" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3"></div>
-  </div>
+<body class="bg-gray-50 min-h-screen flex flex-col">
 
-  <script>
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQZ2xFOOINcnsM3YcC4utl8HkpK--kQp_ioddGQHeWCXTwRc0YU_wF58qN0VJMLJC2Fnaeo5EplmtCQ/pub?gid=1106691761&single=true&output=csv";
+  <header class="bg-blue-700 text-white py-6 shadow-md">
+    <div class="container mx-auto px-4 flex justify-between items-center">
+      <h1 class="text-3xl font-extrabold tracking-tight">EasyFix</h1>
+      <nav>
+        <ul class="flex space-x-6 text-lg">
+          <li><a href="#" class="hover:underline"></a></li>
+          <li><a href="register.html" class="hover:underline">Regjistro Firmën</a></li>
+          <li><a href="#" class="hover:underline">Kontakt</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
 
-    async function loadFirmat() {
-      const res = await fetch(CSV_URL);
-      const text = await res.text();
+  <main class="container mx-auto px-4 py-10 flex-grow">
+    <h2 class="text-4xl font-bold text-blue-900 mb-8 text-center">Gjej mjeshtrin që të duhet me shpejtësi</h2>
 
-      const rows = text.split("\n").map(r => r.split(","));
-      rows.shift(); // hiq headerin
+    <section class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6">
+      <div class="flex flex-col md:flex-row md:space-x-6 mb-6">
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="Kërko firmë ose shërbim..."
+          class="flex-grow border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 md:mb-0"
+        />
+        <select
+          id="categorySelect"
+          class="border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Të gjitha kategoritë</option>
+        </select>
+      </div>
 
-      const container = document.getElementById("firmat");
-      container.innerHTML = "";
+      <div id="firmsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Kartelat do shtohen me JavaScript -->
+      </div>
 
-      rows.forEach(r => {
-        if (!r[1]) return; // mos e shfaq bosh
-        const card = document.createElement("div");
-        card.className = "p-4 bg-white rounded-xl shadow";
-        card.innerHTML = `
-          <h2 class="font-bold text-lg">${r[1]}</h2>
-          <p>Email: ${r[2]}</p>
-          <p>Tel: ${r[3]}</p>
-          <p class="text-sm text-gray-500">Plani: ${r[4]}</p>
-        `;
-        container.appendChild(card);
-      });
+      <p id="noResults" class="text-center text-gray-500 mt-4 hidden">Nuk u gjetën firma për kriteret e kërkimit.</p>
+    </section>
+  </main>
+
+  <footer class="bg-blue-700 text-white text-center py-6 mt-auto">
+    &copy; 2025 EasyFix.mk - Ndihma për çdo shtëpi
+  </footer>
+
+<script>
+  const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQZ2xFOOINcnsM3YcC4utl8HkpK--kQp_ioddGQHeWCXTwRc0YU_wF58qN0VJMLJC2Fnaeo5EplmtCQ/pub?gid=0&single=true&output=csv';
+
+  let allFirms = [];
+
+  const categorySelect = document.getElementById('categorySelect');
+  const searchInput = document.getElementById('searchInput');
+  const firmsContainer = document.getElementById('firmsContainer');
+  const noResults = document.getElementById('noResults');
+
+  function sanitize(text) {
+    return text ? text.toString().trim() : '';
+  }
+
+  function populateCategoryFilter(firms) {
+    const categories = [...new Set(firms.map(f => sanitize(f.kategoria)))].sort();
+    categories.forEach(cat => {
+      if (cat) {
+        const option = document.createElement('option');
+        option.value = cat;
+        option.textContent = cat;
+        categorySelect.appendChild(option);
+      }
+    });
+  }
+
+  function renderFirms(firms) {
+    firmsContainer.innerHTML = '';
+    if (firms.length === 0) {
+      noResults.classList.remove('hidden');
+      return;
+    } else {
+      noResults.classList.add('hidden');
     }
 
-    loadFirmat();
-  </script>
+    firms.forEach(firm => {
+      const div = document.createElement('div');
+      div.className = 'border border-gray-300 rounded-lg p-4 shadow hover:shadow-md transition';
+      div.innerHTML = `
+        <h3 class="text-xl font-bold text-blue-700 mb-2">${sanitize(firm.emri)}</h3>
+        <p><strong>Adresa:</strong> ${sanitize(firm.adresa)}</p>
+        <p><strong>Telefoni:</strong> ${sanitize(firm.telefoni)}</p>
+        <p><strong>Email:</strong> <a href="mailto:${sanitize(firm.email)}" class="text-blue-600 underline">${sanitize(firm.email)}</a></p>
+        <p><strong>Kategoria:</strong> ${sanitize(firm.kategoria)}</p>
+      `;
+      firmsContainer.appendChild(div);
+    });
+  }
+
+  function filterFirms() {
+    const searchText = searchInput.value.toLowerCase();
+    const selectedCategory = categorySelect.value;
+
+    const filtered = allFirms.filter(firm => {
+      const nameMatch = sanitize(firm.emri).toLowerCase().includes(searchText);
+      const categoryMatch = !selectedCategory || sanitize(firm.kategoria) === selectedCategory;
+      return nameMatch && categoryMatch;
+    });
+
+    renderFirms(filtered);
+  }
+
+  fetch(csvUrl)
+    .then(res => res.text())
+    .then(data => {
+      const rows = data.trim().split('\n');
+      const headers = rows[0].split(',');
+
+      allFirms = rows.slice(1).map(row => {
+        const cols = row.split(',');
+        return {
+          emri: cols[0],
+          adresa: cols[1],
+          telefoni: cols[2],
+          email: cols[3],
+          kategoria: cols[4]
+        };
+      });
+
+      populateCategoryFilter(allFirms);
+      renderFirms(allFirms);
+    })
+    .catch(err => {
+      console.error('Gabim në marrjen e CSV:', err);
+      noResults.textContent = "Gabim në marrjen e të dhënave. Provo përsëri më vonë.";
+      noResults.classList.remove('hidden');
+    });
+
+  searchInput.addEventListener('input', filterFirms);
+  categorySelect.addEventListener('change', filterFirms);
+</script>
+
 </body>
 </html>

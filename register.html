@@ -1,616 +1,302 @@
 <!DOCTYPE html>
 <html lang="sq">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EasyFix - Regjistrimi i Firmave Elektrike</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --primary: #3498db;
-            --secondary: #2980b9;
-            --accent: #e74c3c;
-            --light: #ecf0f1;
-            --dark: #2c3e50;
-            --success: #2ecc71;
-            --error: #e74c3c;
-            --warning: #f39c12;
-            --gray: #95a5a6;
-        }
-        
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            color: #333;
-            line-height: 1.6;
-            padding: 20px;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .container {
-            max-width: 900px;
-            width: 100%;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            overflow: hidden;
-        }
-        
-        header {
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            color: white;
-            padding: 25px;
-            text-align: center;
-            position: relative;
-        }
-        
-        .logo {
-            font-size: 32px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .logo-icon {
-            margin-right: 15px;
-            font-size: 38px;
-        }
-        
-        .content {
-            padding: 30px;
-        }
-        
-        .form-row {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .form-group {
-            flex: 1;
-            margin-bottom: 0;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: var(--dark);
-        }
-        
-        input, select {
-            width: 100%;
-            padding: 14px 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: all 0.3s;
-        }
-        
-        input:focus, select:focus {
-            border-color: var(--primary);
-            outline: none;
-            box-shadow: 0 0 8px rgba(52, 152, 219, 0.5);
-            transform: translateY(-2px);
-        }
-        
-        .error {
-            color: var(--error);
-            font-size: 14px;
-            margin-top: 5px;
-            display: none;
-        }
-        
-        .plans {
-            display: flex;
-            gap: 15px;
-            margin: 20px 0;
-        }
-        
-        .plan {
-            flex: 1;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .plan:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-        }
-        
-        .plan.selected {
-            border-color: var(--primary);
-            background-color: rgba(52, 152, 219, 0.05);
-        }
-        
-        .plan h3 {
-            color: var(--primary);
-            margin-bottom: 10px;
-        }
-        
-        .plan .price {
-            font-size: 26px;
-            font-weight: bold;
-            color: var(--dark);
-        }
-        
-        .plan .period {
-            color: var(--gray);
-            font-size: 14px;
-        }
-        
-        button {
-            width: 100%;
-            padding: 16px;
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 10px;
-        }
-        
-        button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-        }
-        
-        button:active {
-            transform: translateY(1px);
-        }
-        
-        .error-message {
-            background-color: rgba(231, 76, 60, 0.1);
-            border-left: 4px solid var(--error);
-            padding: 15px;
-            margin: 20px 0;
-            color: var(--error);
-            border-radius: 5px;
-            display: none;
-        }
-        
-        .success-message {
-            display: none;
-            background-color: rgba(46, 204, 113, 0.1);
-            border-left: 4px solid var(--success);
-            padding: 15px;
-            margin: 20px 0;
-            color: #27ae60;
-            border-radius: 5px;
-            text-align: center;
-        }
-        
-        .diagnostic {
-            background-color: #f9f9f9;
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 30px;
-            border-left: 4px solid var(--warning);
-        }
-        
-        .diagnostic h3 {
-            color: var(--warning);
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-        }
-        
-        .diagnostic-content {
-            display: none;
-            margin-top: 15px;
-        }
-        
-        .diagnostic pre {
-            background-color: var(--dark);
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            overflow-x: auto;
-            font-size: 14px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        
-        .instructions {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            font-size: 14px;
-            color: var(--dark);
-        }
-        
-        .features {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin: 25px 0;
-        }
-        
-        .feature {
-            flex: 1;
-            min-width: 200px;
-            background: rgba(52, 152, 219, 0.1);
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        
-        .feature i {
-            font-size: 24px;
-            color: var(--primary);
-            margin-bottom: 10px;
-        }
-        
-        @media (max-width: 768px) {
-            .form-row {
-                flex-direction: column;
-                gap: 0;
-            }
-            
-            .plans {
-                flex-direction: column;
-            }
-            
-            .content {
-                padding: 20px;
-            }
-            
-            header {
-                padding: 20px;
-            }
-            
-            .features {
-                flex-direction: column;
-            }
-        }
-        
-        .console-tabs {
-            display: flex;
-            border-bottom: 1px solid #ddd;
-            margin-bottom: 10px;
-        }
-        
-        .console-tab {
-            padding: 8px 15px;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-        }
-        
-        .console-tab.active {
-            border-bottom: 2px solid var(--primary);
-            color: var(--primary);
-            font-weight: bold;
-        }
-        
-        .console-content {
-            display: none;
-        }
-        
-        .console-content.active {
-            display: block;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EasyFix - Regjistro dhe Abono</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f4f8;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .wrap {
+      width: 100%;
+      max-width: 450px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+      padding: 28px;
+      margin: 20px auto;
+    }
+    
+    h1 {
+      font-size: 24px;
+      margin: 0 0 20px;
+      text-align: center;
+      color: #1e293b;
+      font-weight: 600;
+    }
+    
+    .input-group {
+      margin-bottom: 15px;
+    }
+    
+    .in {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: border-color 0.3s;
+    }
+    
+    .in:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    
+    .plans {
+      display: flex;
+      gap: 12px;
+      margin: 15px 0 10px;
+    }
+    
+    .plan-btn {
+      flex: 1;
+      padding: 14px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      background: #f9fafb;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    .plan-btn:hover {
+      background: #e5e7eb;
+    }
+    
+    .plan-btn.active {
+      background: #1d4ed8;
+      color: #fff;
+      border-color: #1d4ed8;
+    }
+    
+    .hint {
+      font-size: 14px;
+      color: #4b5563;
+      margin: 10px 0 5px;
+    }
+    
+    .submit {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 10px;
+      background: #16a34a;
+      color: #fff;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 15px;
+      transition: background 0.3s;
+    }
+    
+    .submit:hover {
+      background: #15803d;
+    }
+    
+    .submit:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      margin-top: 15px;
+      text-align: center;
+      font-weight: 500;
+      min-height: 24px;
+      padding: 8px;
+      border-radius: 6px;
+    }
+    
+    .error {
+      color: #dc2626;
+      background: #fef2f2;
+    }
+    
+    .success {
+      color: #166534;
+      background: #f0fdf4;
+    }
+    
+    .loading {
+      color: #1e40af;
+      background: #eff6ff;
+    }
+    
+    @media (max-width: 480px) {
+      .wrap {
+        padding: 20px;
+      }
+      
+      .plans {
+        flex-direction: column;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="logo">
-                <span class="logo-icon"><i class="fas fa-bolt"></i></span>
-                <span>EasyFix</span>
-            </div>
-            <h1>Platforma e Regjistrimit për Firmat Elektrike</h1>
-        </header>
-        
-        <div class="content">
-            <div class="instructions">
-                <p><strong>Udhëzim:</strong> Plotësoni të gjitha fushat më poshtë për të regjistruar firmën tuaj në platformën EasyFix.</p>
-            </div>
-            
-            <form id="registrationForm">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="company">Emri i Firmës</label>
-                        <input type="text" id="company" value="hasan electric" placeholder="Shkruani emrin e firmës">
-                        <div class="error" id="companyError">Ju lutem shkruani emrin e firmës</div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="phone">Numri i Telefonit</label>
-                        <input type="text" id="phone" value="7566456866" placeholder="Shkruani numrin e telefonit">
-                        <div class="error" id="phoneError">Numri i telefonit duhet të ketë 10 shifra</div>
-                    </div>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" value="sabrigdardev@gmail.com" placeholder="Shkruani adresën e emailit">
-                        <div class="error" id="emailError">Ju lutem shkruani një email adresë të vlefshme</div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="profession">Profesioni</label>
-                        <input type="text" id="profession" value="elektricist" placeholder="Shkruani profesionin">
-                        <div class="error" id="professionError">Ju lutem shkruani profesionin tuaj</div>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="address">Adresa</label>
-                    <input type="text" id="address" value="10 shkup" placeholder="Shkruani adresën e plotë">
-                    <div class="error" id="addressError">Ju lutem shkruani adresën e plotë</div>
-                </div>
-                
-                <div class="form-group">
-                    <label>Zgjidh planin e abonimit (e detyueshme):</label>
-                    <div class="plans">
-                        <div class="plan" data-value="major">
-                            <h3>Major</h3>
-                            <div class="price">$10</div>
-                            <div class="period">Çdo muaj</div>
-                        </div>
-                        <div class="plan selected" data-value="vjetor">
-                            <h3>Vjetor</h3>
-                            <div class="price">$100</div>
-                            <div class="period">Çdo vit</div>
-                        </div>
-                    </div>
-                    <div class="error" id="planError">Ju lutem zgjidhni një plan</div>
-                </div>
-                
-                <div class="error-message" id="formError">
-                    <i class="fas fa-exclamation-circle"></i> Gabim gjatë regjistrimit. Provo përsëri.
-                </div>
-                
-                <div class="success-message" id="successMessage">
-                    <i class="fas fa-check-circle"></i> Regjistrimi u krye me sukses! Të dhënat tuaja janë ruajtur në EasyFix.
-                </div>
-                
-                <button type="submit"><i class="fas fa-user-plus"></i> Regjistrohu</button>
-            </form>
-            
-            <div class="features">
-                <div class="feature">
-                    <i class="fas fa-database"></i>
-                    <h3>Ruajtje e Sigurt</h3>
-                    <p>Të dhënat tuaja ruhen në mënyrë të sigurt në serverët tanë</p>
-                </div>
-                <div class="feature">
-                    <i class="fas fa-bolt"></i>
-                    <h3>Shërbim i Shpejtë</h3>
-                    <p>Proces i shpejtë regjistrimi për firmat elektrike</p>
-                </div>
-                <div class="feature">
-                    <i class="fas fa-headset"></i>
-                    <h3>Mbështetje 24/7</h3>
-                    <p>Jemi në dispozicion për të ndihmuar në çdo kohë</p>
-                </div>
-            </div>
-            
-            <div class="diagnostic">
-                <h3 onclick="toggleDiagnostic()">▼ Shfaq informacione diagnostikuese</h3>
-                <div class="diagnostic-content" id="diagnosticContent">
-                    <div class="console-tabs">
-                        <div class="console-tab active" onclick="switchConsoleTab('output')">Output</div>
-                        <div class="console-tab" onclick="switchConsoleTab('data')">Të Dhënat</div>
-                        <div class="console-tab" onclick="switchConsoleTab('status')">Statusi</div>
-                    </div>
-                    
-                    <div class="console-content active" id="consoleOutput">
-                        // Të dhënat e konsolës do të shfahen këtu
-                    </div>
-                    
-                    <div class="console-content" id="consoleData">
-                        // Struktura e të dhënave do të shfahet këtu
-                    </div>
-                    
-                    <div class="console-content" id="consoleStatus">
-                        // Statusi i sistemit do të shfahet këtu
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+  <div class="wrap">
+    <h1>Regjistro Firmën & Zgjidh Planin</h1>
 
-    <script>
-        // Selektimi i planit
-        const plans = document.querySelectorAll('.plan');
-        let selectedPlan = 'vjetor';
+    <form id="registerForm" novalidate>
+      <div class="input-group">
+        <input class="in" type="text" name="emri" placeholder="Emri i firmës" required />
+      </div>
+      
+      <div class="input-group">
+        <input class="in" type="text" name="adresa" placeholder="Adresa / Qyteti" required />
+      </div>
+      
+      <div class="input-group">
+        <input class="in" type="tel" name="telefoni" placeholder="Numër telefoni" required />
+      </div>
+      
+      <div class="input-group">
+        <input class="in" type="email" name="email" placeholder="Email" required />
+      </div>
+      
+      <div class="input-group">
+        <input class="in" type="text" name="kategoria" placeholder="Kategoria (p.sh. Elektricist)" required />
+      </div>
+
+      <div class="hint">Zgjidh planin e abonimit (e detyrueshme):</div>
+      
+      <div class="plans">
+        <button type="button" class="plan-btn" data-plan="1 Muaj">Mujor $10</button>
+        <button type="button" class="plan-btn" data-plan="1 Vit">Vjetor $100</button>
+      </div>
+
+      <input type="hidden" id="plan" name="plan" />
+      <button id="submitBtn" class="submit" type="submit">Regjistrohu</button>
+      
+      <div id="status" class="status"></div>
+    </form>
+  </div>
+
+  <script>
+    // ⛔ Zëvendëso me URL-n tënde të Apps Script (deployment "Web app")
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyWxyJntUVRpnxNapWI9njTAGvq_A3B3rm1f5eZYCevrNT8xdkGUYOC7iTkKNaMg82ibA/exec";
+
+    const form = document.getElementById('registerForm');
+    const statusEl = document.getElementById('status');
+    const planInput = document.getElementById('plan');
+    const planButtons = document.querySelectorAll('.plan-btn');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Inicializimi i butonave të planit
+    planButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        planButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        planInput.value = btn.dataset.plan;
         
-        plans.forEach(plan => {
-            plan.addEventListener('click', () => {
-                plans.forEach(p => p.classList.remove('selected'));
-                plan.classList.add('selected');
-                selectedPlan = plan.getAttribute('data-value');
-                logToConsole(`Plan i zgjedhur: ${selectedPlan}`, 'output');
-            });
+        // Aktivizo butonin e submit
+        submitBtn.disabled = false;
+      });
+    });
+
+    // Validimi i formës
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!planInput.value) {
+        showStatus("Ju lutem zgjidhni një plan abonimi!", "error");
+        return;
+      }
+
+      // Validimi i të dhënave
+      const inputs = form.querySelectorAll('input[required]');
+      let isValid = true;
+      
+      inputs.forEach(input => {
+        if (!input.value.trim()) {
+          input.style.borderColor = '#dc2626';
+          isValid = false;
+        } else {
+          input.style.borderColor = '#d1d5db';
+        }
+      });
+      
+      if (!isValid) {
+        showStatus("Ju lutem plotësoni të gjitha fushat!", "error");
+        return;
+      }
+
+      const data = {
+        emri: form.emri.value.trim(),
+        adresa: form.adresa.value.trim(),
+        telefoni: form.telefoni.value.trim(),
+        email: form.email.value.trim(),
+        kategoria: form.kategoria.value.trim(),
+        plan: planInput.value
+      };
+
+      // Dërgo të dhënat
+      showStatus("Duke regjistruar...", "loading");
+      submitBtn.disabled = true;
+
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(data)
         });
         
-        // Funksioni për të shfaqur/fshehur informacionin diagnostikues
-        function toggleDiagnostic() {
-            const content = document.getElementById('diagnosticContent');
-            const title = document.querySelector('.diagnostic h3');
-            
-            if (content.style.display === 'block') {
-                content.style.display = 'none';
-                title.innerHTML = '▼ Shfaq informacione diagnostikuese';
-            } else {
-                content.style.display = 'block';
-                title.innerHTML = '▲ Fsheh informacione diagnostikuese';
-                logToConsole('Diagnostikimi u aktivizua. Forma është në gjendje të mirë.', 'output');
-                updateSystemStatus();
-            }
+        const result = await response.json();
+        
+        if (result.status === 'success' && result.url) {
+          showStatus("U regjistrua! Po hapet pagesa…", "success");
+          
+          // Ridrejto te PayPal pas 1.5 sekondash
+          setTimeout(() => {
+            window.location.href = result.url;
+          }, 1500);
+        } else {
+          throw new Error(result.message || 'Gabim gjatë regjistrimit');
         }
-        
-        // Funksioni për të ndryshuar tabs në konsolë
-        function switchConsoleTab(tabName) {
-            document.querySelectorAll('.console-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            document.querySelectorAll('.console-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            document.getElementById(`console${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
-            document.querySelector(`.console-tab:nth-child(${tabName === 'output' ? 1 : tabName === 'data' ? 2 : 3})`).classList.add('active');
-        }
-        
-        // Funksioni për të regjistruar në konsolën tonë
-        function logToConsole(message, type = 'output') {
-            const consoleElement = document.getElementById(`console${type.charAt(0).toUpperCase() + type.slice(1)}`);
-            const timestamp = new Date().toLocaleTimeString();
-            
-            if (type === 'output') {
-                consoleElement.textContent += `[${timestamp}] ${message}\n`;
-                consoleElement.scrollTop = consoleElement.scrollHeight;
-            } else if (type === 'data') {
-                consoleElement.textContent = message;
-            }
-            
-            // Gjithashtu regjistro në konsolën e shfletuesit
-            console.log(message);
-        }
-        
-        // Funksioni për të përditësuar statusin e sistemit
-        function updateSystemStatus() {
-            const statusElement = document.getElementById('consoleStatus');
-            statusElement.innerHTML = `
-                <div><strong>Statusi i Formës:</strong> <span style="color: green;">Aktive</span></div>
-                <div><strong>Validimi:</strong> <span style="color: green;">Aktiv</span></div>
-                <div><strong>Lidhja me Serverin:</strong> <span style="color: green;">Aktive</span></div>
-                <div><strong>Koha e Përgjigjes:</strong> < 500ms</div>
-                <div><strong>Versioni:</strong> 1.0.0</div>
-            `;
-        }
-        
-        // Validimi i formës
-        document.getElementById('registrationForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            let isValid = true;
-            
-            // Reset errors
-            document.querySelectorAll('.error').forEach(el => el.style.display = 'none');
-            document.getElementById('formError').style.display = 'none';
-            document.getElementById('successMessage').style.display = 'none';
-            logToConsole('Fillimi i validimit të formës...', 'output');
-            
-            // Validimi i emrit të firmës
-            const company = document.getElementById('company').value.trim();
-            if (!company) {
-                document.getElementById('companyError').style.display = 'block';
-                isValid = false;
-                logToConsole('GABIM: Emri i firmës është i zbrazët', 'output');
-            }
-            
-            // Validimi i adresës
-            const address = document.getElementById('address').value.trim();
-            if (!address) {
-                document.getElementById('addressError').style.display = 'block';
-                isValid = false;
-                logToConsole('GABIM: Adresa është e zbrazët', 'output');
-            }
-            
-            // Validimi i telefonit
-            const phone = document.getElementById('phone').value.trim();
-            const phoneRegex = /^\d{10}$/;
-            if (!phoneRegex.test(phone)) {
-                document.getElementById('phoneError').style.display = 'block';
-                isValid = false;
-                logToConsole('GABIM: Numri i telefonit nuk ka 10 shifra', 'output');
-            }
-            
-            // Validimi i emailit
-            const email = document.getElementById('email').value.trim();
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                document.getElementById('emailError').style.display = 'block';
-                isValid = false;
-                logToConsole('GABIM: Email adresa nuk është e vlefshme', 'output');
-            }
-            
-            // Validimi i profesionit
-            const profession = document.getElementById('profession').value.trim();
-            if (!profession) {
-                document.getElementById('professionError').style.display = 'block';
-                isValid = false;
-                logToConsole('GABIM: Profesioni nuk është specifikuar', 'output');
-            }
-            
-            if (isValid) {
-                logToConsole('SUKSES: Të gjitha fushat janë të valida', 'output');
-                
-                const formData = {
-                    company: company,
-                    address: address,
-                    phone: phone,
-                    email: email,
-                    profession: profession,
-                    plan: selectedPlan,
-                    timestamp: new Date().toLocaleString()
-                };
-                
-                logToConsole(JSON.stringify(formData, null, 2), 'data');
-                logToConsole('Duke dërguar të dhënat në serverin e EasyFix...', 'output');
-                
-                // Simulim të dërgesës së formës
-                setTimeout(() => {
-                    document.getElementById('successMessage').style.display = 'block';
-                    logToConsole('Regjistrimi u krye me sukses në serverin e EasyFix!', 'output');
-                    
-                    // Reset form
-                    document.getElementById('registrationForm').reset();
-                    
-                    // Reset plan selection
-                    plans.forEach(p => p.classList.remove('selected'));
-                    document.querySelector('.plan[data-value="vjetor"]').classList.add('selected');
-                    selectedPlan = 'vjetor';
-                    
-                }, 1500);
-            } else {
-                document.getElementById('formError').style.display = 'block';
-                logToConsole('Dështim: Forma ka gabime validimi', 'output');
-            }
-        });
-        
-        // Diagnostikimi i fillimit
-        logToConsole('Faqja u ngarkua me sukses', 'output');
-        logToConsole('Platforma EasyFix është gati për përdorim', 'output');
-        logToConsole('Konsola diagnostike është aktivizuar', 'output');
-        
-        // Përcakto strukturën e të dhënave
-        const dataStructure = {
-            emri_i_firmes: "Vlera e plotë",
-            adresa: "Vlera e plotë",
-            telefoni: "Vlera numerike (10 shifra)",
-            email: "Format valid email",
-            profesioni: "Vlera e plotë",
-            plani: "major ose vjetor",
-            data_regjistrimit: "Datë dhe kohë automatikisht"
-        };
-        
-        logToConsole(JSON.stringify(dataStructure, null, 2), 'data');
-        updateSystemStatus();
-    </script>
+      } catch (err) {
+        console.error(err);
+        showStatus("Gabim gjatë regjistrimit. Provo përsëri.", "error");
+        submitBtn.disabled = false;
+      }
+    });
+
+    // Funksioni për të shfaqur statusin
+    function showStatus(message, type) {
+      statusEl.textContent = message;
+      statusEl.className = 'status';
+      
+      if (type === 'error') {
+        statusEl.classList.add('error');
+      } else if (type === 'success') {
+        statusEl.classList.add('success');
+      } else if (type === 'loading') {
+        statusEl.classList.add('loading');
+      }
+    }
+  </script>
 </body>
 </html>
+
+
+
+

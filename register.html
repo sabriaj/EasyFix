@@ -140,6 +140,23 @@
       background: #eff6ff;
     }
     
+    .debug {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+    }
+    
+    .debug-toggle {
+      color: #3b82f6;
+      cursor: pointer;
+      font-size: 13px;
+      margin-top: 10px;
+      text-align: center;
+    }
+    
     @media (max-width: 480px) {
       .wrap {
         padding: 20px;
@@ -188,6 +205,9 @@
       
       <div id="status" class="status"></div>
     </form>
+    
+    <div class="debug-toggle" onclick="toggleDebug()">🔍 Shfaq informacione diagnostikuese</div>
+    <div id="debugInfo" class="debug"></div>
   </div>
 
   <script>
@@ -199,6 +219,31 @@
     const planInput = document.getElementById('plan');
     const planButtons = document.querySelectorAll('.plan-btn');
     const submitBtn = document.getElementById('submitBtn');
+    const debugInfo = document.getElementById('debugInfo');
+
+    // Funksioni për të shfaqur/fshehur informacionet diagnostikuese
+    function toggleDebug() {
+      debugInfo.style.display = debugInfo.style.display === 'block' ? 'none' : 'block';
+    }
+
+    // Funksioni për të shfaqur statusin
+    function showStatus(message, type) {
+      statusEl.textContent = message;
+      statusEl.className = 'status';
+      
+      if (type === 'error') {
+        statusEl.classList.add('error');
+      } else if (type === 'success') {
+        statusEl.classList.add('success');
+      } else if (type === 'loading') {
+        statusEl.classList.add('loading');
+      }
+    }
+
+    // Funksioni për të shfaqur informacione diagnostikuese
+    function logDebugInfo(info) {
+      debugInfo.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${info}</div>`;
+    }
 
     // Inicializimi i butonave të planit
     planButtons.forEach(btn => {
@@ -209,6 +254,7 @@
         
         // Aktivizo butonin e submit
         submitBtn.disabled = false;
+        logDebugInfo(`Plan i zgjedhur: ${btn.dataset.plan}`);
       });
     });
 
@@ -218,6 +264,7 @@
 
       if (!planInput.value) {
         showStatus("Ju lutem zgjidhni një plan abonimi!", "error");
+        logDebugInfo("Gabim: Nuk është zgjedhur asnjë plan");
         return;
       }
 
@@ -236,6 +283,7 @@
       
       if (!isValid) {
         showStatus("Ju lutem plotësoni të gjitha fushat!", "error");
+        logDebugInfo("Gabim: Janë lënë bosh disa fusha të detyrueshme");
         return;
       }
 
@@ -247,6 +295,9 @@
         kategoria: form.kategoria.value.trim(),
         plan: planInput.value
       };
+
+      logDebugInfo(`Duke dërguar të dhënat: ${JSON.stringify(data)}`);
+      logDebugInfo(`URL e scriptit: ${SCRIPT_URL}`);
 
       // Dërgo të dhënat
       showStatus("Duke regjistruar...", "loading");
@@ -261,10 +312,19 @@
           body: JSON.stringify(data)
         });
         
+        logDebugInfo(`Përgjigja e serverit: Status ${response.status}`);
+        
+        // Kontrollo nëse përgjigja është e suksesshme
+        if (!response.ok) {
+          throw new Error(`Gabim në server: ${response.status} ${response.statusText}`);
+        }
+        
         const result = await response.json();
+        logDebugInfo(`Përgjigja e serverit: ${JSON.stringify(result)}`);
         
         if (result.status === 'success' && result.url) {
           showStatus("U regjistrua! Po hapet pagesa…", "success");
+          logDebugInfo("U krye me sukses, duke ridrejtuar për pagesë...");
           
           // Ridrejto te PayPal pas 1.5 sekondash
           setTimeout(() => {
@@ -275,30 +335,11 @@
         }
       } catch (err) {
         console.error(err);
+        logDebugInfo(`Gabim: ${err.message}`);
         showStatus("Gabim gjatë regjistrimit. Provo përsëri.", "error");
         submitBtn.disabled = false;
       }
     });
-
-    // Funksioni për të shfaqur statusin
-    function showStatus(message, type) {
-      statusEl.textContent = message;
-      statusEl.className = 'status';
-      
-      if (type === 'error') {
-        statusEl.classList.add('error');
-      } else if (type === 'success') {
-        statusEl.classList.add('success');
-      } else if (type === 'loading') {
-        statusEl.classList.add('loading');
-      }
-    }
   </script>
 </body>
 </html>
-
-
-
-
-
-

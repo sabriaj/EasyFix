@@ -2,303 +2,77 @@
 <html lang="sq">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EasyFix - Regjistro dhe Abono</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #f0f4f8;
-      margin: 0;
-      padding: 20px;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    
-    .wrap {
-      width: 100%;
-      max-width: 450px;
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-      padding: 28px;
-      margin: 20px auto;
-    }
-    
-    h1 {
-      font-size: 24px;
-      margin: 0 0 20px;
-      text-align: center;
-      color: #1e293b;
-      font-weight: 600;
-    }
-    
-    .input-group {
-      margin-bottom: 15px;
-    }
-    
-    .in {
-      width: 100%;
-      padding: 14px 16px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      font-size: 15px;
-      transition: border-color 0.3s;
-    }
-    
-    .in:focus {
-      outline: none;
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-    }
-    
-    .plans {
-      display: flex;
-      gap: 12px;
-      margin: 15px 0 10px;
-    }
-    
-    .plan-btn {
-      flex: 1;
-      padding: 14px;
-      border: 1.5px solid #d1d5db;
-      border-radius: 8px;
-      background: #f9fafb;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 14px;
-      transition: all 0.2s;
-    }
-    
-    .plan-btn:hover {
-      background: #e5e7eb;
-    }
-    
-    .plan-btn.active {
-      background: #1d4ed8;
-      color: #fff;
-      border-color: #1d4ed8;
-    }
-    
-    .hint {
-      font-size: 14px;
-      color: #4b5563;
-      margin: 10px 0 5px;
-    }
-    
-    .submit {
-      width: 100%;
-      padding: 16px;
-      border: none;
-      border-radius: 10px;
-      background: #16a34a;
-      color: #fff;
-      font-weight: 600;
-      font-size: 16px;
-      cursor: pointer;
-      margin-top: 15px;
-      transition: background 0.3s;
-    }
-    
-    .submit:hover {
-      background: #15803d;
-    }
-    
-    .submit:disabled {
-      background: #9ca3af;
-      cursor: not-allowed;
-    }
-    
-    .status {
-      margin-top: 15px;
-      text-align: center;
-      font-weight: 500;
-      min-height: 24px;
-      padding: 8px;
-      border-radius: 6px;
-    }
-    
-    .error {
-      color: #dc2626;
-      background: #fef2f2;
-    }
-    
-    .success {
-      color: #166534;
-      background: #f0fdf4;
-    }
-    
-    .loading {
-      color: #1e40af;
-      background: #eff6ff;
-    }
-    
-    @media (max-width: 480px) {
-      .wrap {
-        padding: 20px;
-      }
-      
-      .plans {
-        flex-direction: column;
-      }
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyFix - Regjistrimi i Firmës</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script defer src=""></script>
 </head>
-<body>
-  <div class="wrap">
-    <h1>Regjistro Firmën & Zgjidh Planin</h1>
+<body class="bg-gray-100 min-h-screen">
+  <section class="max-w-3xl mx-auto p-6 bg-white shadow-lg rounded-xl mt-10">
+    <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">Regjistrimi i Firmës</h1>
 
-    <form id="registerForm" novalidate>
-      <div class="input-group">
-        <input class="in" type="text" name="emri" placeholder="Emri i firmës" required />
-      </div>
-      
-      <div class="input-group">
-        <input class="in" type="text" name="adresa" placeholder="Adresa / Qyteti" required />
-      </div>
-      
-      <div class="input-group">
-        <input class="in" type="tel" name="telefoni" placeholder="Numër telefoni" required />
-      </div>
-      
-      <div class="input-group">
-        <input class="in" type="email" name="email" placeholder="Email" required />
-      </div>
-      
-      <div class="input-group">
-        <input class="in" type="text" name="kategoria" placeholder="Kategoria (p.sh. Elektricist)" required />
+    <!-- Plan Selection -->
+    <h2 class="text-xl font-semibold mb-3">Zgjidh Planin</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+      <button data-plan="basic" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100">
+        <h3 class="text-lg font-bold">Basic</h3>
+        <p class="text-sm text-gray-600">5€ / muaj</p>
+      </button>
+
+      <button data-plan="standard" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100">
+        <h3 class="text-lg font-bold">Standard</h3>
+        <p class="text-sm text-gray-600">10€ / muaj</p>
+      </button>
+
+      <button data-plan="premium" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100">
+        <h3 class="text-lg font-bold">Premium</h3>
+        <p class="text-sm text-gray-600">20€ / muaj</p>
+      </button>
+    </div>
+
+    <!-- Hidden Selected Plan Input -->
+    <input type="hidden" id="selectedPlan" />
+
+    <!-- Registration Form -->
+    <form id="registerForm" class="grid grid-cols-1 gap-4">
+
+      <div>
+        <label class="font-semibold">Emri i Firmës</label>
+        <input id="emri" type="text" class="w-full border p-2 rounded" required />
       </div>
 
-      <div class="hint">Zgjidh planin e abonimit (e detyrueshme):</div>
-      
-      <div class="plans">
-        <button type="button" class="plan-btn" data-plan="1 Muaj">Mujor $10</button>
-        <button type="button" class="plan-btn" data-plan="1 Vit">Vjetor $100</button>
+      <div>
+        <label class="font-semibold">Adresa</label>
+        <input id="adresa" type="text" class="w-full border p-2 rounded" required />
       </div>
 
-      <input type="hidden" id="plan" name="plan" />
-      <button id="submitBtn" class="submit" type="submit">Regjistrohu</button>
-      
-      <div id="status" class="status"></div>
+      <div>
+        <label class="font-semibold">Telefoni</label>
+        <input id="telefoni" type="text" class="w-full border p-2 rounded" required />
+      </div>
+
+      <div>
+        <label class="font-semibold">Email</label>
+        <input id="emaili" type="email" class="w-full border p-2 rounded" required />
+      </div>
+
+      <div>
+        <label class="font-semibold">Kategoria e Shërbimit</label>
+        <select id="kategoria" class="w-full border p-2 rounded" required>
+          <option value="Elektricist">Elektricist</option>
+          <option value="Hidraulik">Hidraulik</option>
+          <option value="Murator">Murator</option>
+          <option value="Pastrime">Pastrime</option>
+          <option value="Klimë">Klimë</option>
+        </select>
+      </div>
+
+      <!-- Submit -->
+      <button class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-lg">
+        Vazhdo te Pagesa
+      </button>
     </form>
-  </div>
-
-  <script>
-    // ⛔ Zëvendëso me URL-n tënde të Apps Script (deployment "Web app")
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyWxyJntUVRpnxNapWI9njTAGvq_A3B3rm1f5eZYCevrNT8xdkGUYOC7iTkKNaMg82ibA/exec";
-
-    const form = document.getElementById('registerForm');
-    const statusEl = document.getElementById('status');
-    const planInput = document.getElementById('plan');
-    const planButtons = document.querySelectorAll('.plan-btn');
-    const submitBtn = document.getElementById('submitBtn');
-
-    // Inicializimi i butonave të planit
-    planButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        planButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        planInput.value = btn.dataset.plan;
-        
-        // Aktivizo butonin e submit
-        submitBtn.disabled = false;
-      });
-    });
-
-    // Validimi i formës
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      if (!planInput.value) {
-        showStatus("Ju lutem zgjidhni një plan abonimi!", "error");
-        return;
-      }
-
-      // Validimi i të dhënave
-      const inputs = form.querySelectorAll('input[required]');
-      let isValid = true;
-      
-      inputs.forEach(input => {
-        if (!input.value.trim()) {
-          input.style.borderColor = '#dc2626';
-          isValid = false;
-        } else {
-          input.style.borderColor = '#d1d5db';
-        }
-      });
-      
-      if (!isValid) {
-        showStatus("Ju lutem plotësoni të gjitha fushat!", "error");
-        return;
-      }
-
-      const data = {
-        emri: form.emri.value.trim(),
-        adresa: form.adresa.value.trim(),
-        telefoni: form.telefoni.value.trim(),
-        email: form.email.value.trim(),
-        kategoria: form.kategoria.value.trim(),
-        plan: planInput.value
-      };
-
-      // Dërgo të dhënat
-      showStatus("Duke regjistruar...", "loading");
-      submitBtn.disabled = true;
-
-      try {
-        const response = await fetch(SCRIPT_URL, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(data)
-        });
-        
-        const result = await response.json();
-        
-        if (result.status === 'success' && result.url) {
-          showStatus("U regjistrua! Po hapet pagesa…", "success");
-          
-          // Ridrejto te PayPal pas 1.5 sekondash
-          setTimeout(() => {
-            window.location.href = result.url;
-          }, 1500);
-        } else {
-          throw new Error(result.message || 'Gabim gjatë regjistrimit');
-        }
-      } catch (err) {
-        console.error(err);
-        showStatus("Gabim gjatë regjistrimit. Provo përsëri.", "error");
-        submitBtn.disabled = false;
-      }
-    });
-
-    // Funksioni për të shfaqur statusin
-    function showStatus(message, type) {
-      statusEl.textContent = message;
-      statusEl.className = 'status';
-      
-      if (type === 'error') {
-        statusEl.classList.add('error');
-      } else if (type === 'success') {
-        statusEl.classList.add('success');
-      } else if (type === 'loading') {
-        statusEl.classList.add('loading');
-      }
-    }
-  </script>
+  </section>
 </body>
 </html>
-
-
-
-
-
-

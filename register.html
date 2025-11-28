@@ -10,29 +10,53 @@
 <body class="bg-gray-100 min-h-screen">
   <section class="max-w-3xl mx-auto p-6 bg-white shadow-lg rounded-xl mt-10">
     <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">Regjistrimi i Firmës</h1>
+<h2 class="text-xl font-semibold mb-3">Zgjidh Planin</h2>
 
-    <!-- Plan Selection -->
-    <h2 class="text-xl font-semibold mb-3">Zgjidh Planin</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+<style>
+.plan-btn.active {
+  border: 3px solid #2563eb;
+  background: #dbeafe;
+}
+</style>
 
-      <button data-plan="basic" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100">
-        <h3 class="text-lg font-bold">Basic</h3>
-        <p class="text-sm text-gray-600">5€ / muaj</p>
-      </button>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 
-      <button data-plan="standard" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100">
-        <h3 class="text-lg font-bold">Standard</h3>
-        <p class="text-sm text-gray-600">10€ / muaj</p>
-      </button>
+  <!-- BASIC -->
+  <button data-plan="basic" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
+    <h3 class="text-lg font-bold mb-1">Basic – 5€/muaj</h3>
+    <ul class="text-sm text-gray-600 space-y-1">
+      <li>• Publikim i firmës</li>
+      <li>• Kontakt bazë</li>
+      <li>• Shfaqje standard në listë</li>
+    </ul>
+  </button>
 
-      <button data-plan="premium" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100">
-        <h3 class="text-lg font-bold">Premium</h3>
-        <p class="text-sm text-gray-600">20€ / muaj</p>
-      </button>
-    </div>
+  <!-- STANDARD -->
+  <button data-plan="standard" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
+    <h3 class="text-lg font-bold mb-1">Standard – 10€/muaj</h3>
+    <ul class="text-sm text-gray-600 space-y-1">
+      <li>• Gjithë Basic +</li>
+      <li>• Prioritet në listë</li>
+      <li>• Logo e kompanisë</li>
+      <li>• 3 foto shërbimesh</li>
+    </ul>
+  </button>
 
-    <!-- Hidden Selected Plan Input -->
-    <input type="hidden" id="selectedPlan" />
+  <!-- PREMIUM -->
+  <button data-plan="premium" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
+    <h3 class="text-lg font-bold mb-1">Premium – 20€/muaj</h3>
+    <ul class="text-sm text-gray-600 space-y-1">
+      <li>• Gjithë Standard +</li>
+      <li>• Vlerësime klientësh</li>
+      <li>• Promovim javor</li>
+      <li>• Top 3 pozicione sipas lokacionit</li>
+    </ul>
+  </button>
+
+</div>
+
+<input type="hidden" id="selectedPlan" />
+
 
     <!-- Registration Form -->
     <form id="registerForm" class="grid grid-cols-1 gap-4">

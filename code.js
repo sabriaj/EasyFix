@@ -1,5 +1,5 @@
 // ====== CONFIG: Zëvendëso me URL-të e tua ======
-const SAVE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwRQMFckX3-LHr0x2m1djKcJF92JknvcgLD7lqlN59JF-NMIa3fGACbsqwlUX7zDNbA/exec"; // POST për të ruajtur regjistrimin (pre-checkout)
+const SAVE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxPkO6zyvS7MY6_zcgqbF8LSgK_mXw3k0g8bJg16AVhuXusR96enaSTQUCGU2Hgkflt/exec"; // POST për të ruajtur regjistrimin (pre-checkout)
 const FINALIZE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzwUs9whENWtm16xRCfGUANtV1T2-MtlPi__ExhCDc0_lILnsYrBK33gQx0dRL_li0k/exec"; // (opsionale) finalize after redirect
 // Checkout URLs (ke dërguar këto — i kam vendosur si janë)
 const CHECKOUT_URLS = {
@@ -184,4 +184,5 @@ if (typeof window !== "undefined" && window.location.search) {
   // give the page a second to load then run
   setTimeout(processPostCheckout, 700);
 }
+
 

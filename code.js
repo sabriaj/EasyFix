@@ -1,6 +1,6 @@
 // ====== CONFIG: Zëvendëso me URL-të e tua ======
-const SAVE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDKTZE3DVXC5ml1hOJTd-qZMNhASDs0bdXFXEyNf0WeV5XV1WIGB0yhKSH1KsURkQyPA/exec"; // POST për të ruajtur regjistrimin (pre-checkout)
-const FINALIZE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzwUs9whENWtm16xRCfGUANtV1T2-MtlPi__ExhCDc0_lILnsYrBK33gQx0dRL_li0k/exec"; // (opsionale) finalize after redirect
+const SAVE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxCI_XXKbaS2WQLrFXZZZHDJREGx_R8F6Fb3FxY2sJqxE8KhWVYJextIcZoPLvG0N5b/exec"; // POST për të ruajtur regjistrimin (pre-checkout)
+const FINALIZE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxCI_XXKbaS2WQLrFXZZZHDJREGx_R8F6Fb3FxY2sJqxE8KhWVYJextIcZoPLvG0N5b/exec"; // (opsionale) finalize after redirect
 // Checkout URLs (ke dërguar këto — i kam vendosur si janë)
 const CHECKOUT_URLS = {
   basic:   "https://easyfixx.lemonsqueezy.com/buy/d78e48d9-9c54-4ee3-8aed-d4a63ecbd31a?logo=0",
@@ -9,9 +9,6 @@ const CHECKOUT_URLS = {
 };
 // =================================================
 
-function doGet() {
-  return ContentService.createTextOutput("OK");
-}
 
 
 document.querySelectorAll(".plan-btn").forEach(btn => {
@@ -184,6 +181,7 @@ if (typeof window !== "undefined" && window.location.search) {
   // give the page a second to load then run
   setTimeout(processPostCheckout, 700);
 }
+
 
 
 

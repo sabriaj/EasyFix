@@ -8,14 +8,42 @@
   <script defer src="code.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
+  <header class="bg-blue-700 text-white py-6 shadow-md">
+    <div class="container mx-auto px-4 flex justify-between items-center">
+      <h1 class="text-3xl font-extrabold tracking-tight">EasyFix</h1>
+      <nav>
+        <ul class="flex space-x-6 text-lg">
+          <li><a href="#" class="hover:underline"></a></li>
+          <li><a href="#" class="hover:underline">Kontakt</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
   <section class="max-w-3xl mx-auto p-6 bg-white shadow-lg rounded-xl mt-10">
     <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">Regjistrimi i Firmës</h1>
+
 <h2 class="text-xl font-semibold mb-3">Zgjidh Planin</h2>
 
 <style>
 .plan-btn.active {
   border: 3px solid #2563eb;
   background: #dbeafe;
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .plan-btn {
+    padding: 16px;
+    font-size: 16px;    
+  }
+}
+
+
+@media (max-width: 767px) {
+  .plan-btn {
+    padding: 12px;     
+    font-size: 14px;    
+  }
 }
 </style>
 

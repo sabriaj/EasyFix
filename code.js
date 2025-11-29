@@ -9,6 +9,11 @@ const CHECKOUT_URLS = {
 };
 // =================================================
 
+function doGet() {
+  return ContentService.createTextOutput("OK");
+}
+
+
 document.querySelectorAll(".plan-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".plan-btn").forEach(b => b.classList.remove("active"));
@@ -179,3 +184,4 @@ if (typeof window !== "undefined" && window.location.search) {
   // give the page a second to load then run
   setTimeout(processPostCheckout, 700);
 }
+

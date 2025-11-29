@@ -1,6 +1,6 @@
 // ====== CONFIG: Zëvendëso me URL-të e tua ======
-const SAVE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby7qKZTOmhH8B7O_XdFH1E71lL1vPqqQmUmThL7guHAeY9m6e9hIAG6G7iQ8nsReHYh/exec"; // POST për të ruajtur regjistrimin (pre-checkout)
-const FINALIZE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbymgufe0Gcwg75ifqYfrkLIAnRvoVKkWJ_Kbhm9DE2esQlXV4wrZaHZt_Dzxv1aRus/exec"; // (opsionale) finalize after redirect
+const SAVE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsWbq5naVyFOehohGPOeu01a2titBIO-tDQQLozPZZoGKP8p62DawH7aGdpco6MFAc/exec"; // POST për të ruajtur regjistrimin (pre-checkout)
+const FINALIZE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsWbq5naVyFOehohGPOeu01a2titBIO-tDQQLozPZZoGKP8p62DawH7aGdpco6MFAc/exec"; // (opsionale) finalize after redirect
 // Checkout URLs (ke dërguar këto — i kam vendosur si janë)
 const CHECKOUT_URLS = {
   basic:   "https://easyfixx.lemonsqueezy.com/buy/d78e48d9-9c54-4ee3-8aed-d4a63ecbd31a?logo=0",

@@ -8,21 +8,28 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json());              // rëndësishme për body JSON
 
-// Lemon Squeezy webhook kërkon RAW body për endpoint-in /webhook
+// për webhook (lemon) përdor raw body vetëm për /webhook
 app.use("/webhook", express.raw({ type: "*/*" }));
 
+// MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
-  .catch(err => console.log(err));
+  .catch(err => console.error("MongoDB connection error:", err));
 
+// ===== MODELS =====
 const firmaSchema = new mongoose.Schema({
-  email: String,
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  address: String,
+  phone: String,
+  category: String,
   plan: String,
   advantages: Array,
   paid_at: Date,
-  expires_at: Date
+  expires_at: Date,
+  created_at: { type: Date, default: Date.now }
 });
 const Firma = mongoose.model("Firma", firmaSchema);
 
@@ -34,162 +41,143 @@ const messageSchema = new mongoose.Schema({
 });
 const Message = mongoose.model("Message", messageSchema);
 
+// advantages
 const planAdvantages = {
   basic: [
-    "1 kategori",
-    "Listim bazik",
-    "Support me email"
+    "Publikim i firmës",
+    "Kontakt bazë",
+    "Shfaqje standard"
   ],
   standard: [
-    "3 kategori",
-    "Listim i zgjeruar",
-    "Support me email + telefon"
+    "Gjithë Basic +",
+    "Prioritet në listë",
+    "Logo e kompanisë",
+    "3 foto"
   ],
   premium: [
-    "∞ kategori",
-    "Listim premium",
-    "Prioritet në kërkime",
-    "Support 24/7"
+    "Gjithë Standard +",
+    "Vlerësime klientësh",
+    "Promovim javor",
+    "Top 3 pozicione"
   ]
 };
 
-// Webhook i Lemon Squeezy
+// ===== WEBHOOK (Lemon Squeezy) =====
 app.post("/webhook", async (req, res) => {
-  const signature = req.headers["x-signature"];
-  const secret = process.env.LEMON_WEBHOOK_SECRET;
+  try {
+    const signature = req.headers["x-signature"];
+    const secret = process.env.LEMON_WEBHOOK_SECRET || "";
 
-  const hmac = crypto
-    .createHmac("sha256", secret)
-    .update(req.body)
-    .digest("hex");
+    // req.body është Buffer sepse u konfigurua express.raw për /webhook
+    const rawBody = req.body.toString();
+    const hmac = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
 
-  if (signature !== hmac) {
-    console.log("❌ Invalid signature");
-    return res.status(400).send("Invalid signature");
-  }
-
-  const payload = JSON.parse(req.body);
-  const event = payload.meta.event_name;
-
-  if (event === "order_created") {
-    const email = payload.data.attributes.user_email;
-    const variantId = payload.data.attributes.first_order_item.variant_id;
-
-    let plan = null;
-    if (variantId === 1104148) plan = "basic";
-    if (variantId === 1104129) plan = "standard";
-    if (variantId === 1104151) plan = "premium";
-
-    if (!plan) {
-      console.log("Variant ID not recognized");
-      return res.status(400).send("Unknown variant");
+    if (signature !== hmac) {
+      console.log("Invalid webhook signature");
+      return res.status(400).send("Invalid signature");
     }
 
-    const advantages = planAdvantages[plan];
+    const payload = JSON.parse(rawBody);
+    const event = payload?.meta?.event_name;
 
-    await Firma.findOneAndUpdate(
-      { email },
-      {
-        email,
-        plan,
-        advantages,
-        paid_at: new Date(),
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 ditë
-      },
-      { upsert: true }
-    );
+    if (event === "order_created" || event === "order_paid") {
+      const email = payload.data.attributes.user_email;
+      // mund të ndryshoj varësisht si e dërgon Lemon; ky shembull përdor first_order_item.variant_id
+      const variantId = payload.data.attributes?.first_order_item?.variant_id || payload.data.attributes.variant_id;
 
-    console.log("💰 Payment received:", email, plan);
+      let plan = null;
+      if (variantId === 1104148) plan = "basic";
+      if (variantId === 1104129) plan = "standard";
+      if (variantId === 1104151) plan = "premium";
+
+      if (!plan) {
+        console.log("Unknown variant id in webhook:", variantId);
+        // nuk kthejmë error të fortë sepse mund të jetë event tjetër
+      } else {
+        const advantages = planAdvantages[plan] || [];
+
+        await Firma.findOneAndUpdate(
+          { email },
+          {
+            email,
+            plan,
+            advantages,
+            paid_at: new Date(),
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          },
+          { upsert: true, new: true }
+        );
+
+        console.log("Payment recorded for", email, plan);
+      }
+    }
+
+    res.status(200).send("Webhook received");
+  } catch (err) {
+    console.error("Webhook handler error:", err);
+    res.status(500).send("Webhook error");
   }
-
-  res.status(200).send("Webhook OK");
 });
 
-// Endpoint për regjistrimin e firmës nga forma frontend
+// ===== REGISTER endpoint (nga front-end) =====
 app.post("/register", async (req, res) => {
   try {
-    const { name, email, phone, address, category, plan } = req.body;
+    const { name, email, address, phone, category, plan } = req.body;
 
-    if (!name || !email || !phone || !address || !category || !plan) {
-      return res.status(400).json({ success: false, error: "Të dhënat nuk janë plotësuar si duhet." });
-    }
-
-    // Kontrollo nëse email ekziston
-    const existingFirma = await Firma.findOne({ email });
-    if (existingFirma) {
-      return res.status(409).json({ success: false, error: "Email-i është regjistruar tashmë." });
+    if (!name || !email || !address || !phone || !category || !plan) {
+      return res.status(400).json({ success: false, error: "Plotësoni të gjitha fushat." });
     }
 
     const advantages = planAdvantages[plan] || [];
 
-    const firma = new Firma({
-      email,
-      plan,
-      advantages,
-      paid_at: null,
-      expires_at: null
-    });
+    let firma = await Firma.findOne({ email });
+
+    if (firma) {
+      // update (nëse deshiron mund ta pengosh me error 409)
+      firma.name = name;
+      firma.address = address;
+      firma.phone = phone;
+      firma.category = category;
+      firma.plan = plan;
+      firma.advantages = advantages;
+    } else {
+      firma = new Firma({
+        name,
+        email,
+        address,
+        phone,
+        category,
+        plan,
+        advantages
+      });
+    }
 
     await firma.save();
 
-    res.json({ success: true, message: "Firma u regjistrua me sukses." });
+    return res.json({ success: true, message: "Firma regjistruar. Vazhdo tek pagesa." });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    console.error("/register error:", err);
+    // nëse është error i unique index (email duplicate) njofto ndryshe
+    if (err.code === 11000) {
+      return res.status(409).json({ success: false, error: "Email-i është regjistruar tashmë." });
+    }
+    return res.status(500).json({ success: false, error: "Gabim në server." });
   }
 });
 
-// Endpoint për kontakt
+// ===== CONTACT (mbetet si më parë) =====
 app.post("/contact", async (req, res) => {
   try {
     const msg = new Message(req.body);
     await msg.save();
     res.json({ success: true, message: "Message saved!" });
   } catch (err) {
+    console.error("/contact error:", err);
     res.json({ success: false, error: err.message });
   }
 });
 
+
+// ===== START =====
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`Server running on port ${PORT}`)
-);
-
-app.post("/register", async (req, res) => {
-  try {
-    const { name, email, message } = req.body;
-
-    if (!name || !email || !message) {
-      return res.status(400).json({ success: false, error: "Të dhënat e plota mungojnë." });
-    }
-
-    // Për shembull, mund të ruash firmën me këto fushat nga 'message' mund ta ndash në pjesë, ose ruaj si është
-    // Këtu po ruajmë vetëm email, name dhe message
-
-    // Kontrollo nëse firma ekziston
-    let firma = await Firma.findOne({ email });
-
-    if (!firma) {
-      // Krijo të re
-      firma = new Firma({
-        email,
-        plan: "",         // mund ta plotësosh sipas nevojës
-        advantages: [],
-        paid_at: null,
-        expires_at: null
-      });
-    }
-
-    // Për këtë shembull, ruajmë vetëm firmën me email, mund të zgjerosh sipas të dhënave të sakta
-    await firma.save();
-
-    // Ruaj mesazhin në koleksionin Messages gjithashtu (opsionale)
-    const msg = new Message({ name, email, message });
-    await msg.save();
-
-    res.json({ success: true, message: "Firma u regjistrua me sukses!" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: "Gabim në server." });
-  }
-});
-
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

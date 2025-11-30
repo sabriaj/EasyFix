@@ -1,7 +1,5 @@
-// ------------------------------
-// CONFIG: Backend endpoint
-// ------------------------------
-const BACKEND_URL = "http://localhost:5000/contact"; // Change to your deployed server URL later
+// Backend URL me Render
+const BACKEND_URL = "https://easyfix.onrender.com/contact";
 
 const CHECKOUT_URLS = {
   basic:   "https://easyfixx.lemonsqueezy.com/buy/d78e48d9-9c54-4ee3-8aed-d4a63ecbd31a?logo=0",
@@ -9,9 +7,6 @@ const CHECKOUT_URLS = {
   premium: "https://easyfixx.lemonsqueezy.com/buy/700a3989-d2c8-4f8a-be82-57157c75b585?logo=0"
 };
 
-// ------------------------------
-// UTILITY
-// ------------------------------
 function $(selector) { return document.querySelector(selector); }
 
 function showStatus(msg, type = "info") {
@@ -24,9 +19,6 @@ function showStatus(msg, type = "info") {
   if (type === "loading") statusEl.classList.add("loading");
 }
 
-// ------------------------------
-// PLAN BUTTON LOGIC
-// ------------------------------
 let selectedPlan = "";
 document.querySelectorAll(".plan-btn").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -38,22 +30,17 @@ document.querySelectorAll(".plan-btn").forEach(btn => {
   });
 });
 
-// ------------------------------
-// FORM SUBMIT: save to Node backend + redirect
-// ------------------------------
 const form = $("#registerForm");
 if (form) {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // Get form values
     const emri = $("#emri")?.value.trim() || "";
     const adresa = $("#adresa")?.value.trim() || "";
     const telefoni = $("#telefoni")?.value.trim() || "";
     const emaili = $("#emaili")?.value.trim() || "";
     const kategoria = $("#kategoria")?.value.trim() || "";
 
-    // Validation
     if (!emri || !adresa || !telefoni || !emaili || !kategoria) {
       showStatus("Ju lutem plotësoni të gjitha fushat e nevojshme.", "error");
       return;
@@ -63,7 +50,6 @@ if (form) {
       return;
     }
 
-    // Prepare payload
     const payload = {
       name: emri,
       email: emaili,
@@ -84,18 +70,13 @@ if (form) {
       if (data.success) {
         showStatus("Regjistrimi u ruajt!", "success");
 
-        // Redirect to checkout
         const checkoutUrl = CHECKOUT_URLS[selectedPlan] || CHECKOUT_URLS.standard;
         setTimeout(() => window.location.href = checkoutUrl, 1000);
       } else {
         showStatus("Gabim: " + (data.error || "Ndodhi një problem"), "error");
       }
-
     } catch (err) {
       showStatus("Gabim në ruajtje: " + err.message, "error");
     }
   });
 }
-
-
-

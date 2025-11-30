@@ -2,10 +2,10 @@
   "name": "easyfix",
   "version": "1.0.0",
   "description": "demo : (https://sabriaj.github.io/EasyFix/)",
-  "main": "code.js",
+  "main": "server.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",

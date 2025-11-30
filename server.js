@@ -6,26 +6,16 @@ import crypto from "crypto";
 
 dotenv.config();
 
-// =========================
-// EXPRESS SETUP
-// =========================
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Lemon Squeezy kërkon RAW body
+// Lemon Squeezy webhook kërkon RAW body për endpoint-in /webhook
 app.use("/webhook", express.raw({ type: "*/*" }));
 
-// =========================
-// MONGO CONNECTION
-// =========================
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
   .catch(err => console.log(err));
-
-// =========================
-// SCHEMAS
-// =========================
 
 const firmaSchema = new mongoose.Schema({
   email: String,
@@ -44,9 +34,6 @@ const messageSchema = new mongoose.Schema({
 });
 const Message = mongoose.model("Message", messageSchema);
 
-// =========================
-// PLAN ADVANTAGES
-// =========================
 const planAdvantages = {
   basic: [
     "1 kategori",
@@ -65,10 +52,6 @@ const planAdvantages = {
     "Support 24/7"
   ]
 };
-
-// =========================
-// LEMON SQUEEZY WEBHOOK
-// =========================
 
 app.post("/webhook", async (req, res) => {
   const signature = req.headers["x-signature"];
@@ -92,7 +75,6 @@ app.post("/webhook", async (req, res) => {
     const variantId = payload.data.attributes.first_order_item.variant_id;
 
     let plan = null;
-
     if (variantId === 1104148) plan = "basic";
     if (variantId === 1104129) plan = "standard";
     if (variantId === 1104151) plan = "premium";
@@ -122,9 +104,6 @@ app.post("/webhook", async (req, res) => {
   res.status(200).send("Webhook OK");
 });
 
-// =========================
-// CONTACT FORM
-// =========================
 app.post("/contact", async (req, res) => {
   try {
     const msg = new Message(req.body);
@@ -135,9 +114,6 @@ app.post("/contact", async (req, res) => {
   }
 });
 
-// =========================
-// START SERVER
-// =========================
 app.listen(process.env.PORT, () =>
   console.log(`Server running on port ${process.env.PORT}`)
 );

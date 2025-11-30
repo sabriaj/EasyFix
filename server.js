@@ -53,6 +53,7 @@ const planAdvantages = {
   ]
 };
 
+// Webhook i Lemon Squeezy
 app.post("/webhook", async (req, res) => {
   const signature = req.headers["x-signature"];
   const secret = process.env.LEMON_WEBHOOK_SECRET;
@@ -104,6 +105,40 @@ app.post("/webhook", async (req, res) => {
   res.status(200).send("Webhook OK");
 });
 
+// Endpoint për regjistrimin e firmës nga forma frontend
+app.post("/register", async (req, res) => {
+  try {
+    const { name, email, phone, address, category, plan } = req.body;
+
+    if (!name || !email || !phone || !address || !category || !plan) {
+      return res.status(400).json({ success: false, error: "Të dhënat nuk janë plotësuar si duhet." });
+    }
+
+    // Kontrollo nëse email ekziston
+    const existingFirma = await Firma.findOne({ email });
+    if (existingFirma) {
+      return res.status(409).json({ success: false, error: "Email-i është regjistruar tashmë." });
+    }
+
+    const advantages = planAdvantages[plan] || [];
+
+    const firma = new Firma({
+      email,
+      plan,
+      advantages,
+      paid_at: null,
+      expires_at: null
+    });
+
+    await firma.save();
+
+    res.json({ success: true, message: "Firma u regjistrua me sukses." });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Endpoint për kontakt
 app.post("/contact", async (req, res) => {
   try {
     const msg = new Message(req.body);
@@ -114,6 +149,7 @@ app.post("/contact", async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT, () =>
-  console.log(`Server running on port ${process.env.PORT}`)
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () =>
+  console.log(`Server running on port ${PORT}`)
 );

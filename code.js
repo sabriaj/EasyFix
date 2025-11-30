@@ -1,5 +1,5 @@
 // URL i backend për regjistrim
-const BACKEND_URL = "https://easyfix.onrender.com/register";
+const BACKEND_URL = "https://easyfix.onrender.com/contact";
 
 const CHECKOUT_URLS = {
   basic:   "https://easyfixx.lemonsqueezy.com/buy/d78e48d9-9c54-4ee3-8aed-d4a63ecbd31a?logo=0",

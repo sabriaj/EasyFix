@@ -153,3 +153,43 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`Server running on port ${PORT}`)
 );
+
+app.post("/register", async (req, res) => {
+  try {
+    const { name, email, message } = req.body;
+
+    if (!name || !email || !message) {
+      return res.status(400).json({ success: false, error: "Të dhënat e plota mungojnë." });
+    }
+
+    // Për shembull, mund të ruash firmën me këto fushat nga 'message' mund ta ndash në pjesë, ose ruaj si është
+    // Këtu po ruajmë vetëm email, name dhe message
+
+    // Kontrollo nëse firma ekziston
+    let firma = await Firma.findOne({ email });
+
+    if (!firma) {
+      // Krijo të re
+      firma = new Firma({
+        email,
+        plan: "",         // mund ta plotësosh sipas nevojës
+        advantages: [],
+        paid_at: null,
+        expires_at: null
+      });
+    }
+
+    // Për këtë shembull, ruajmë vetëm firmën me email, mund të zgjerosh sipas të dhënave të sakta
+    await firma.save();
+
+    // Ruaj mesazhin në koleksionin Messages gjithashtu (opsionale)
+    const msg = new Message({ name, email, message });
+    await msg.save();
+
+    res.json({ success: true, message: "Firma u regjistrua me sukses!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: "Gabim në server." });
+  }
+});
+

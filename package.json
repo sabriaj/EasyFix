@@ -5,7 +5,6 @@
   "main": "server.js",
   "type": "module",
   "body-parser": "^1.20.2",
-
   "scripts": {
     "start": "node server.js"
   },
@@ -21,6 +20,7 @@
   },
   "homepage": "https://github.com/sabriaj/EasyFix#readme",
   "dependencies": {
+    "body-parser": "^2.2.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",

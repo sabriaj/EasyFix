@@ -1,5 +1,6 @@
 // URL i backend për regjistrim
-const BACKEND_URL = "https://easyfix.onrender.com/register";
+const BACKEND_URL = "https://easyfix.onrender.com";
+
 
 
 const CHECKOUT_URLS = {

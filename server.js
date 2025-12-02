@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import crypto from "crypto";
+import Firma from "./models/firma.js";
 
 
 dotenv.config();

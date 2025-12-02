@@ -64,7 +64,7 @@ if (form) {
     try {
       showStatus("Po ruajmë regjistrimin...", "loading");
 
-     const res = await fetch(BACKEND_URL + "/register", {
+     const res = await fetch(`${BACKEND_URL}/register`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(payload)

@@ -53,96 +53,86 @@
   </footer>
 
 <script>
-  const csvUrl = '';
+const API_URL = "https://easyfix.onrender.com";
 
-  let allFirms = [];
+// variabla
+let allFirms = [];
 
-  const categorySelect = document.getElementById('categorySelect');
-  const searchInput = document.getElementById('searchInput');
-  const firmsContainer = document.getElementById('firmsContainer');
-  const noResults = document.getElementById('noResults');
+const categorySelect = document.getElementById('categorySelect');
+const searchInput = document.getElementById('searchInput');
+const firmsContainer = document.getElementById('firmsContainer');
+const noResults = document.getElementById('noResults');
 
-  function sanitize(text) {
-    return text ? text.toString().trim() : '';
-  }
+function sanitize(text) {
+  return text ? text.toString().trim() : '';
+}
 
-  function populateCategoryFilter(firms) {
-    const categories = [...new Set(firms.map(f => sanitize(f.kategoria)))].sort();
-    categories.forEach(cat => {
-      if (cat) {
-        const option = document.createElement('option');
-        option.value = cat;
-        option.textContent = cat;
-        categorySelect.appendChild(option);
-      }
-    });
-  }
-
-  function renderFirms(firms) {
-    firmsContainer.innerHTML = '';
-    if (firms.length === 0) {
-      noResults.classList.remove('hidden');
-      return;
-    } else {
-      noResults.classList.add('hidden');
+function populateCategoryFilter(firms) {
+  const categories = [...new Set(firms.map(f => sanitize(f.category)))].sort();
+  categories.forEach(cat => {
+    if (cat) {
+      const option = document.createElement('option');
+      option.value = cat;
+      option.textContent = cat;
+      categorySelect.appendChild(option);
     }
+  });
+}
 
-    firms.forEach(firm => {
-      const div = document.createElement('div');
-      div.className = 'border border-gray-300 rounded-lg p-4 shadow hover:shadow-md transition';
-      div.innerHTML = `
-        <h3 class="text-xl font-bold text-blue-700 mb-2">${sanitize(firm.emri)}</h3>
-        <p><strong>Adresa:</strong> ${sanitize(firm.adresa)}</p>
-        <p><strong>Telefoni:</strong> ${sanitize(firm.telefoni)}</p>
-        <p><strong>Email:</strong> <a href="mailto:${sanitize(firm.email)}" class="text-blue-600 underline">${sanitize(firm.email)}</a></p>
-        <p><strong>Kategoria:</strong> ${sanitize(firm.kategoria)}</p>
-      `;
-      firmsContainer.appendChild(div);
-    });
+function renderFirms(firms) {
+  firmsContainer.innerHTML = '';
+  if (firms.length === 0) {
+    noResults.classList.remove('hidden');
+    return;
+  } else {
+    noResults.classList.add('hidden');
   }
 
-  function filterFirms() {
-    const searchText = searchInput.value.toLowerCase();
-    const selectedCategory = categorySelect.value;
+  firms.forEach(firm => {
+    const div = document.createElement('div');
+    div.className = 'border border-gray-300 rounded-lg p-4 shadow hover:shadow-md transition';
+    div.innerHTML = `
+      <h3 class="text-xl font-bold text-blue-700 mb-2">${sanitize(firm.name)}</h3>
+      <p><strong>Adresa:</strong> ${sanitize(firm.address)}</p>
+      <p><strong>Telefoni:</strong> ${sanitize(firm.phone)}</p>
+      <p><strong>Email:</strong> <a href="mailto:${sanitize(firm.email)}" class="text-blue-600 underline">${sanitize(firm.email)}</a></p>
+      <p><strong>Kategoria:</strong> ${sanitize(firm.category)}</p>
+    `;
+    firmsContainer.appendChild(div);
+  });
+}
 
-    const filtered = allFirms.filter(firm => {
-      const nameMatch = sanitize(firm.emri).toLowerCase().includes(searchText);
-      const categoryMatch = !selectedCategory || sanitize(firm.kategoria) === selectedCategory;
-      return nameMatch && categoryMatch;
-    });
+function filterFirms() {
+  const searchText = searchInput.value.toLowerCase();
+  const selectedCategory = categorySelect.value;
 
-    renderFirms(filtered);
-  }
+  const filtered = allFirms.filter(firm => {
+    const nameMatch = sanitize(firm.name).toLowerCase().includes(searchText);
+    const categoryMatch = !selectedCategory || sanitize(firm.category) === selectedCategory;
+    return nameMatch && categoryMatch;
+  });
 
-  fetch(csvUrl)
-    .then(res => res.text())
-    .then(data => {
-      const rows = data.trim().split('\n');
-      const headers = rows[0].split(',');
+  renderFirms(filtered);
+}
 
-      allFirms = rows.slice(1).map(row => {
-        const cols = row.split(',');
-        return {
-          emri: cols[0],
-          adresa: cols[1],
-          telefoni: cols[2],
-          email: cols[3],
-          kategoria: cols[4]
-        };
-      });
+// MERR FIRMAT NGA SERVERI
+fetch(`${API_URL}/firms`)
+  .then(res => res.json())
+  .then(data => {
+    allFirms = data;
+    populateCategoryFilter(allFirms);
+    renderFirms(allFirms);
+  })
+  .catch(err => {
+    console.error('Gabim në marrjen e të dhënave:', err);
+    noResults.textContent = "Gabim në server. Provo më vonë.";
+    noResults.classList.remove('hidden');
+  });
 
-      populateCategoryFilter(allFirms);
-      renderFirms(allFirms);
-    })
-    .catch(err => {
-      console.error('Gabim në marrjen e CSV:', err);
-      noResults.textContent = "Gabim në marrjen e të dhënave. Provo përsëri më vonë.";
-      noResults.classList.remove('hidden');
-    });
-
-  searchInput.addEventListener('input', filterFirms);
-  categorySelect.addEventListener('change', filterFirms);
+searchInput.addEventListener('input', filterFirms);
+categorySelect.addEventListener('change', filterFirms);
 </script>
+
 
 </body>
 </html>

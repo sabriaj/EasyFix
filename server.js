@@ -121,51 +121,53 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-// ===== REGISTER endpoint (nga front-end) =====
 app.post("/register", async (req, res) => {
   try {
     const { name, email, address, phone, category, plan } = req.body;
 
     if (!name || !email || !address || !phone || !category || !plan) {
-      return res.status(400).json({ success: false, error: "Plotësoni të gjitha fushat." });
+      return res.status(400).json({
+        success: false,
+        error: "Plotësoni të gjitha fushat."
+      });
+    }
+
+    // kontrollo nëse email ekziston
+    const exists = await Firma.findOne({ email });
+    if (exists) {
+      return res.status(409).json({
+        success: false,
+        error: "Ky email është përdorur tashmë në një llogari tjetër."
+      });
     }
 
     const advantages = planAdvantages[plan] || [];
 
-    let firma = await Firma.findOne({ email });
-
-    if (firma) {
-      // update (nëse deshiron mund ta pengosh me error 409)
-      firma.name = name;
-      firma.address = address;
-      firma.phone = phone;
-      firma.category = category;
-      firma.plan = plan;
-      firma.advantages = advantages;
-    } else {
-      firma = new Firma({
-        name,
-        email,
-        address,
-        phone,
-        category,
-        plan,
-        advantages
-      });
-    }
+    const firma = new Firma({
+      name,
+      email,
+      address,
+      phone,
+      category,
+      plan,
+      advantages
+    });
 
     await firma.save();
 
-    return res.json({ success: true, message: "Firma regjistruar. Vazhdo tek pagesa." });
+    return res.json({
+      success: true,
+      message: "Firma u regjistrua me sukses. Vazhdo tek pagesa."
+    });
   } catch (err) {
     console.error("/register error:", err);
-    // nëse është error i unique index (email duplicate) njofto ndryshe
-    if (err.code === 11000) {
-      return res.status(409).json({ success: false, error: "Email-i është regjistruar tashmë." });
-    }
-    return res.status(500).json({ success: false, error: "Gabim në server." });
+    return res.status(500).json({
+      success: false,
+      error: "Gabim në server."
+    });
   }
 });
+
 
 // ===== CONTACT (mbetet si më parë) =====
 app.post("/contact", async (req, res) => {
@@ -178,6 +180,12 @@ app.post("/contact", async (req, res) => {
     res.json({ success: false, error: err.message });
   }
 });
+
+app.get("/firms", async (req, res) => {
+  const firms = await Firma.find();
+  res.json(firms);
+});
+
 
 
 // ===== START =====

@@ -168,6 +168,44 @@ app.post("/register", async (req, res) => {
   }
 });
 
+// REGISTER COMPANY
+app.post("/api/firmat", async (req, res) => {
+  try {
+    const { emriBiznesit, email, telefoni, passwordi, plani } = req.body;
+
+    // 1. Kontrollo nëse email ekziston
+    const ekziston = await Firma.findOne({ email });
+
+    if (ekziston) {
+      return res.status(400).json({
+        success: false,
+        message: "Ky email tashmë është i regjistruar."
+      });
+    }
+
+    // 2. Krijo firmën e re
+    const firma = new Firma({
+      emriBiznesit,
+      email,
+      telefoni,
+      passwordi,
+      plani
+    });
+
+    await firma.save();
+
+    return res.json({
+      success: true,
+      message: "Regjistrimi u krye me sukses!",
+      firma
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Gabim serveri." });
+  }
+});
+
 
 // ===== CONTACT (mbetet si më parë) =====
 app.post("/contact", async (req, res) => {

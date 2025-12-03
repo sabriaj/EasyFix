@@ -1,8 +1,6 @@
 // URL i backend për regjistrim
 const BACKEND_URL = "https://easyfix.onrender.com";
 
-
-
 const CHECKOUT_URLS = {
   basic:   "https://easyfixx.lemonsqueezy.com/buy/d78e48d9-9c54-4ee3-8aed-d4a63ecbd31a?logo=0",
   standard:"https://easyfixx.lemonsqueezy.com/buy/544a4069-7897-4cb0-a8e4-62e0aeb54b4b?logo=0",
@@ -64,25 +62,36 @@ if (form) {
     try {
       showStatus("Po ruajmë regjistrimin...", "loading");
 
-     const res = await fetch(`${BACKEND_URL}/register`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(payload)
-});
+      // Kërkesa fetch ndodhet vetëm një herë këtu
+      const res = await fetch(`${BACKEND_URL}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
+      if (res.status === 409) {
+        showStatus("Ky email është i regjistruar! Ju lutem përdorni një email tjetër.", "error");
+        return;
+      }
 
-      const data = await res.json();
+      // Kujdes: Kjo rresht supozon që serveri gjithmonë kthen JSON, 
+      // edhe nëse ka gabime të tjera përveç 409.
+      const data = await res.json(); 
 
       if (data.success) {
-        showStatus("Regjistrimi u ruajt!", "success");
-
+        showStatus("Regjistrimi u krye me sukses!", "success");
         const checkoutUrl = CHECKOUT_URLS[selectedPlan] || CHECKOUT_URLS.standard;
         setTimeout(() => window.location.href = checkoutUrl, 1000);
       } else {
-        showStatus("Gabim: " + (data.error || "Ndodhi një problem"), "error");
+        // Shfaq mesazhin e gabimit që vjen nga backend-i nëse 'data.success' është false
+        showStatus(data.error || "Gabim në regjistrim.", "error");
       }
-    } catch (err) {
-      showStatus("Gabim në ruajtje: " + err.message, "error");
+
+    } catch (error) {
+      // Ky bllok kap gabimet e rrjetit OSE gabimin në `res.json()`
+      console.error("Gabim gjatë kërkesës:", error);
+      showStatus("Problem me lidhjen e rrjetit ose serverin. Provoni përsëri më vonë.", "error");
     }
+
   });
 }

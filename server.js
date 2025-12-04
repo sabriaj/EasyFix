@@ -220,6 +220,54 @@ app.post("/api/firmat", async (req, res) => {
 });
 
 
+app.post("/register", async (req, res) => {
+  try {
+    const { name, email, address, phone, category, plan } = req.body;
+
+    if (!name || !email || !address || !phone || !category || !plan) {
+      return res.status(400).json({
+        success: false,
+        error: "Plotësoni të gjitha fushat."
+      });
+    }
+
+    // kontrollo nëse email ekziston
+    const exists = await Firma.findOne({ email });
+    if (exists) {
+      return res.status(409).json({
+        success: false,
+        error: "Ky email është përdorur tashmë në një llogari tjetër."
+      });
+    }
+
+    const advantages = planAdvantages[plan] || [];
+
+    const firma = new Firma({
+      name,
+      email,
+      address,
+      phone,
+      category,
+      plan,
+      advantages
+    });
+
+    await firma.save();
+
+    return res.json({
+      success: true,
+      message: "Firma u regjistrua me sukses. Vazhdo tek pagesa."
+    });
+  } catch (err) {
+    console.error("/register error:", err);
+    return res.status(500).json({
+      success: false,
+      error: "Gabim në server."
+    });
+  }
+});
+
+
 // ===== CONTACT (mbetet si më parë) =====
 app.post("/contact", async (req, res) => {
   try {

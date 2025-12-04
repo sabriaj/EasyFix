@@ -64,109 +64,122 @@ const planAdvantages = {
   ]
 };
 
-// ===== WEBHOOK (Lemon Squeezy) =====
+
+app.use("/webhook", express.raw({ type: "*/*" }));
+ 
+
+// ======= WEBHOOK LEMON SQUEEZY =======
+
 app.post("/webhook", async (req, res) => {
   try {
-    const signature = req.headers["x-signature"];
-    const secret = process.env.LEMON_WEBHOOK_SECRET || "";
-
-    // req.body është Buffer sepse u konfigurua express.raw për /webhook
     const rawBody = req.body.toString();
-    const hmac = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
 
-    if (signature !== hmac) {
-      console.log("Invalid webhook signature");
-      return res.status(400).send("Invalid signature");
-    }
-
+    // Parse JSON payload
     const payload = JSON.parse(rawBody);
     const event = payload?.meta?.event_name;
+    const email = payload?.data?.attributes?.user_email;
 
-    if (event === "order_created" || event === "order_paid") {
-      const email = payload.data.attributes.user_email;
-      // mund të ndryshoj varësisht si e dërgon Lemon; ky shembull përdor first_order_item.variant_id
-      const variantId = payload.data.attributes?.first_order_item?.variant_id || payload.data.attributes.variant_id;
-
-      let plan = null;
-      if (variantId === 1104148) plan = "basic";
-      if (variantId === 1104129) plan = "standard";
-      if (variantId === 1104151) plan = "premium";
-
-      if (!plan) {
-        console.log("Unknown variant id in webhook:", variantId);
-        // nuk kthejmë error të fortë sepse mund të jetë event tjetër
-      } else {
-        const advantages = planAdvantages[plan] || [];
-
-        await Firma.findOneAndUpdate(
-          { email },
-          {
-            email,
-            plan,
-            advantages,
-            paid_at: new Date(),
-            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-          },
-          { upsert: true, new: true }
-        );
-
-        console.log("Payment recorded for", email, plan);
-      }
+    if (!email) {
+      console.log("Webhook without email");
+      return res.status(400).send("No email found");
     }
 
+    console.log("Webhook Event:", event, "for:", email);
+
+
+    // ========================
+    //      VARIANT → PLAN
+    // ========================
+    const variantId =
+      payload?.data?.attributes?.first_order_item?.variant_id ||
+      payload?.data?.attributes?.variant_id;
+
+    let plan = null;
+
+    if (variantId === 1104148) plan = "basic";
+    if (variantId === 1104129) plan = "standard";
+    if (variantId === 1104151) plan = "premium";
+
+
+    // ========================
+    //     PLAN ADVANTAGES
+    // ========================
+    const planAdvantages = {
+      basic: [
+        "Publikim i firmës",
+        "Kontakt bazë",
+        "Shfaqje standard"
+      ],
+      standard: [
+        "Gjithë Basic +",
+        "Prioritet në listë",
+        "Logo e kompanisë",
+        "3 foto"
+      ],
+      premium: [
+        "Gjithë Standard +",
+        "Vlerësime klientësh",
+        "Promovim javor",
+        "Top 3 pozicione"
+      ]
+    };
+
+
+    // ========================
+    //  1) ORDER PAID → ADD TO DB
+    // ========================
+    if (event === "order_paid") {
+      if (!plan) {
+        console.log("Unknown variant:", variantId);
+        return res.status(200).send("Unknown plan, but OK");
+      }
+
+      const advantages = planAdvantages[plan] || [];
+
+      // ruaje ose update nese ekziston
+      await Firma.findOneAndUpdate(
+        { email },
+        {
+          email,
+          plan,
+          advantages,
+          paid_at: new Date(),
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) 
+        },
+        { upsert: true, new: true }
+      );
+
+      console.log("📌 USER ADDED / UPDATED:", email, "-", plan);
+      return res.status(200).send("Order paid processed");
+    }
+
+
+    // ========================
+    // 2) CANCEL / EXPIRE / REFUND → DELETE FROM DB
+    // ========================
+    if (
+      event === "subscription_cancelled" ||
+      event === "subscription_expired" ||
+      event === "order_refunded"
+    ) {
+      await Firma.deleteOne({ email });
+
+      console.log("❌ USER REMOVED:", email, "-", event);
+      return res.status(200).send("Subscription removed");
+    }
+
+
+    // ========================
+    // 3) OTHER EVENTS
+    // ========================
     res.status(200).send("Webhook received");
+    
   } catch (err) {
-    console.error("Webhook handler error:", err);
+    console.error("❗ WEBHOOK ERROR:", err);
     res.status(500).send("Webhook error");
   }
 });
 
-app.post("/register", async (req, res) => {
-  try {
-    const { name, email, address, phone, category, plan } = req.body;
-
-    if (!name || !email || !address || !phone || !category || !plan) {
-      return res.status(400).json({
-        success: false,
-        error: "Plotësoni të gjitha fushat."
-      });
-    }
-
-    // kontrollo nëse email ekziston
-    const exists = await Firma.findOne({ email });
-    if (exists) {
-      return res.status(409).json({
-        success: false,
-        error: "Ky email është përdorur tashmë në një llogari tjetër."
-      });
-    }
-
-    const advantages = planAdvantages[plan] || [];
-
-    const firma = new Firma({
-      name,
-      email,
-      address,
-      phone,
-      category,
-      plan,
-      advantages
-    });
-
-    await firma.save();
-
-    return res.json({
-      success: true,
-      message: "Firma u regjistrua me sukses. Vazhdo tek pagesa."
-    });
-  } catch (err) {
-    console.error("/register error:", err);
-    return res.status(500).json({
-      success: false,
-      error: "Gabim në server."
-    });
-  }
-});
 
 // REGISTER COMPANY
 app.post("/api/firmat", async (req, res) => {

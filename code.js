@@ -7,42 +7,49 @@ const CHECKOUT_URLS = {
   premium: "https://easyfixx.lemonsqueezy.com/buy/700a3989-d2c8-4f8a-be82-57157c75b585?logo=0"
 };
 
-function $(selector) { return document.querySelector(selector); }
+function $(s) { 
+  return document.querySelector(s); 
+}
 
 function showStatus(msg, type = "info") {
-  const statusEl = $("#status");
-  if (!statusEl) return;
-  statusEl.textContent = msg;
-  statusEl.className = "status";
-  if (type === "error") statusEl.classList.add("error");
-  if (type === "success") statusEl.classList.add("success");
-  if (type === "loading") statusEl.classList.add("loading");
+  const el = $("#status");
+  if (!el) return;
+
+  el.textContent = msg;
+  el.className = "status";
+
+  if (type === "error") el.classList.add("error");
+  if (type === "success") el.classList.add("success");
+  if (type === "loading") el.classList.add("loading");
 }
 
 let selectedPlan = "";
+
 document.querySelectorAll(".plan-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".plan-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     selectedPlan = btn.dataset.plan;
+
     const hidden = $("#selectedPlan");
     if (hidden) hidden.value = selectedPlan;
   });
 });
 
 const form = $("#registerForm");
+
 if (form) {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const emri = $("#emri")?.value.trim() || "";
-    const adresa = $("#adresa")?.value.trim() || "";
+    const emri     = $("#emri")?.value.trim() || "";
+    const adresa   = $("#adresa")?.value.trim() || "";
     const telefoni = $("#telefoni")?.value.trim() || "";
-    const emaili = $("#emaili")?.value.trim() || "";
-    const kategoria = $("#kategoria")?.value.trim() || "";
+    const emaili   = $("#emaili")?.value.trim() || "";
+    const kategoria= $("#kategoria")?.value.trim() || "";
 
     if (!emri || !adresa || !telefoni || !emaili || !kategoria) {
-      showStatus("Ju lutem plotësoni të gjitha fushat e nevojshme.", "error");
+      showStatus("Ju lutem plotësoni të gjitha fushat e formularit.", "error");
       return;
     }
     if (!selectedPlan) {
@@ -62,37 +69,51 @@ if (form) {
     try {
       showStatus("Po ruajmë regjistrimin...", "loading");
 
-      // Kërkesa fetch ndodhet vetëm një herë këtu
       const res = await fetch(`${BACKEND_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
 
+      // Konflikt emaili (email ekziston)
       if (res.status === 409) {
-        showStatus("Ky email është i regjistruar! Ju lutem përdorni një email tjetër.", "error");
+        showStatus("Ky email tashmë është i regjistruar!", "error");
         return;
       }
 
-      // Kujdes: Kjo rresht supozon që serveri gjithmonë kthen JSON, 
-      // edhe nëse ka gabime të tjera përveç 409.
-      const data = await res.json(); 
+      // Gabime të tjera HTTP
+      if (!res.ok) {
+        showStatus(`Gabim nga serveri (${res.status}).`, "error");
+        return;
+      }
 
+      // Provo të lexosh JSON-in
+      let data = {};
+      try {
+        data = await res.json();
+      } catch {
+        showStatus("Serveri ktheu përgjigje të pavlefshme. (Jo JSON)", "error");
+        return;
+      }
+
+      // Nëse backend kthen sukses
       if (data.success) {
         showStatus("Regjistrimi u krye me sukses!", "success");
+
         const checkoutUrl = CHECKOUT_URLS[selectedPlan] || CHECKOUT_URLS.standard;
-        setTimeout(() => window.location.href = checkoutUrl, 1000);
+
+        setTimeout(() => {
+          window.location.href = checkoutUrl;
+        }, 1000);
+
       } else {
-        // Shfaq mesazhin e gabimit që vjen nga backend-i nëse 'data.success' është false
         showStatus(data.error || "Gabim në regjistrim.", "error");
       }
 
-    } catch (error) {
-      // Ky bllok kap gabimet e rrjetit OSE gabimin në `res.json()`
-      console.error("Gabim gjatë kërkesës:", error);
-      showStatus("Problem me lidhjen e rrjetit ose serverin. Provoni përsëri më vonë.", "error");
+    } catch (err) {
+      console.error("Gabim gjatë kërkesës:", err);
+      showStatus("Problem me rrjetin ose serverin. Provoni përsëri më vonë.", "error");
     }
 
   });
 }
-

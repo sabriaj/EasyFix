@@ -8,14 +8,17 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
+
+
+app.use("/webhook", express.raw({ type: "*/*" }));
+
 app.use(express.json());
 
-// Raw body vetëm për webhook
-app.use("/webhook", express.raw({ type: "*/*" }));
+// Raw body PËR WEBHOOK
 
 
 // =====================
-//  CONNECT MONGODB
+//     MONGO CONNECT
 // =====================
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
@@ -23,7 +26,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 
 // =====================
-//  FIRMA MODEL
+//      FIRMA MODEL
 // =====================
 const firmaSchema = new mongoose.Schema({
   name: String,
@@ -45,27 +48,17 @@ const Firma = mongoose.model("Firma", firmaSchema);
 
 
 // =====================
-//  PLAN AVANTAGES
+//   PLAN INFO
 // =====================
 const planAdvantages = {
   basic: ["Publikim i firmës", "Kontakt bazë", "Shfaqje standard"],
-  standard: [
-    "Gjithë Basic +",
-    "Prioritet në listë",
-    "Logo e firmës",
-    "3 foto"
-  ],
-  premium: [
-    "Gjithë Standard +",
-    "Vlerësime klientësh",
-    "Promovim javor",
-    "Top 3 pozicione"
-  ]
+  standard: ["Gjithë Basic +", "Prioritet në listë", "Logo e kompanisë", "3 foto"],
+  premium: ["Gjithë Standard +", "Vlerësime klientësh", "Promovim javor", "Top 3 pozicione"]
 };
 
 
 // =======================================================
-// 1) REGJISTRIMI (SAVING AS PENDING)
+// 1) REGJISTRIMI — Ruhet si PENDING
 // =======================================================
 app.post("/register", async (req, res) => {
   try {
@@ -77,11 +70,12 @@ app.post("/register", async (req, res) => {
 
     // Check email
     const exists = await Firma.findOne({ email });
+
     if (exists) {
       return res.status(409).json({ success: false, error: "Email exists" });
     }
 
-    // Create as pending
+    // Save new firm
     await Firma.create({
       name,
       email,
@@ -103,23 +97,22 @@ app.post("/register", async (req, res) => {
 
 
 // =======================================================
-// 2) WEBHOOK — LEMON SQUEEZY VERIFICATION + UPDATE
+// 2) WEBHOOK VERIFICATION (LEMON SQUEEZY)
 // =======================================================
 
-// Verifikim HMAC
+// Verify HMAC signature
 function verifyLemon(req) {
   try {
     const signature = req.headers["x-signature"];
     const secret = process.env.LEMON_WEBHOOK_SECRET;
 
-    const computed = crypto
+    const hmac = crypto
       .createHmac("sha256", secret)
       .update(req.body)
       .digest("hex");
 
-    return computed === signature;
-  } catch (err) {
-    console.log("Verification error:", err);
+    return hmac === signature;
+  } catch {
     return false;
   }
 }
@@ -127,7 +120,7 @@ function verifyLemon(req) {
 app.post("/webhook", async (req, res) => {
   try {
     if (!verifyLemon(req)) {
-      console.log("❌ Invalid webhook signature");
+      console.log("❌ Invalid LemonSqueezy signature");
       return res.status(400).send("Invalid signature");
     }
 
@@ -135,9 +128,9 @@ app.post("/webhook", async (req, res) => {
     const event = payload?.meta?.event_name;
     const email = payload?.data?.attributes?.user_email;
 
-    console.log("📩 Incoming Webhook:", event, "→", email);
+    console.log("📩 Webhook:", event, "->", email);
 
-    // Variant ID → Plan mapping
+    // Extract variant → plan
     const variantId =
       payload?.data?.attributes?.first_order_item?.variant_id ||
       payload?.data?.attributes?.variant_id;
@@ -147,8 +140,9 @@ app.post("/webhook", async (req, res) => {
     if (variantId === 1104129) plan = "standard";
     if (variantId === 1104151) plan = "premium";
 
-
-    // 🎉 Procesim pagesash
+    // =============================
+    //  PAGESA U KRY → Aktivizo
+    // =============================
     if (event === "order_paid") {
       await Firma.findOneAndUpdate(
         { email },
@@ -161,20 +155,20 @@ app.post("/webhook", async (req, res) => {
         }
       );
 
-      console.log("✅ Firma Aktivizuar →", email);
+      console.log("✅ PAID → Aktivizuar:", email);
       return res.status(200).send("OK");
     }
 
-
-    // ❌ ANULIM / REFUND / EXPIRE
+    // =============================
+    //  ANULIM / REFUND → Fshi
+    // =============================
     if (
       event === "subscription_cancelled" ||
       event === "subscription_expired" ||
       event === "order_refunded"
     ) {
       await Firma.deleteOne({ email });
-
-      console.log("🗑️ Firma fshihet:", email);
+      console.log("🗑️ Firma u fshi (cancel/refund):", email);
       return res.status(200).send("Deleted");
     }
 
@@ -188,7 +182,7 @@ app.post("/webhook", async (req, res) => {
 
 
 // =======================================================
-// 3) GET — FIRMAT E AKTIVUARA
+//  3) FIRMS API — vetëm firmat me pagesë
 // =======================================================
 app.get("/firms", async (req, res) => {
   const firms = await Firma.find({ payment_status: "paid" });
@@ -196,6 +190,8 @@ app.get("/firms", async (req, res) => {
 });
 
 
-// START SERVER
+// =======================================================
+//  START SERVER
+// =======================================================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

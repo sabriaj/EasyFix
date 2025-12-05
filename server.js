@@ -10,8 +10,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Raw body për verifikimin e Lemon webhook
+// Raw body vetëm për webhook
 app.use("/webhook", express.raw({ type: "*/*" }));
+
 
 // =====================
 //  CONNECT MONGODB
@@ -44,14 +45,14 @@ const Firma = mongoose.model("Firma", firmaSchema);
 
 
 // =====================
-//  PLAN BENEFITS
+//  PLAN AVANTAGES
 // =====================
 const planAdvantages = {
   basic: ["Publikim i firmës", "Kontakt bazë", "Shfaqje standard"],
   standard: [
     "Gjithë Basic +",
     "Prioritet në listë",
-    "Logo e kompanisë",
+    "Logo e firmës",
     "3 foto"
   ],
   premium: [
@@ -64,7 +65,7 @@ const planAdvantages = {
 
 
 // =======================================================
-// 1) REGJISTRIMI — user regjistrohet si “pending”
+// 1) REGJISTRIMI (SAVING AS PENDING)
 // =======================================================
 app.post("/register", async (req, res) => {
   try {
@@ -74,18 +75,22 @@ app.post("/register", async (req, res) => {
       return res.status(400).json({ success: false, error: "Missing fields" });
     }
 
-    // Check if email exists
-    const exists = await Firmat.findOne({ email });
-
+    // Check email
+    const exists = await Firma.findOne({ email });
     if (exists) {
-      // IMPORTANT
       return res.status(409).json({ success: false, error: "Email exists" });
     }
 
-    // Save new firm
-    await Firmat.create({
-      name, email, phone, address, category, plan,
-      paymentStatus: "pending"
+    // Create as pending
+    await Firma.create({
+      name,
+      email,
+      phone,
+      address,
+      category,
+      plan,
+      advantages: planAdvantages[plan],
+      payment_status: "pending"
     });
 
     return res.status(200).json({ success: true });
@@ -97,12 +102,11 @@ app.post("/register", async (req, res) => {
 });
 
 
-
 // =======================================================
-// 2) WEBHOOK LEMON SQUEEZY — VERIFIKIM + UPDATE MONGO
+// 2) WEBHOOK — LEMON SQUEEZY VERIFICATION + UPDATE
 // =======================================================
 
-// Verifikim i nënshkrimit
+// Verifikim HMAC
 function verifyLemon(req) {
   try {
     const signature = req.headers["x-signature"];
@@ -115,6 +119,7 @@ function verifyLemon(req) {
 
     return computed === signature;
   } catch (err) {
+    console.log("Verification error:", err);
     return false;
   }
 }
@@ -122,7 +127,7 @@ function verifyLemon(req) {
 app.post("/webhook", async (req, res) => {
   try {
     if (!verifyLemon(req)) {
-      console.log("❌ Webhook signature invalid");
+      console.log("❌ Invalid webhook signature");
       return res.status(400).send("Invalid signature");
     }
 
@@ -130,9 +135,9 @@ app.post("/webhook", async (req, res) => {
     const event = payload?.meta?.event_name;
     const email = payload?.data?.attributes?.user_email;
 
-    console.log("📩 Webhook:", event, "->", email);
+    console.log("📩 Incoming Webhook:", event, "→", email);
 
-    // variant -> plan
+    // Variant ID → Plan mapping
     const variantId =
       payload?.data?.attributes?.first_order_item?.variant_id ||
       payload?.data?.attributes?.variant_id;
@@ -142,9 +147,8 @@ app.post("/webhook", async (req, res) => {
     if (variantId === 1104129) plan = "standard";
     if (variantId === 1104151) plan = "premium";
 
-    // =============================
-    //    1) PAGESA U KRY → Aktivizo
-    // =============================
+
+    // 🎉 Procesim pagesash
     if (event === "order_paid") {
       await Firma.findOneAndUpdate(
         { email },
@@ -157,20 +161,20 @@ app.post("/webhook", async (req, res) => {
         }
       );
 
-      console.log("✅ PAID → Aktivizuar:", email);
+      console.log("✅ Firma Aktivizuar →", email);
       return res.status(200).send("OK");
     }
 
-    // =============================
-    //    2) ANULIM → Fshi firmën
-    // =============================
+
+    // ❌ ANULIM / REFUND / EXPIRE
     if (
       event === "subscription_cancelled" ||
       event === "subscription_expired" ||
       event === "order_refunded"
     ) {
       await Firma.deleteOne({ email });
-      console.log("🗑️ Firma u fshi (anulim):", email);
+
+      console.log("🗑️ Firma fshihet:", email);
       return res.status(200).send("Deleted");
     }
 
@@ -184,7 +188,7 @@ app.post("/webhook", async (req, res) => {
 
 
 // =======================================================
-//  LISTA E FIRMAVE VETËM TË AKTIVUARA
+// 3) GET — FIRMAT E AKTIVUARA
 // =======================================================
 app.get("/firms", async (req, res) => {
   const firms = await Firma.find({ payment_status: "paid" });

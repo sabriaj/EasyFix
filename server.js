@@ -7,13 +7,11 @@ import crypto from "crypto";
 dotenv.config();
 
 const app = express();
-
-// 🟢 JSON për të gjitha endpoint-et
-app.use(express.json());
 app.use(cors());
 
-// 🟡 RAW vetëëm për /webhook — MË POSHTË
-// (duhet të vendoset PARA webhook-ut dhe PAS json middleware-it)
+// ❗ MOS E PËRDOR express.json() KËTU
+// sepse prish webhook-un
+
 
 // =====================
 //  CONNECT MONGODB
@@ -67,9 +65,10 @@ const planAdvantages = {
 
 
 // =======================================================
-// 1) REGJISTRIMI — user regjistrohet si “pending”
+//  REGJISTRIMI — ME express.json()
 // =======================================================
-app.post("/register", async (req, res) => {
+
+app.post("/register", express.json(), async (req, res) => {
   try {
     const { name, email, phone, address, category, plan } = req.body;
 
@@ -100,104 +99,112 @@ app.post("/register", async (req, res) => {
 
 
 // =======================================================
-// ==== RAW BODY VETËM PËR /webhook ======================
+//      WEBHOOK — RAW BODY (I PASTËR)
 // =======================================================
-app.post("/webhook",
-  express.raw({ type: "*/*" }),
-  async (req, res) => {
 
-    // =======================
-    // 1. VERIFIKO NËNSHKRIMIN
-    // =======================
-    try {
-      const signature = req.headers["x-signature"];
-      const secret = process.env.LEMON_WEBHOOK_SECRET;
+app.post("/webhook", express.raw({ type: "*/*" }), async (req, res) => {
 
-      const computed = crypto
-        .createHmac("sha256", secret)
-        .update(req.body) // req.body është Buffer — E SAKTË
-        .digest("hex");
+  // --- VERIFY SIGNATURE ---
+  try {
+    const signature = req.headers["x-signature"];
+    const secret = process.env.LEMON_WEBHOOK_SECRET;
 
-      if (computed !== signature) {
-        console.log("❌ Invalid webhook signature");
-        return res.status(400).send("Invalid signature");
-      }
+    const computed = crypto
+      .createHmac("sha256", secret)
+      .update(req.body) // Buffer — TANI 100% OK
+      .digest("hex");
 
-    } catch (err) {
-      console.log("Verification error:", err);
+    if (computed !== signature) {
+      console.log("❌ Invalid webhook signature");
       return res.status(400).send("Invalid signature");
     }
-
-    // =======================
-    // 2. PROCESSO NGJARJEN
-    // =======================
-    try {
-      const payload = JSON.parse(req.body.toString());
-      const event = payload?.meta?.event_name;
-      const email = payload?.data?.attributes?.user_email;
-
-      // ID → PLAN
-      const variantId =
-        payload?.data?.attributes?.first_order_item?.variant_id ||
-        payload?.data?.attributes?.variant_id;
-
-      let plan = null;
-      if (variantId === 1104148) plan = "basic";
-      if (variantId === 1104129) plan = "standard";
-      if (variantId === 1104151) plan = "premium";
-
-      // =======================
-      //  PAGESA U KRY
-      // =======================
-      if (event === "order_paid") {
-        await Firma.findOneAndUpdate(
-          { email },
-          {
-            payment_status: "paid",
-            paid_at: new Date(),
-            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            plan,
-            advantages: planAdvantages[plan]
-          }
-        );
-
-        console.log("✅ PAID → Aktivizuar:", email);
-        return res.status(200).send("OK");
-      }
-
-      // =======================
-      //  ANULIM
-      // =======================
-      if (
-        event === "subscription_cancelled" ||
-        event === "subscription_expired" ||
-        event === "order_refunded"
-      ) {
-        await Firma.deleteOne({ email });
-        console.log("🗑️ Firma u fshi (anulim):", email);
-        return res.status(200).send("Deleted");
-      }
-
-      res.status(200).send("OK");
-
-    } catch (err) {
-      console.error("WEBHOOK ERROR:", err);
-      res.status(500).send("Webhook error");
-    }
+  } catch (err) {
+    console.log("Verification error:", err);
+    return res.status(400).send("Invalid signature");
   }
-);
+
+  // --- PROCESS WEBHOOK ---
+  try {
+    const payload = JSON.parse(req.body.toString());
+    const event = payload?.meta?.event_name;
+    const email = payload?.data?.attributes?.user_email;
+
+    const variantId =
+      payload?.data?.attributes?.first_order_item?.variant_id ||
+      payload?.data?.attributes?.variant_id;
+
+    let plan = null;
+    if (variantId === 1104148) plan = "basic";
+    if (variantId === 1104129) plan = "standard";
+    if (variantId === 1104151) plan = "premium";
+
+    // ====== PAID ======
+    if (event === "order_paid") {
+      await Firma.findOneAndUpdate(
+        { email },
+        {
+          payment_status: "paid",
+          paid_at: new Date(),
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          plan,
+          advantages: planAdvantages[plan]
+        }
+      );
+
+      console.log("✅ PAID → Aktivizuar:", email);
+      return res.status(200).send("OK");
+    }
+
+    // ====== CANCEL / EXPIRE ======
+    if (
+      event === "subscription_cancelled" ||
+      event === "subscription_expired" ||
+      event === "order_refunded"
+    ) {
+      await Firma.deleteOne({ email });
+      console.log("🗑️ Firma u fshi:", email);
+      return res.status(200).send("Deleted");
+    }
+
+    res.status(200).send("OK");
+
+  } catch (err) {
+    console.error("WEBHOOK ERROR:", err);
+    res.status(500).send("Webhook error");
+  }
+});
 
 
 
 // =======================================================
-//  LISTA E FIRMAVE VETËM TË AKTIVUARA
+//  LISTA E FIRMAVE TË AKTIVE
 // =======================================================
+
 app.get("/firms", async (req, res) => {
   const firms = await Firma.find({ payment_status: "paid" });
   res.json(firms);
 });
 
 
+// =======================================================
+//      AUTO DELETE NGA MONGO NË SKADIM
+// =======================================================
+
+setInterval(async () => {
+  const now = new Date();
+  const expired = await Firma.deleteMany({
+    payment_status: "paid",
+    expires_at: { $lte: now }
+  });
+
+  if (expired.deletedCount > 0) {
+    console.log("🗑️ FSHIRJE AUTOMATIKE:", expired.deletedCount, "firma");
+  }
+}, 1000 * 60 * 60); // çdo 1 orë
+
+
+
 // START SERVER
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+

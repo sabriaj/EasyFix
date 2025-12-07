@@ -8,10 +8,12 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
 
-// raw body për webhook
+// *** RAW BODY VETËM PËR WEBHOOK ***
 app.use("/webhook", express.raw({ type: "*/*" }));
+
+// PER KRKESA NORMALE
+app.use(express.json());
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
@@ -39,12 +41,24 @@ const planAdvantages = {
   premium: ["Gjithë Standard +", "Vlerësime klientësh", "Promovim javor", "Top 3 pozicione"]
 };
 
+// =============================
+//      REGISTER
+// =============================
 app.post("/register", async (req, res) => {
   try {
     const exists = await Firma.findOne({ email: req.body.email });
     if (exists) return res.status(409).json({ success: false, error: "Email exists" });
 
-    await Firma.create(req.body);
+    await Firma.create({
+      name: req.body.name,
+      email: req.body.email,
+      phone: req.body.phone,
+      address: req.body.address,
+      category: req.body.category,
+      plan: req.body.plan,
+      payment_status: "pending",
+      advantages: planAdvantages[req.body.plan]
+    });
 
     res.json({ success: true });
   } catch (err) {
@@ -53,36 +67,45 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// verify signature
+// =============================
+//      VERIFY SIGNATURE
+// =============================
 function verifyLemon(req) {
-  const signature = req.headers["x-signature"];
-  const secret = process.env.LEMON_WEBHOOK_SECRET;
+  try {
+    const signature = req.headers["x-signature"];
+    const secret = process.env.LEMON_WEBHOOK_SECRET;
 
-  const hmac = crypto.createHmac("sha256", secret);
-  hmac.update(req.body);
+    const hmac = crypto.createHmac("sha256", secret);
+    hmac.update(req.body); // Buffer
+    const digest = hmac.digest("hex");
 
-  return hmac.digest("hex") === signature;
+    return signature === digest;
+  } catch (err) {
+    console.log("Verification error:", err);
+    return false;
+  }
 }
 
+// =============================
+//      WEBHOOK
+// =============================
 app.post("/webhook", async (req, res) => {
   try {
     if (!verifyLemon(req)) {
-      console.log("Invalid signature");
+      console.log("❌ Invalid signature");
       return res.status(400).send("Invalid");
     }
 
-    const payload = JSON.parse(req.body);
-
+    const payload = JSON.parse(req.body.toString());
     const event = payload?.meta?.event_name;
 
-    // MERR EMAILIN NGA TE GJITHA MUNDËSITË
     const email =
       payload?.data?.attributes?.user_email ||
       payload?.data?.attributes?.checkout_data?.custom?.email ||
       payload?.data?.attributes?.customer_email;
 
     if (!email) {
-      console.log("No email in payload");
+      console.log("⚠ No email in webhook payload");
       return res.status(200).send("OK");
     }
 
@@ -90,7 +113,7 @@ app.post("/webhook", async (req, res) => {
       payload?.data?.attributes?.first_order_item?.variant_id ||
       payload?.data?.attributes?.variant_id;
 
-    let plan = "basic"; // default
+    let plan = "basic";
 
     if (variantId == process.env.VARIANT_BASIC) plan = "basic";
     if (variantId == process.env.VARIANT_STANDARD) plan = "standard";
@@ -100,15 +123,15 @@ app.post("/webhook", async (req, res) => {
       await Firma.findOneAndUpdate(
         { email },
         {
-          plan,
-          advantages: planAdvantages[plan],
           payment_status: "paid",
           paid_at: new Date(),
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          plan,
+          advantages: planAdvantages[plan]
         }
       );
 
-      console.log("Firma aktivizuar:", email);
+      console.log("✅ Firma aktivizuar:", email);
       return res.send("OK");
     }
 
@@ -118,6 +141,7 @@ app.post("/webhook", async (req, res) => {
       event === "order_refunded"
     ) {
       await Firma.deleteOne({ email });
+      console.log("🗑 Firma u fshi:", email);
       return res.send("Deleted");
     }
 

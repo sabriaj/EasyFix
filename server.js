@@ -9,13 +9,85 @@ dotenv.config();
 const app = express();
 app.use(cors());
 
-// --------------------------
-// RAW BODY VETËM PËR WEBHOOK
-// --------------------------
-app.use("/webhook", express.raw({ type: "*/*" }));
-
-// Normal JSON për request tjera
+// NORMAL BODY PARSER
 app.use(express.json());
+
+// RAW VETËM PËR WEBHOOK
+app.post("/webhook", express.raw({ type: "application/json" }));
+
+// --------------------------
+// WEBHOOK LEMON
+//---------------------------
+
+app.post("/webhook", async (req, res) => {
+  try {
+
+    if (!verifyLemon(req)) {
+      console.log("❌ Invalid Signature");
+      return res.status(400).send("Invalid signature");
+    }
+
+    const payload = JSON.parse(req.body.toString());
+
+    const event = payload?.meta?.event_name;
+
+    const email =
+      payload?.data?.attributes?.user_email ||
+      payload?.data?.attributes?.checkout_data?.custom?.email ||
+      payload?.data?.attributes?.customer_email ||
+      null;
+
+    if (!email) {
+      console.log("⚠️ No email in webhook");
+      return res.status(200).send("OK");
+    }
+
+    const variantId =
+      payload?.data?.attributes?.first_order_item?.variant_id ||
+      payload?.data?.attributes?.variant_id;
+
+    let plan = "basic";
+
+    if (variantId == process.env.VARIANT_BASIC) plan = "basic";
+    if (variantId == process.env.VARIANT_STANDARD) plan = "standard";
+    if (variantId == process.env.VARIANT_PREMIUM) plan = "premium";
+
+    // ORDER PAID
+    if (event === "order_paid") {
+      await Firma.findOneAndUpdate(
+        { email },
+        {
+          plan,
+          advantages: planAdvantages[plan],
+          payment_status: "paid",
+          paid_at: new Date(),
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        }
+      );
+
+      console.log("✅ Firma aktivizuar:", email);
+      return res.send("OK");
+    }
+
+    // CANCEL / REFUND / EXPIRE
+    if (
+      event === "subscription_cancelled" ||
+      event === "subscription_expired" ||
+      event === "order_refunded"
+    ) {
+      await Firma.deleteOne({ email });
+      console.log("🗑️ Firma fshihet:", email);
+      return res.send("Deleted");
+    }
+
+    return res.send("OK");
+
+  } catch (err) {
+    console.log("WEBHOOK ERROR:", err);
+    res.status(500).send("Webhook error");
+  }
+});
+
 
 // --------------------------
 // CONNECT MONGO
@@ -106,83 +178,7 @@ function verifyLemon(req) {
   }
 }
 
-// --------------------------
-// LEMON WEBHOOK
-// --------------------------
-app.post("/webhook", async (req, res) => {
-  try {
-    if (!verifyLemon(req)) {
-      console.log("❌ Invalid Signature");
-      return res.status(400).send("Invalid signature");
-    }
 
-    const payload = JSON.parse(req.body.toString("utf8"));
-
-
-    const event = payload?.meta?.event_name;
-
-    // MERR EMAIL NGA TË GJITHA BURIMET
-    const email =
-      payload?.data?.attributes?.user_email ||
-      payload?.data?.attributes?.checkout_data?.custom?.email ||
-      payload?.data?.attributes?.customer_email ||
-      null;
-
-    if (!email) {
-      console.log("⚠️ No email found in webhook");
-      return res.status(200).send("OK");
-    }
-
-    // MERR PLANIN
-    const variantId =
-      payload?.data?.attributes?.first_order_item?.variant_id ||
-      payload?.data?.attributes?.variant_id;
-
-    let plan = "basic";
-
-    if (variantId == process.env.VARIANT_BASIC) plan = "basic";
-    if (variantId == process.env.VARIANT_STANDARD) plan = "standard";
-    if (variantId == process.env.VARIANT_PREMIUM) plan = "premium";
-
-    // -------------------
-    // ORDER PAID → Aktivizo
-    // -------------------
-    if (event === "order_paid") {
-      await Firma.findOneAndUpdate(
-        { email },
-        {
-          plan,
-          advantages: planAdvantages[plan],
-          payment_status: "paid",
-          paid_at: new Date(),
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        }
-      );
-
-      console.log("✅ Firma aktivizuar:", email);
-      return res.send("OK");
-    }
-
-    // -------------------
-    // ANULIM / SKADIM → Fshi
-    // -------------------
-    if (
-      event === "subscription_cancelled" ||
-      event === "subscription_expired" ||
-      event === "order_refunded"
-    ) {
-      await Firma.deleteOne({ email });
-      console.log("🗑️ Firma fshihet:", email);
-      return res.send("Deleted");
-    }
-
-    return res.send("OK");
-
-  } catch (err) {
-    console.log("WEBHOOK ERROR:", err);
-    res.status(500).send("Webhook error");
-  }
-});
 
 // --------------------------
 // START SERVER

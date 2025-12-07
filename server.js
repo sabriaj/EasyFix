@@ -116,7 +116,8 @@ app.post("/webhook", async (req, res) => {
       return res.status(400).send("Invalid signature");
     }
 
-    const payload = JSON.parse(req.body);
+    const payload = JSON.parse(req.body.toString("utf8"));
+
 
     const event = payload?.meta?.event_name;
 

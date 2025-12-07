@@ -98,11 +98,34 @@ app.post("/webhook", async (req, res) => {
 
     const payload = JSON.parse(req.body.toString());
     const event = payload?.meta?.event_name;
+    
+    console.log("📩 Webhook email:", email);
 
-    const email =
-      payload?.data?.attributes?.user_email ||
-      payload?.data?.attributes?.checkout_data?.custom?.email ||
-      payload?.data?.attributes?.customer_email;
+
+   let email = null;
+
+// 1. user_email (kur useri ka account në Lemon)
+if (payload?.data?.attributes?.user_email)
+  email = payload.data.attributes.user_email;
+
+// 2. customer_email (zakonisht te subscription events)
+if (!email && payload?.data?.attributes?.customer_email)
+  email = payload.data.attributes.customer_email;
+
+// 3. checkout_data.custom.email (kjo është ajo që ti ia dërgon nga forma)
+if (!email && payload?.data?.attributes?.checkout_data?.custom?.email)
+  email = payload.data.attributes.checkout_data.custom.email;
+
+// 4. fallback — kur Lemon dërgon buyer info
+if (!email && payload?.data?.attributes?.billing?.email)
+  email = payload.data.attributes.billing.email;
+
+// 5. log nëse prapë nuk u gjet
+if (!email) {
+  console.log("⚠️ EMAIL NOT FOUND IN WEBHOOK PAYLOAD:", payload.data.attributes);
+  return res.status(200).send("NO EMAIL");
+}
+
 
     if (!email) {
       console.log("⚠ No email in webhook payload");

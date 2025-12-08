@@ -84,22 +84,26 @@ app.post("/webhook", async (req, res) => {
     const event = payload?.meta?.event_name;
 
     const email =
-      payload?.data?.attributes?.user_email ||
       payload?.data?.attributes?.checkout_data?.custom?.email ||
-      payload?.data?.attributes?.customer_email ||
-      null;
+      payload?.data?.attributes?.user_email ||
+      payload?.data?.attributes?.customer_email;
 
-    if (!email) return res.status(200).send("OK");
+    if (!email) {
+      console.log("❌ No email in webhook");
+      return res.status(200).send("OK");
+    }
 
-    const variantId =
-      payload?.data?.attributes?.first_order_item?.variant_id ||
-      payload?.data?.attributes?.variant_id;
+    // variant nga subscription
+    const variantId = payload?.data?.attributes?.variant_id;
 
     let plan = "basic";
     if (variantId == process.env.VARIANT_STANDARD) plan = "standard";
     if (variantId == process.env.VARIANT_PREMIUM) plan = "premium";
 
-    if (event === "order_paid") {
+    if (
+      event === "subscription_created" ||
+      event === "subscription_payment_success"
+    ) {
       await Firma.findOneAndUpdate(
         { email },
         {
@@ -110,15 +114,16 @@ app.post("/webhook", async (req, res) => {
           expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
         }
       );
-      console.log("✅ Firma aktivizuar:", email);
+
+      console.log("✅ Firma u aktivizua:", email);
     }
 
     res.send("OK");
-
   } catch (err) {
     console.log("WEBHOOK ERROR:", err);
     res.status(500).send("Webhook error");
   }
 });
+
 
 app.listen(5000, () => console.log("🚀 Server running on port 5000"));

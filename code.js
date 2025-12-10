@@ -1,18 +1,6 @@
 // URL i backend për regjistrim
 const BACKEND_URL = "https://easyfix.onrender.com";
 
-const finalEmail = emaili;
-
-// krijo URL dinamike me email-in e regjistrimit
-const checkoutBase = CHECKOUT_URLS[selectedPlan];
-
-const checkoutUrl =
-  checkoutBase +
-  `&checkout[email]=${encodeURIComponent(finalEmail)}` +
-  `&checkout[custom][email]=${encodeURIComponent(finalEmail)}`;
-
-
-
 const CHECKOUT_URLS = {
   basic:   "https://easyfixx.lemonsqueezy.com/buy/d78e48d9-9c54-4ee3-8aed-d4a63ecbd31a?logo=0",
   standard:"https://easyfixx.lemonsqueezy.com/buy/544a4069-7897-4cb0-a8e4-62e0aeb54b4b?logo=0",
@@ -112,15 +100,7 @@ if (form) {
       if (data.success) {
         showStatus("Regjistrimi u krye me sukses!", "success");
 
-        const finalEmail = emaili;
-
-const base = CHECKOUT_URLS[selectedPlan] || CHECKOUT_URLS.standard;
-
-const checkoutUrl =
-  base +
-  `&checkout[email]=${encodeURIComponent(finalEmail)}` +
-  `&checkout[custom][email]=${encodeURIComponent(finalEmail)}`;
-
+        const checkoutUrl = CHECKOUT_URLS[selectedPlan] || CHECKOUT_URLS.standard;
 
         setTimeout(() => {
           window.location.href = checkoutUrl;

@@ -25,6 +25,7 @@ function showStatus(msg, type = "info") {
 
 let selectedPlan = "";
 
+// HANDLE PLAN BUTTONS
 document.querySelectorAll(".plan-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".plan-btn").forEach(b => b.classList.remove("active"));
@@ -75,19 +76,16 @@ if (form) {
         body: JSON.stringify(payload)
       });
 
-      // Konflikt emaili (email ekziston)
       if (res.status === 409) {
         showStatus("Ky email tashmë është i regjistruar!", "error");
         return;
       }
 
-      // Gabime të tjera HTTP
       if (!res.ok) {
         showStatus(`Gabim nga serveri (${res.status}).`, "error");
         return;
       }
 
-      // Provo të lexosh JSON-in
       let data = {};
       try {
         data = await res.json();
@@ -96,12 +94,18 @@ if (form) {
         return;
       }
 
-      // Nëse backend kthen sukses
       if (data.success) {
         showStatus("Regjistrimi u krye me sukses!", "success");
 
-        const checkoutUrl = CHECKOUT_URLS[selectedPlan] || CHECKOUT_URLS.standard;
+        // FIX: Checkout URL me email-in origjinal të regjistrimit (custom + checkout email)
+        const base = CHECKOUT_URLS[selectedPlan] || CHECKOUT_URLS.standard;
 
+        const checkoutUrl =
+          base +
+          `&checkout[email]=${encodeURIComponent(emaili)}` +
+          `&checkout[custom][email]=${encodeURIComponent(emaili)}`;
+
+        // Redirect pas 1 sekonde
         setTimeout(() => {
           window.location.href = checkoutUrl;
         }, 1000);
@@ -112,7 +116,7 @@ if (form) {
 
     } catch (err) {
       console.error("Gabim gjatë kërkesës:", err);
-      showStatus("Problem me rrjetin ose serverin. Provoni përsëri më vonë.", "error");
+      showStatus("Problem me rrjetin ose serverin. Provoni përsëriteni më vonë.", "error");
     }
 
   });

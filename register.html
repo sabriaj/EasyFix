@@ -186,17 +186,20 @@
         </form>
       </div>
 
-      <!-- KOLUMN 3: PANELI I AVANTAZHEVE / PLAN DETAILS -->
-      <aside class="bg-gray-50 border rounded-xl p-4">
-        <h3 class="text-lg font-semibold text-gray-800 mb-2">Avantazhet e planit të zgjedhur</h3>
-        <p id="planTitle" class="text-sm text-gray-600 mb-2">
-          Zgjidh një plan për të parë avantazhet në detaje.
-        </p>
-        <ul id="planAdvantages" class="text-sm text-gray-700 space-y-1">
-          <!-- mbushet nga JS -->
-        </ul>
-      </aside>
+     
     </div>
+      //=================fshehja e logos dhe fotove ne planin basic==================//
+    <div id="uploadSection" class="mt-6 p-4 border rounded-xl bg-gray-50">
+  <h3 class="font-semibold mb-2">Ngarko Logo / Foto</h3>
+
+  <label class="block mb-2">Logo e Kompanisë</label>
+  <input type="file" id="logoUpload" accept="image/*" class="mb-4">
+
+  <label class="block mb-2">Foto të Shërbimeve (max 3)</label>
+  <input type="file" id="photoUpload" accept="image/*" multiple>
+</div>
+
+
   </section>
 </body>
 </html>

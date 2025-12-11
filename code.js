@@ -181,3 +181,25 @@ if (form) {
     }
   });
 }
+
+
+
+// Selektorët e elementeve të upload-it
+const uploadSection = document.getElementById("uploadSection");
+
+// Fshih me default
+if (uploadSection) uploadSection.style.display = "none";
+
+// Kur zgjedhet plani
+document.querySelectorAll(".plan-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const plan = btn.dataset.plan;
+
+    // Vetëm STANDARD dhe PREMIUM e kanë upload
+    if (plan === "standard" || plan === "premium") {
+      uploadSection.style.display = "block";
+    } else {
+      uploadSection.style.display = "none";
+    }
+  });
+});

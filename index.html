@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
-    /* Ngjyra të veçanta për planin */
+    /* BADGES */
     .badge-premium {
       background: linear-gradient(to right, #fbbf24, #f59e0b);
       color: black;
@@ -19,6 +19,61 @@
     .badge-basic {
       background: #6b7280;
       color: white;
+    }
+
+    /* SLIDER */
+    .slider-container {
+      position: relative;
+      width: 100%;
+      height: 180px;
+      overflow: hidden;
+      border-radius: 12px;
+    }
+
+    .slider-container img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .slider-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0,0,0,0.5);
+      color: white;
+      padding: 6px 10px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      transition: 0.2s;
+    }
+
+    .slider-arrow:hover {
+      background: rgba(0,0,0,0.7);
+    }
+
+    .arrow-left { left: 8px; }
+    .arrow-right { right: 8px; }
+
+    /* MODAL */
+    #photoModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(3px);
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+
+    #photoModal img {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 12px;
     }
   </style>
 </head>
@@ -77,11 +132,16 @@
     &copy; 2025 EasyFix.mk - Ndihma për çdo shtëpi
   </footer>
 
+  <!-- MODAL -->
+  <div id="photoModal" onclick="closeModal()">
+    <img id="modalImg" src="">
+  </div>
+
 <script>
 const API_URL = "https://easyfix.onrender.com";
 
-// Store all firms
 let allFirms = [];
+let autoplayIntervals = {};
 
 const categorySelect = document.getElementById("categorySelect");
 const searchInput = document.getElementById("searchInput");
@@ -92,7 +152,6 @@ function sanitize(text) {
   return text ? text.toString().trim() : "";
 }
 
-// Render categories dropdown
 function populateCategoryFilter(firms) {
   const categories = [...new Set(firms.map(f => sanitize(f.category)))].sort();
   categories.forEach(cat => {
@@ -105,14 +164,60 @@ function populateCategoryFilter(firms) {
   });
 }
 
-// Badge UI
-function planBadge(plan) {
-  if (plan === "premium") return `<span class="badge-premium px-3 py-1 rounded-full text-xs font-bold">Premium</span>`;
-  if (plan === "standard") return `<span class="badge-standard px-3 py-1 rounded-full text-xs font-bold">Standard</span>`;
-  return `<span class="badge-basic px-3 py-1 rounded-full text-xs font-bold">Basic</span>`;
+function openModal(src) {
+  document.getElementById("modalImg").src = src;
+  document.getElementById("photoModal").style.display = "flex";
 }
 
-// Render firms
+function closeModal() {
+  document.getElementById("photoModal").style.display = "none";
+}
+
+function renderSlider(photos, plan, firmId) {
+  if (!photos || photos.length === 0) return "";
+
+  let autoplayAttr = plan === "premium" ? "data-autoplay='true'" : "";
+
+  return `
+    <div class="slider-container" ${autoplayAttr} id="slider-${firmId}">
+      <img src="${photos[0]}" onclick="openModal('${photos[0]}')" id="img-${firmId}">
+      <div class="slider-arrow arrow-left" onclick="prev('${firmId}')">&#10094;</div>
+      <div class="slider-arrow arrow-right" onclick="next('${firmId}')">&#10095;</div>
+    </div>
+  `;
+}
+
+function next(id) {
+  const slider = document.getElementById("slider-" + id);
+  const img = document.getElementById("img-" + id);
+  const photos = slider.dataset.photos.split(",");
+  let index = Number(slider.dataset.index);
+
+  index = (index + 1) % photos.length;
+
+  slider.dataset.index = index;
+  img.src = photos[index];
+}
+
+function prev(id) {
+  const slider = document.getElementById("slider-" + id);
+  const img = document.getElementById("img-" + id);
+  const photos = slider.dataset.photos.split(",");
+  let index = Number(slider.dataset.index);
+
+  index = (index - 1 + photos.length) % photos.length;
+
+  slider.dataset.index = index;
+  img.src = photos[index];
+}
+
+function initAutoplay(id) {
+  const slider = document.getElementById("slider-" + id);
+  if (!slider || !slider.dataset.autoplay) return;
+
+  autoplayIntervals[id] = setInterval(() => next(id), 5000);
+}
+
 function renderFirms(firms) {
   firmsContainer.innerHTML = '';
   if (firms.length === 0) {
@@ -122,32 +227,40 @@ function renderFirms(firms) {
     noResults.classList.add('hidden');
   }
 
-  firms.forEach(firm => {
+  firms.forEach((firm, idx) => {
+    const firmId = "firm" + idx;
+    const hasImages = firm.photos && firm.photos.length > 0;
+
     const div = document.createElement('div');
     div.className = 'border border-gray-300 rounded-xl p-5 shadow hover:shadow-lg transition bg-white';
 
     div.innerHTML = `
       <div class="flex items-center mb-3">
-
-        <!-- LOGO -->
-        <img src="${firm.logoUrl || 'default_logo.png'}"
-             class="w-14 h-14 rounded-full object-cover border shadow-sm mr-3" />
-
-        <!-- NAME + BADGE -->
+        ${
+          firm.plan !== "basic" && firm.logoUrl
+          ? `<img src="${firm.logoUrl}" class="w-16 h-16 object-cover rounded-xl border shadow-sm mr-3">`
+          : `<div class="w-16 h-16 rounded-xl bg-gray-300 mr-3 flex items-center justify-center text-gray-600 text-sm">No Logo</div>`
+        }
         <div>
           <h3 class="text-xl font-bold text-blue-700">${sanitize(firm.name)}</h3>
           ${
             firm.plan === "premium"
-              ? `<span class="text-xs bg-yellow-500 text-white px-2 py-1 rounded">PREMIUM</span>`
+              ? `<span class="badge-premium px-3 py-1 rounded-full text-xs font-bold">Premium</span>`
             : firm.plan === "standard"
-              ? `<span class="text-xs bg-blue-600 text-white px-2 py-1 rounded">STANDARD</span>`
-            : `<span class="text-xs bg-gray-500 text-white px-2 py-1 rounded">BASIC</span>`
+              ? `<span class="badge-standard px-3 py-1 rounded-full text-xs font-bold">Standard</span>`
+            : `<span class="badge-basic px-3 py-1 rounded-full text-xs font-bold">Basic</span>`
           }
         </div>
-
       </div>
 
-      <p><strong>Adresa:</strong> ${sanitize(firm.address)}</p>
+      ${ hasImages ? renderSlider(firm.photos, firm.plan, firmId) : "" }
+
+      <script>
+        document.getElementById("slider-${firmId}")?.setAttribute("data-photos", "${firm.photos}");
+        document.getElementById("slider-${firmId}")?.setAttribute("data-index", "0");
+      </script>
+
+      <p class="mt-3"><strong>Adresa:</strong> ${sanitize(firm.address)}</p>
       <p><strong>Telefoni:</strong> ${sanitize(firm.phone)}</p>
       <p><strong>Email:</strong> 
         <a href="mailto:${sanitize(firm.email)}" class="text-blue-600 underline">
@@ -158,12 +271,11 @@ function renderFirms(firms) {
     `;
 
     firmsContainer.appendChild(div);
+
+    setTimeout(() => initAutoplay(firmId), 300);
   });
 }
 
-
-
-// Filter logic
 function filterFirms() {
   const txt = searchInput.value.toLowerCase();
   const cat = categorySelect.value;
@@ -177,12 +289,9 @@ function filterFirms() {
   renderFirms(filtered);
 }
 
-// Fetch firms
 fetch(`${API_URL}/firms`)
   .then(res => res.json())
   .then(data => {
-
-    // ORDER FIRMS BY PLAN
     allFirms = data.sort((a, b) => {
       const order = { premium: 1, standard: 2, basic: 3 };
       return order[a.plan] - order[b.plan];
@@ -203,7 +312,3 @@ categorySelect.addEventListener("change", filterFirms);
 
 </body>
 </html>
-
-
-
-

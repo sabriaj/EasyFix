@@ -7,28 +7,44 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-  <script defer src="code.js"></script>
-
   <style>
     .plan-btn.active {
       border: 3px solid #2563eb;
       background: #dbeafe;
     }
+    @media (min-width: 768px) and (max-width: 1024px) {
+      .plan-btn {
+        padding: 16px;
+        font-size: 16px;
+      }
+    }
+    @media (max-width: 767px) {
+      .plan-btn {
+        padding: 12px;
+        font-size: 14px;
+      }
+    }
     .status {
-      margin-top: 10px;
+      margin-top: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
       font-size: 0.9rem;
-      text-align: center;
     }
     .status.error {
+      background: #fee2e2;
       color: #b91c1c;
     }
     .status.success {
-      color: #15803d;
+      background: #dcfce7;
+      color: #166534;
     }
     .status.loading {
-      color: #1d4ed8;
+      background: #e0f2fe;
+      color: #075985;
     }
   </style>
+
+  <script defer src="code.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
   <header class="bg-blue-700 text-white py-6 shadow-md">
@@ -36,111 +52,151 @@
       <h1 class="text-3xl font-extrabold tracking-tight">EasyFix</h1>
       <nav>
         <ul class="flex space-x-6 text-lg">
-          <li><a href="#" class="hover:underline"></a></li>
-          <li>
-            <a href="index.html" class="hover:underline">
-              <i class="fas fa-arrow-left mr-2"></i>
-              Kthehu mbrapa
-            </a>
-          </li>
+          <li><a href="register.html" class="hover:underline">Regjistro Firmën</a></li>
+          <li><a href="index.html" class="hover:underline">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Kthehu mbrapa
+          </a></li>
         </ul>
       </nav>
     </div>
   </header>
 
-  <section class="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-xl mt-10">
+  <section class="max-w-5xl mx-auto p-6 bg-white shadow-lg rounded-xl mt-10">
     <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">Regjistrimi i Firmës</h1>
 
     <!-- STATUS MESAZHI -->
-    <p id="status" class="status mb-4"></p>
+    <div id="status" class="status hidden"></div>
 
-    <h2 class="text-xl font-semibold mb-3">Zgjidh Planin</h2>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+      <!-- KOLUMN 1-2: PLANET + FORMA -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- PLANET -->
+        <div>
+          <h2 class="text-xl font-semibold mb-3">Zgjidh Planin</h2>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <!-- BASIC -->
-      <button data-plan="basic" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
-        <h3 class="text-lg font-bold mb-1">Basic – 15€/muaj</h3>
-        <ul class="text-sm text-gray-600 space-y-1">
-          <li>• Publikim i firmës në platformë</li>
-          <li>• Kontakt bazë (telefon + email)</li>
-          <li>• Shfaqje standarde në kategori</li>
-          <li>• 1 kategori shërbimi</li>
-          <li>• Support bazik me email</li>
-          <li>• Pa logo / pa galeri fotosh</li>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+            <!-- BASIC -->
+            <button data-plan="basic" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
+              <h3 class="text-lg font-bold mb-1">Basic – 15€/muaj</h3>
+              <ul class="text-sm text-gray-600 space-y-1">
+                <li>• Listim bazë në EasyFix</li>
+                <li>• Të dhënat e kontaktit</li>
+                <li>• Shfaqje standard në kategori</li>
+              </ul>
+            </button>
+
+            <!-- STANDARD -->
+            <button data-plan="standard" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
+              <h3 class="text-lg font-bold mb-1">Standard – 20€/muaj</h3>
+              <ul class="text-sm text-gray-600 space-y-1">
+                <li>• Logo e kompanisë</li>
+                <li>• Deri në 3 foto të shërbimeve</li>
+                <li>• Pozicion më i mirë në lista</li>
+              </ul>
+            </button>
+
+            <!-- PREMIUM -->
+            <button data-plan="premium" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
+              <h3 class="text-lg font-bold mb-1">Premium – 30€/muaj</h3>
+              <ul class="text-sm text-gray-600 space-y-1">
+                <li>• Logo + shumë foto</li>
+                <li>• Pozicion Top sipas lokacionit</li>
+                <li>• Brandim më i fortë</li>
+              </ul>
+            </button>
+          </div>
+
+          <input type="hidden" id="selectedPlan" />
+          <p class="text-xs text-gray-500">
+            Logo dhe foto janë të disponueshme vetëm për planet <strong>Standard</strong> dhe <strong>Premium</strong>.
+          </p>
+        </div>
+
+        <!-- FORMA E REGJISTRIMIT -->
+        <form id="registerForm" class="grid grid-cols-1 gap-4 mt-4" enctype="multipart/form-data">
+          <div>
+            <label class="font-semibold">Emri i Firmës</label>
+            <input id="emri" name="name" type="text" class="w-full border p-2 rounded" required />
+          </div>
+
+          <div>
+            <label class="font-semibold">Adresa</label>
+            <input id="adresa" name="address" type="text" class="w-full border p-2 rounded" required />
+          </div>
+
+          <div>
+            <label class="font-semibold">Telefoni</label>
+            <input id="telefoni" name="phone" type="text" class="w-full border p-2 rounded" required />
+          </div>
+
+          <div>
+            <label class="font-semibold">Email</label>
+            <input id="emaili" name="email" type="email" class="w-full border p-2 rounded" required />
+          </div>
+
+          <div>
+            <label class="font-semibold">Kategoria e Shërbimit</label>
+            <select id="kategoria" name="category" class="w-full border p-2 rounded" required>
+              <option value="Elektricist">Elektricist</option>
+              <option value="Hidraulik">Hidraulik</option>
+              <option value="Murator">Murator</option>
+              <option value="Pastrime">Pastrime</option>
+              <option value="Klimë">Klimë</option>
+            </select>
+          </div>
+
+          <!-- LOGO (Standard/Premium) -->
+          <div>
+            <label class="font-semibold">Logo e kompanisë (Standard & Premium)</label>
+            <input
+              id="logo"
+              name="logo"
+              type="file"
+              accept="image/*"
+              class="w-full border p-2 rounded bg-white"
+            />
+            <p class="text-xs text-gray-500 mt-1">
+              Basic nuk përdor logo. Për Standard & Premium logo është e rekomanduar.
+            </p>
+          </div>
+
+          <!-- FOTO (Standard/Premium) -->
+          <div>
+            <label class="font-semibold">Foto të shërbimeve (Standard & Premium)</label>
+            <input
+              id="photos"
+              name="photos"
+              type="file"
+              accept="image/*"
+              multiple
+              class="w-full border p-2 rounded bg-white"
+            />
+            <p class="text-xs text-gray-500 mt-1">
+              Standard: deri në 3 foto. Premium: shumë foto (portfolio).
+            </p>
+          </div>
+
+          <button
+            type="submit"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-lg"
+          >
+            Vazhdo te Pagesa
+          </button>
+        </form>
+      </div>
+
+      <!-- KOLUMN 3: PANELI I AVANTAZHEVE / PLAN DETAILS -->
+      <aside class="bg-gray-50 border rounded-xl p-4">
+        <h3 class="text-lg font-semibold text-gray-800 mb-2">Avantazhet e planit të zgjedhur</h3>
+        <p id="planTitle" class="text-sm text-gray-600 mb-2">
+          Zgjidh një plan për të parë avantazhet në detaje.
+        </p>
+        <ul id="planAdvantages" class="text-sm text-gray-700 space-y-1">
+          <!-- mbushet nga JS -->
         </ul>
-      </button>
-
-      <!-- STANDARD -->
-      <button data-plan="standard" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
-        <h3 class="text-lg font-bold mb-1">Standard – 20€/muaj</h3>
-        <ul class="text-sm text-gray-600 space-y-1">
-          <li>• Të gjitha nga Basic</li>
-          <li>• Logo e kompanisë në profil</li>
-          <li>• 3 foto të shërbimeve</li>
-          <li>• Prioritet në listë mbi Basic</li>
-          <li>• Profil më i detajuar</li>
-        </ul>
-      </button>
-
-      <!-- PREMIUM -->
-      <button data-plan="premium" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
-        <h3 class="text-lg font-bold mb-1">Premium – 30€/muaj</h3>
-        <ul class="text-sm text-gray-600 space-y-1">
-          <li>• Të gjitha nga Standard</li>
-          <li>• Deri në 10 foto në galeri</li>
-          <li>• Vlerësime dhe komente klientësh</li>
-          <li>• Promovim javor</li>
-          <li>• Top 3 pozicione sipas lokacionit</li>
-        </ul>
-      </button>
+      </aside>
     </div>
-
-    <!-- Detajet e planit të zgjedhur (dynamic) -->
-    <div id="planDetails" class="mb-6 hidden border rounded-lg p-4 bg-blue-50">
-      <h3 class="text-lg font-semibold mb-2" id="planDetailsTitle"></h3>
-      <ul id="planDetailsList" class="list-disc list-inside text-sm text-gray-700"></ul>
-    </div>
-
-    <input type="hidden" id="selectedPlan" />
-
-    <!-- Registration Form -->
-    <form id="registerForm" class="grid grid-cols-1 gap-4">
-      <div>
-        <label class="font-semibold">Emri i Firmës</label>
-        <input id="emri" type="text" class="w-full border p-2 rounded" required />
-      </div>
-
-      <div>
-        <label class="font-semibold">Adresa</label>
-        <input id="adresa" type="text" class="w-full border p-2 rounded" required />
-      </div>
-
-      <div>
-        <label class="font-semibold">Telefoni</label>
-        <input id="telefoni" type="text" class="w-full border p-2 rounded" required />
-      </div>
-
-      <div>
-        <label class="font-semibold">Email</label>
-        <input id="emaili" type="email" class="w-full border p-2 rounded" required />
-      </div>
-
-      <div>
-        <label class="font-semibold">Kategoria e Shërbimit</label>
-        <select id="kategoria" class="w-full border p-2 rounded" required>
-          <option value="Elektricist">Elektricist</option>
-          <option value="Hidraulik">Hidraulik</option>
-          <option value="Murator">Murator</option>
-          <option value="Pastrime">Pastrime</option>
-          <option value="Klimë">Klimë</option>
-        </select>
-      </div>
-
-      <!-- Submit -->
-      <button class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-lg">
-        Vazhdo te Pagesa
-      </button>
-    </form>
   </section>
 </body>
 </html>

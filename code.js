@@ -1,44 +1,37 @@
 // URL i backend për regjistrim
 const BACKEND_URL = "https://easyfix.onrender.com";
 
-// URL-të e Lemon Squeezy për çdo plan
 const CHECKOUT_URLS = {
   basic:   "https://easyfixx.lemonsqueezy.com/buy/d78e48d9-9c54-4ee3-8aed-d4a63ecbd31a?logo=0",
   standard:"https://easyfixx.lemonsqueezy.com/buy/544a4069-7897-4cb0-a8e4-62e0aeb54b4b?logo=0",
   premium: "https://easyfixx.lemonsqueezy.com/buy/700a3989-d2c8-4f8a-be82-57157c75b585?logo=0"
 };
 
-// Advantaget në frontend – identike me backend
 const PLAN_DETAILS = {
   basic: {
-    title: "Plani Basic – 15€/muaj",
-    perks: [
-      "Publikim i firmës në platformë",
-      "Kontakt bazë (telefon + email)",
-      "Shfaqje standarde në kategori",
-      "1 kategori shërbimi",
-      "Support bazik me email",
-      "Pa logo / pa galeri fotosh"
+    title: "Basic – 15€/muaj",
+    advantages: [
+      "Listim bazë në EasyFix",
+      "Shfaqje standard në kategorinë përkatëse",
+      "Telefoni dhe emaili i firmës të dukshëm për klientët"
     ]
   },
   standard: {
-    title: "Plani Standard – 20€/muaj",
-    perks: [
-      "Të gjitha nga BASIC",
-      "Logo e kompanisë në profil",
-      "Deri në 3 foto të shërbimeve",
-      "Prioritet në listë mbi Basic",
-      "Profil më i detajuar i firmës"
+    title: "Standard – 20€/muaj",
+    advantages: [
+      "Të gjitha avantazhet e planit BASIC",
+      "Logo e kompanisë shfaqet në kartelën e firmës",
+      "Deri në 3 foto të shërbimeve më të mira",
+      "Pozicion më i mirë në rezultatet e kërkimit"
     ]
   },
   premium: {
-    title: "Plani Premium – 30€/muaj",
-    perks: [
-      "Të gjitha nga STANDARD",
-      "Deri në 10 foto në galeri",
-      "Vlerësime dhe komente nga klientët",
-      "Promovim javor në seksionin e rekomanduar",
-      "Pozicionim në TOP 3 sipas lokacionit"
+    title: "Premium – 30€/muaj",
+    advantages: [
+      "Të gjitha avantazhet e planit STANDARD",
+      "Mundësi për shumë foto (portfolio e plotë)",
+      "Pozicion Top sipas lokacionit në listime",
+      "Brandim i fortë dhe besueshmëri më e madhe te klientët"
     ]
   }
 };
@@ -53,50 +46,39 @@ function showStatus(msg, type = "info") {
 
   el.textContent = msg;
   el.className = "status";
-
   if (type === "error") el.classList.add("error");
   if (type === "success") el.classList.add("success");
   if (type === "loading") el.classList.add("loading");
-}
-
-function renderPlanDetails(planKey) {
-  const box = $("#planDetails");
-  const titleEl = $("#planDetailsTitle");
-  const listEl = $("#planDetailsList");
-
-  if (!box || !titleEl || !listEl) return;
-
-  const details = PLAN_DETAILS[planKey];
-  if (!details) {
-    box.classList.add("hidden");
-    return;
-  }
-
-  titleEl.textContent = details.title;
-  listEl.innerHTML = "";
-  details.perks.forEach(p => {
-    const li = document.createElement("li");
-    li.textContent = p;
-    listEl.appendChild(li);
-  });
-
-  box.classList.remove("hidden");
+  el.classList.remove("hidden");
 }
 
 let selectedPlan = "";
 
-// HANDLE PLAN BUTTONS
-document.querySelectorAll(".plan-btn").forEach(btn => {
+// PLAN BUTTONS + panel avantazhesh
+const planButtons = document.querySelectorAll(".plan-btn");
+const planTitleEl = $("#planTitle");
+const planAdvantagesEl = $("#planAdvantages");
+
+planButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".plan-btn").forEach(b => b.classList.remove("active"));
+    planButtons.forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
     selectedPlan = btn.dataset.plan;
 
     const hidden = $("#selectedPlan");
     if (hidden) hidden.value = selectedPlan;
 
-    // Shfaq advantaget e planit të zgjedhur
-    renderPlanDetails(selectedPlan);
+    // përditëso panelin e avantazheve
+    const details = PLAN_DETAILS[selectedPlan];
+    if (details && planTitleEl && planAdvantagesEl) {
+      planTitleEl.textContent = details.title;
+      planAdvantagesEl.innerHTML = "";
+      details.advantages.forEach((adv) => {
+        const li = document.createElement("li");
+        li.textContent = "• " + adv;
+        planAdvantagesEl.appendChild(li);
+      });
+    }
   });
 });
 
@@ -112,6 +94,9 @@ if (form) {
     const emaili    = $("#emaili")?.value.trim() || "";
     const kategoria = $("#kategoria")?.value.trim() || "";
 
+    const logoInput   = $("#logo");
+    const photosInput = $("#photos");
+
     if (!emri || !adresa || !telefoni || !emaili || !kategoria) {
       showStatus("Ju lutem plotësoni të gjitha fushat e formularit.", "error");
       return;
@@ -121,22 +106,36 @@ if (form) {
       return;
     }
 
-    const payload = {
-      name: emri,
-      email: emaili,
-      phone: telefoni,
-      address: adresa,
-      category: kategoria,
-      plan: selectedPlan
-    };
+    // Ndërto FormData për të dërguar të dhënat + file-t
+    const formData = new FormData();
+    formData.append("name", emri);
+    formData.append("address", adresa);
+    formData.append("phone", telefoni);
+    formData.append("email", emaili);
+    formData.append("category", kategoria);
+    formData.append("plan", selectedPlan);
+
+    // Logo + foto VETËM për standard/premium
+    if (selectedPlan === "standard" || selectedPlan === "premium") {
+      if (logoInput && logoInput.files[0]) {
+        formData.append("logo", logoInput.files[0]);
+      }
+
+      if (photosInput && photosInput.files && photosInput.files.length > 0) {
+        const maxPhotos = selectedPlan === "standard" ? 3 : 20;
+        const count = Math.min(photosInput.files.length, maxPhotos);
+        for (let i = 0; i < count; i++) {
+          formData.append("photos", photosInput.files[i]);
+        }
+      }
+    }
 
     try {
       showStatus("Po ruajmë regjistrimin...", "loading");
 
       const res = await fetch(`${BACKEND_URL}/register`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: formData
       });
 
       if (res.status === 409) {
@@ -158,11 +157,10 @@ if (form) {
       }
 
       if (data.success) {
-        showStatus("Regjistrimi u krye me sukses! Po ju dërgojmë te pagesa...", "success");
+        showStatus("Regjistrimi u krye me sukses! Po kaloni te pagesa...", "success");
 
+        // URL e checkout-it + e detyrojmë Lemon të përdorë TË NJËJTIN EMAIL
         const base = CHECKOUT_URLS[selectedPlan] || CHECKOUT_URLS.standard;
-
-        // Ky email përdoret në webhook si checkout_data.custom.email
         const checkoutUrl =
           base +
           `&checkout[email]=${encodeURIComponent(emaili)}` +
@@ -176,7 +174,10 @@ if (form) {
       }
     } catch (err) {
       console.error("Gabim gjatë kërkesës:", err);
-      showStatus("Problem me rrjetin ose serverin. Provoni përsëriteni më vonë.", "error");
+      showStatus(
+        "Problem me rrjetin ose serverin. Provoni përsëriteni më vonë.",
+        "error"
+      );
     }
   });
 }

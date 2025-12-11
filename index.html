@@ -7,7 +7,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
-    /* BADGES */
     .badge-premium {
       background: linear-gradient(to right, #fbbf24, #f59e0b);
       color: black;
@@ -21,61 +20,24 @@
       color: white;
     }
 
-    /* SLIDER */
-    .slider-container {
-      position: relative;
-      width: 100%;
-      height: 180px;
-      overflow: hidden;
-      border-radius: 12px;
-    }
-
-    .slider-container img {
-      width: 100%;
-      height: 180px;
-      object-fit: cover;
-      border-radius: 12px;
-      cursor: pointer;
-    }
-
-    .slider-arrow {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      background: rgba(0,0,0,0.5);
-      color: white;
-      padding: 6px 10px;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 18px;
-      transition: 0.2s;
-    }
-
-    .slider-arrow:hover {
-      background: rgba(0,0,0,0.7);
-    }
-
-    .arrow-left { left: 8px; }
-    .arrow-right { right: 8px; }
-
-    /* MODAL */
+    /* MODAL FULLSCREEN */
     #photoModal {
       display: none;
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.85);
-      backdrop-filter: blur(3px);
       justify-content: center;
       align-items: center;
-      z-index: 999;
+      z-index: 9999;
     }
-
     #photoModal img {
       max-width: 90%;
       max-height: 90%;
       border-radius: 12px;
+      box-shadow: 0 0 20px rgba(255,255,255,0.3);
     }
   </style>
+
 </head>
 
 <body class="bg-gray-50 min-h-screen flex flex-col">
@@ -93,7 +55,7 @@
     </div>
   </header>
 
-  <!-- Kërkimi -->
+  <!-- MAIN -->
   <main class="container mx-auto px-4 py-10 flex-grow">
     <h2 class="text-4xl font-bold text-blue-900 mb-8 text-center">
       Gjej mjeshtrin që të duhet me shpejtësi
@@ -115,10 +77,8 @@
         >
           <option value="">Të gjitha kategoritë</option>
         </select>
-
       </div>
 
-      <!-- Firms Grid -->
       <div id="firmsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
 
       <p id="noResults" class="text-center text-gray-500 mt-4 hidden">
@@ -127,21 +87,19 @@
     </section>
   </main>
 
-  <!-- Footer -->
+  <!-- FOOTER -->
   <footer class="bg-blue-700 text-white text-center py-6 mt-auto">
     &copy; 2025 EasyFix.mk - Ndihma për çdo shtëpi
   </footer>
 
   <!-- MODAL -->
   <div id="photoModal" onclick="closeModal()">
-    <img id="modalImg" src="">
+    <img id="modalImage" src="">
   </div>
 
 <script>
 const API_URL = "https://easyfix.onrender.com";
-
 let allFirms = [];
-let autoplayIntervals = {};
 
 const categorySelect = document.getElementById("categorySelect");
 const searchInput = document.getElementById("searchInput");
@@ -155,92 +113,68 @@ function sanitize(text) {
 function populateCategoryFilter(firms) {
   const categories = [...new Set(firms.map(f => sanitize(f.category)))].sort();
   categories.forEach(cat => {
-    if (cat) {
-      const option = document.createElement("option");
-      option.value = cat;
-      option.textContent = cat;
-      categorySelect.appendChild(option);
-    }
+    if (!cat) return;
+    const opt = document.createElement("option");
+    opt.value = cat;
+    opt.textContent = cat;
+    categorySelect.appendChild(opt);
   });
 }
 
-function openModal(src) {
-  document.getElementById("modalImg").src = src;
-  document.getElementById("photoModal").style.display = "flex";
+/* OPEN MODAL */
+function openModal(url) {
+  const modal = document.getElementById("photoModal");
+  const img = document.getElementById("modalImage");
+  img.src = url;
+  modal.style.display = "flex";
 }
 
+/* CLOSE MODAL */
 function closeModal() {
   document.getElementById("photoModal").style.display = "none";
 }
 
-function renderSlider(photos, plan, firmId) {
-  if (!photos || photos.length === 0) return "";
-
-  let autoplayAttr = plan === "premium" ? "data-autoplay='true'" : "";
-
-  return `
-    <div class="slider-container" ${autoplayAttr} id="slider-${firmId}">
-      <img src="${photos[0]}" onclick="openModal('${photos[0]}')" id="img-${firmId}">
-      <div class="slider-arrow arrow-left" onclick="prev('${firmId}')">&#10094;</div>
-      <div class="slider-arrow arrow-right" onclick="next('${firmId}')">&#10095;</div>
-    </div>
-  `;
-}
-
-function next(id) {
-  const slider = document.getElementById("slider-" + id);
-  const img = document.getElementById("img-" + id);
-  const photos = slider.dataset.photos.split(",");
-  let index = Number(slider.dataset.index);
-
-  index = (index + 1) % photos.length;
-
-  slider.dataset.index = index;
-  img.src = photos[index];
-}
-
-function prev(id) {
-  const slider = document.getElementById("slider-" + id);
-  const img = document.getElementById("img-" + id);
-  const photos = slider.dataset.photos.split(",");
-  let index = Number(slider.dataset.index);
-
-  index = (index - 1 + photos.length) % photos.length;
-
-  slider.dataset.index = index;
-  img.src = photos[index];
-}
-
-function initAutoplay(id) {
-  const slider = document.getElementById("slider-" + id);
-  if (!slider || !slider.dataset.autoplay) return;
-
-  autoplayIntervals[id] = setInterval(() => next(id), 5000);
-}
-
+/* RENDER FIRMS */
 function renderFirms(firms) {
-  firmsContainer.innerHTML = '';
+  firmsContainer.innerHTML = "";
+
   if (firms.length === 0) {
-    noResults.classList.remove('hidden');
+    noResults.classList.remove("hidden");
     return;
   } else {
-    noResults.classList.add('hidden');
+    noResults.classList.add("hidden");
   }
 
   firms.forEach((firm, idx) => {
-    const firmId = "firm" + idx;
-    const hasImages = firm.photos && firm.photos.length > 0;
+    const div = document.createElement("div");
+    div.className = "border border-gray-300 rounded-xl p-5 shadow bg-white";
 
-    const div = document.createElement('div');
-    div.className = 'border border-gray-300 rounded-xl p-5 shadow hover:shadow-lg transition bg-white';
+    /* Logo default nëse s'ka */
+    const logo = firm.logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+
+    let photosHTML = "";
+
+    /* Only Standard & Premium show gallery */
+    if (firm.photos && firm.photos.length > 0 && firm.plan !== "basic") {
+      photosHTML += `
+        <div class="flex space-x-2 mt-3 overflow-x-auto pb-2">
+          ${firm.photos
+            .map(
+              (p, i) => `
+              <img src="${p}" 
+                   onclick="openModal('${p}')"
+                   class="w-20 h-20 object-cover rounded-lg cursor-pointer shadow-sm">
+            `
+            )
+            .join("")}
+        </div>
+      `;
+    }
 
     div.innerHTML = `
       <div class="flex items-center mb-3">
-        ${
-          firm.plan !== "basic" && firm.logoUrl
-          ? `<img src="${firm.logoUrl}" class="w-16 h-16 object-cover rounded-xl border shadow-sm mr-3">`
-          : `<div class="w-16 h-16 rounded-xl bg-gray-300 mr-3 flex items-center justify-center text-gray-600 text-sm">No Logo</div>`
-        }
+        <img src="${logo}" class="w-14 h-14 rounded-full object-cover border shadow-sm mr-3" />
+
         <div>
           <h3 class="text-xl font-bold text-blue-700">${sanitize(firm.name)}</h3>
           ${
@@ -253,14 +187,7 @@ function renderFirms(firms) {
         </div>
       </div>
 
-      ${ hasImages ? renderSlider(firm.photos, firm.plan, firmId) : "" }
-
-      <script>
-        document.getElementById("slider-${firmId}")?.setAttribute("data-photos", "${firm.photos}");
-        document.getElementById("slider-${firmId}")?.setAttribute("data-index", "0");
-      </script>
-
-      <p class="mt-3"><strong>Adresa:</strong> ${sanitize(firm.address)}</p>
+      <p><strong>Adresa:</strong> ${sanitize(firm.address)}</p>
       <p><strong>Telefoni:</strong> ${sanitize(firm.phone)}</p>
       <p><strong>Email:</strong> 
         <a href="mailto:${sanitize(firm.email)}" class="text-blue-600 underline">
@@ -268,11 +195,10 @@ function renderFirms(firms) {
         </a>
       </p>
       <p><strong>Kategoria:</strong> ${sanitize(firm.category)}</p>
+      ${photosHTML}
     `;
 
     firmsContainer.appendChild(div);
-
-    setTimeout(() => initAutoplay(firmId), 300);
   });
 }
 
@@ -280,18 +206,20 @@ function filterFirms() {
   const txt = searchInput.value.toLowerCase();
   const cat = categorySelect.value;
 
-  const filtered = allFirms.filter(firm => {
-    const nameMatch = sanitize(firm.name).toLowerCase().includes(txt);
-    const catMatch = !cat || sanitize(firm.category) === cat;
-    return nameMatch && catMatch;
+  const filtered = allFirms.filter(f => {
+    const matchName = sanitize(f.name).toLowerCase().includes(txt);
+    const matchCat = !cat || sanitize(f.category) === cat;
+    return matchName && matchCat;
   });
 
   renderFirms(filtered);
 }
 
+/* FETCH FIRMS */
 fetch(`${API_URL}/firms`)
   .then(res => res.json())
   .then(data => {
+
     allFirms = data.sort((a, b) => {
       const order = { premium: 1, standard: 2, basic: 3 };
       return order[a.plan] - order[b.plan];
@@ -308,6 +236,7 @@ fetch(`${API_URL}/firms`)
 
 searchInput.addEventListener("input", filterFirms);
 categorySelect.addEventListener("change", filterFirms);
+
 </script>
 
 </body>

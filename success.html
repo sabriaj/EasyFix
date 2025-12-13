@@ -1,100 +1,47 @@
+<!-- success.html -->
 <!DOCTYPE html>
 <html lang="sq">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pagesa u krye me sukses – EasyFix</title>
-
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <style>
-    @keyframes pop {
-      0% { transform: scale(0.5); opacity: 0; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    .pop {
-      animation: pop 0.4s ease-out forwards;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Regjistrimi i Firmës - EasyFix</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
 
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
-
-  <div class="bg-white shadow-xl rounded-2xl p-8 max-w-md w-full text-center pop">
-
-    <!-- CHECK ICON -->
-    <div class="flex justify-center mb-4">
-      <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-        <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" stroke-width="3"
-             viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round"
-                d="M5 13l4 4L19 7" />
-        </svg>
-      </div>
+  <header class="bg-blue-700 text-white py-6 shadow-md">
+    <div class="container mx-auto px-4 flex justify-between items-center">
+      <h1 class="text-3xl font-extrabold">EasyFix</h1>
     </div>
+  </header>
 
-    <h1 class="text-2xl font-bold text-gray-800 mb-2">
-      Pagesa u krye me sukses!
-    </h1>
+  <main class="container mx-auto px-4 py-10 flex-grow">
+    <h2 class="text-4xl font-bold text-blue-900 mb-8 text-center">Regjistrimi u krye me sukses!</h2>
+    <p class="text-center">Faleminderit për regjistrimin tuaj! Tani mund të shihni regjistrimin tuaj më poshtë.</p>
 
-    <p class="text-gray-600 mb-6">
-      Firma juaj është aktivizuar dhe tashmë shfaqet në EasyFix.
-    </p>
+    <div class="text-center mt-6">
+      <button
+        id="viewOrderBtn"
+        class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
+      >
+        Shiko Regjistrimin
+      </button>
+    </div>
+  </main>
 
-    <!-- STATUS -->
-    <p id="statusText" class="text-sm text-gray-500 mb-6">
-      Duke verifikuar regjistrimin…
-    </p>
+  <footer class="bg-blue-700 text-white text-center py-6 mt-auto">
+    &copy; 2025 EasyFix.mk - Ndihma për çdo shtëpi
+  </footer>
 
-    <!-- BUTTON -->
-    <button
-      id="viewBtn"
-      disabled
-      class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400
-             text-white py-3 rounded-xl font-semibold transition">
-      Shiko firmën tënde
-    </button>
-
-  </div>
-
-<script>
-const API_URL = "https://easyfix.onrender.com";
-
-// Marrim email-in nga URL (?email=...)
-const params = new URLSearchParams(window.location.search);
-const email = params.get("email");
-
-const statusText = document.getElementById("statusText");
-const viewBtn = document.getElementById("viewBtn");
-
-if (!email) {
-  statusText.textContent = "Email mungon. Nuk mund të verifikohet firma.";
-} else {
-  // Kontrollo statusin nga backend
-  fetch(`${API_URL}/check-status?email=${encodeURIComponent(email)}`)
-    .then(res => res.json())
-    .then(data => {
-      if (!data.success || !data.firma || data.firma.payment_status !== "paid") {
-        statusText.textContent =
-          "Firma ende nuk është aktivizuar. Provo përsëri pas pak.";
-        return;
-      }
-
-      const firmId = data.firma._id;
-
-      statusText.textContent = "Firma është aktive 🎉";
-      viewBtn.disabled = false;
-
-      viewBtn.addEventListener("click", () => {
-        window.location.href = `index.html?focus=${firmId}`;
-      });
-    })
-    .catch(() => {
-      statusText.textContent =
-        "Gabim gjatë verifikimit. Provo më vonë.";
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const email = urlParams.get('email');
+    const viewOrderBtn = document.getElementById('viewOrderBtn');
+    
+    viewOrderBtn.addEventListener('click', () => {
+      window.location.href = `https://easyfix.onrender.com/check-status?email=${email}`;
     });
-}
-</script>
+  </script>
 
 </body>
 </html>

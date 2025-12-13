@@ -169,6 +169,7 @@ app.post(
 app.use(express.json());
 
 /* ================= REGISTER ================= */
+// --- REGISTER endpoint (me logo + foto për standard/premium) ---
 app.post(
   "/register",
   upload.fields([
@@ -179,50 +180,85 @@ app.post(
     try {
       const { name, email, phone, address, category, plan } = req.body;
 
-      if (!name || !email || !plan)
-        return res.status(400).json({ success: false });
+      if (!name || !email || !phone || !address || !category || !plan) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Missing fields" });
+      }
 
-      if (await Firma.findOne({ email }))
-        return res.status(409).json({ success: false });
+      const exists = await Firma.findOne({ email });
+      if (exists) {
+        return res
+          .status(409)
+          .json({ success: false, error: "Ky email tashmë është i ekzistuar" });
+      }
 
-      let logoUrl = null;
+      // Përgatit advantage sipas planit
+      const advantages = planAdvantages[plan] || [];
+
+      let logoUrl = "";
       let photos = [];
 
-      if (plan !== "basic") {
-        if (req.files?.logo?.[0]) {
-          logoUrl = await uploadBuffer(
-            req.files.logo[0].buffer,
-            "easyfix/logos"
-          );
+      // Logo & foto LEJOHEN VETËM për standard/premium
+      if (plan === "standard" || plan === "premium") {
+        const files = req.files || {};
+
+        // LOGO
+        if (files.logo && files.logo[0]) {
+          try {
+            logoUrl = await uploadBufferToCloudinary(
+              files.logo[0].buffer,
+              "easyfix/logos"
+            );
+          } catch (err) {
+            console.errorWithTime("Cloudinary logo upload error:", err);
+          }
         }
 
-        const maxPhotos = plan === "standard" ? 3 : 8;
-        if (req.files?.photos) {
-          for (const file of req.files.photos.slice(0, maxPhotos)) {
-            photos.push(
-              await uploadBuffer(file.buffer, "easyfix/photos")
-            );
+        // FOTOT
+        if (files.photos && files.photos.length > 0) {
+          // limit fotot sipas planit
+          const maxPhotos = plan === "standard" ? 3 : 20;
+          const slice = files.photos.slice(0, maxPhotos);
+
+          for (const file of slice) {
+            try {
+              const url = await uploadBufferToCloudinary(
+                file.buffer,
+                "easyfix/photos"
+              );
+              photos.push(url);
+            } catch (err) {
+              console.errorWithTime("Cloudinary photo upload error:", err);
+            }
           }
         }
       }
 
-      await new Firma({
+      const firma = new Firma({
         name,
         email,
         phone,
         address,
         category,
         plan,
-        payment_status: "pending",
-        advantages: planAdvantages[plan],
-        logoUrl,
+        advantages,
+        payment_status: "pending", // fillimisht pending
+        logoUrl: logoUrl || null,
         photos,
-      }).save();
+      });
 
-      return res.json({ success: true });
+      await firma.save();
+      log("🆕 Registered (pending):", email);
+
+      return res.json({
+        success: true,
+        message: "Regjistrimi u ruajt si pending. Vazhdoni me pagesën.",
+        redirectUrl: `/success.html?email=${email}`, // Send the user to the success page
+      });
     } catch (err) {
-      console.error("REGISTER ERROR:", err);
-      return res.status(500).json({ success: false });
+      console.errorWithTime("REGISTER ERROR:", err);
+      return res.status(500).json({ success: false, error: "Server error" });
     }
   }
 );

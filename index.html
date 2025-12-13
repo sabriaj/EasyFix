@@ -7,37 +7,84 @@
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
-    .badge-premium {
-      background: linear-gradient(to right, #fbbf24, #f59e0b);
-      color: black;
-    }
-    .badge-standard {
-      background: #3b82f6;
-      color: white;
-    }
-    .badge-basic {
-      background: #6b7280;
-      color: white;
-    }
+    .badge-premium { background: linear-gradient(to right, #fbbf24, #f59e0b); color: black; }
+    .badge-standard { background: #3b82f6; color: white; }
+    .badge-basic { background: #6b7280; color: white; }
 
     /* MODAL FULLSCREEN */
     #photoModal {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.85);
+      background: rgba(0,0,0,0.88);
       justify-content: center;
       align-items: center;
       z-index: 9999;
+      padding: 24px;
     }
+
+    #photoModal .modal-card {
+      width: min(1100px, 95vw);
+      height: min(720px, 92vh);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    #photoModal .modal-img-wrap {
+      position: relative;
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 14px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.06);
+      box-shadow: 0 0 24px rgba(0,0,0,0.35);
+    }
+
     #photoModal img {
-      max-width: 90%;
-      max-height: 90%;
-      border-radius: 12px;
-      box-shadow: 0 0 20px rgba(255,255,255,0.3);
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    #photoModal .modal-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+      gap: 12px;
+    }
+
+    .modal-btn {
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.18);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      transition: transform .08s ease, background .15s ease;
+    }
+    .modal-btn:hover { background: rgba(255,255,255,0.20); }
+    .modal-btn:active { transform: scale(0.98); }
+
+    .modal-close {
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.16);
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-weight: 800;
+    }
+
+    /* highlight when focused */
+    .focus-ring {
+      outline: 3px solid rgba(37,99,235,0.9);
+      outline-offset: 2px;
+      box-shadow: 0 0 0 6px rgba(37,99,235,0.12);
     }
   </style>
-
 </head>
 
 <body class="bg-gray-50 min-h-screen flex flex-col">
@@ -63,7 +110,6 @@
 
     <section class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6">
       <div class="flex flex-col md:flex-row md:space-x-6 mb-6">
-
         <input
           id="searchInput"
           type="text"
@@ -93,8 +139,28 @@
   </footer>
 
   <!-- MODAL -->
-  <div id="photoModal" onclick="closeModal()">
-    <img id="modalImage" src="">
+  <div id="photoModal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-actions">
+        <div class="text-sm opacity-90">
+          <span id="modalTitle" class="font-semibold"></span>
+          <span id="modalCounter" class="ml-2 opacity-80"></span>
+        </div>
+        <button class="modal-close" id="modalCloseBtn" type="button">Mbyll</button>
+      </div>
+
+      <div class="modal-img-wrap" id="modalBackdrop">
+        <button class="modal-btn absolute left-3 top-1/2 -translate-y-1/2" id="modalPrevBtn" type="button">‹</button>
+        <img id="modalImage" src="" alt="Foto" />
+        <button class="modal-btn absolute right-3 top-1/2 -translate-y-1/2" id="modalNextBtn" type="button">›</button>
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-btn" id="modalPrevBtn2" type="button">Prev</button>
+        <div class="text-xs opacity-80">Esc për me mbyll, shigjeta ← → për Next/Prev</div>
+        <button class="modal-btn" id="modalNextBtn2" type="button">Next</button>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -106,11 +172,25 @@ const searchInput = document.getElementById("searchInput");
 const firmsContainer = document.getElementById("firmsContainer");
 const noResults = document.getElementById("noResults");
 
+/* =================== helpers =================== */
 function sanitize(text) {
   return text ? text.toString().trim() : "";
 }
 
+function normalizeEmail(email) {
+  return sanitize(email).toLowerCase();
+}
+
+function clampPhotos(firm) {
+  const photos = Array.isArray(firm.photos) ? firm.photos : [];
+  if (firm.plan === "standard") return photos.slice(0, 3);
+  if (firm.plan === "premium") return photos.slice(0, 8);
+  return [];
+}
+
+/* =================== categories =================== */
 function populateCategoryFilter(firms) {
+  categorySelect.innerHTML = `<option value="">Të gjitha kategoritë</option>`;
   const categories = [...new Set(firms.map(f => sanitize(f.category)))].sort();
   categories.forEach(cat => {
     if (!cat) return;
@@ -121,87 +201,266 @@ function populateCategoryFilter(firms) {
   });
 }
 
-/* OPEN MODAL */
-function openModal(url) {
-  const modal = document.getElementById("photoModal");
-  const img = document.getElementById("modalImage");
-  img.src = url;
-  modal.style.display = "flex";
+/* =================== modal slider =================== */
+const photoModal = document.getElementById("photoModal");
+const modalImage = document.getElementById("modalImage");
+const modalTitle = document.getElementById("modalTitle");
+const modalCounter = document.getElementById("modalCounter");
+const modalBackdrop = document.getElementById("modalBackdrop");
+
+const modalCloseBtn = document.getElementById("modalCloseBtn");
+const modalPrevBtn = document.getElementById("modalPrevBtn");
+const modalNextBtn = document.getElementById("modalNextBtn");
+const modalPrevBtn2 = document.getElementById("modalPrevBtn2");
+const modalNextBtn2 = document.getElementById("modalNextBtn2");
+
+let modalPhotos = [];
+let modalIndex = 0;
+
+function openModalSlider({ photos, startIndex, firmName }) {
+  modalPhotos = photos || [];
+  modalIndex = Math.max(0, Math.min(startIndex || 0, modalPhotos.length - 1));
+
+  modalTitle.textContent = firmName ? sanitize(firmName) : "";
+  updateModalImage();
+  photoModal.style.display = "flex";
+  photoModal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
 }
 
-/* CLOSE MODAL */
+function updateModalImage() {
+  if (!modalPhotos.length) return;
+  modalImage.src = modalPhotos[modalIndex];
+  modalCounter.textContent = `(${modalIndex + 1}/${modalPhotos.length})`;
+}
+
 function closeModal() {
-  document.getElementById("photoModal").style.display = "none";
+  photoModal.style.display = "none";
+  photoModal.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+  modalPhotos = [];
+  modalIndex = 0;
 }
 
-/* RENDER FIRMS */
+function modalPrev() {
+  if (!modalPhotos.length) return;
+  modalIndex = (modalIndex - 1 + modalPhotos.length) % modalPhotos.length;
+  updateModalImage();
+}
+
+function modalNext() {
+  if (!modalPhotos.length) return;
+  modalIndex = (modalIndex + 1) % modalPhotos.length;
+  updateModalImage();
+}
+
+modalCloseBtn.addEventListener("click", closeModal);
+modalPrevBtn.addEventListener("click", modalPrev);
+modalNextBtn.addEventListener("click", modalNext);
+modalPrevBtn2.addEventListener("click", modalPrev);
+modalNextBtn2.addEventListener("click", modalNext);
+
+// click outside image -> close (but not when clicking buttons)
+photoModal.addEventListener("click", (e) => {
+  if (e.target === photoModal) closeModal();
+});
+modalBackdrop.addEventListener("click", (e) => {
+  // clicking the backdrop area closes, clicking image/buttons does not
+  if (e.target === modalBackdrop) closeModal();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (photoModal.style.display !== "flex") return;
+  if (e.key === "Escape") closeModal();
+  if (e.key === "ArrowLeft") modalPrev();
+  if (e.key === "ArrowRight") modalNext();
+});
+
+/* =================== autoplay per premium (card slider) =================== */
+const autoplayTimers = new Map();
+
+function startAutoplay(containerEl, photos) {
+  stopAutoplay(containerEl);
+  if (!photos || photos.length <= 1) return;
+
+  let i = 0;
+  const imgEl = containerEl.querySelector("img[data-main-photo='1']");
+  const dots = Array.from(containerEl.querySelectorAll("[data-dot]"));
+
+  const tick = () => {
+    i = (i + 1) % photos.length;
+    if (imgEl) imgEl.src = photos[i];
+    dots.forEach((d, idx) => {
+      d.className = idx === i
+        ? "w-2 h-2 rounded-full bg-blue-600"
+        : "w-2 h-2 rounded-full bg-gray-300";
+    });
+  };
+
+  const t = setInterval(tick, 5000);
+  autoplayTimers.set(containerEl, t);
+}
+
+function stopAutoplay(containerEl) {
+  const t = autoplayTimers.get(containerEl);
+  if (t) clearInterval(t);
+  autoplayTimers.delete(containerEl);
+}
+
+/* =================== render =================== */
 function renderFirms(firms) {
+  // stop old autoplay timers
+  autoplayTimers.forEach((t) => clearInterval(t));
+  autoplayTimers.clear();
+
   firmsContainer.innerHTML = "";
 
-  if (firms.length === 0) {
+  if (!firms.length) {
     noResults.classList.remove("hidden");
     return;
   } else {
     noResults.classList.add("hidden");
   }
 
-  firms.forEach((firm, idx) => {
+  firms.forEach((firm) => {
     const div = document.createElement("div");
-    div.className = "border border-gray-300 rounded-xl p-5 shadow bg-white";
+    div.className = "border border-gray-300 rounded-xl p-5 shadow bg-white hover:shadow-md transition";
+    div.dataset.email = normalizeEmail(firm.email);
 
-    /* Logo default nëse s'ka */
-    const logo = firm.logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+    const plan = firm.plan || "basic";
 
+    // Basic: no logo, no photos
+    const showMedia = plan !== "basic";
+    const logo = showMedia ? (firm.logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png") : null;
+    const photos = showMedia ? clampPhotos(firm) : [];
+
+    // badge
+    const badgeHTML =
+      plan === "premium"
+        ? `<span class="badge-premium px-3 py-1 rounded-full text-xs font-bold">Premium</span>`
+        : plan === "standard"
+          ? `<span class="badge-standard px-3 py-1 rounded-full text-xs font-bold">Standard</span>`
+          : `<span class="badge-basic px-3 py-1 rounded-full text-xs font-bold">Basic</span>`;
+
+    // header
+    const headerHTML = showMedia
+      ? `
+        <div class="flex items-center mb-3">
+          <img src="${logo}"
+               class="w-14 h-14 rounded-full object-cover border shadow-sm mr-3" />
+          <div>
+            <h3 class="text-xl font-bold text-blue-700">${sanitize(firm.name)}</h3>
+            ${badgeHTML}
+          </div>
+        </div>
+      `
+      : `
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="text-xl font-bold text-blue-700">${sanitize(firm.name)}</h3>
+            ${badgeHTML}
+          </div>
+        </div>
+      `;
+
+    // photos block (standard/premium only)
     let photosHTML = "";
+    if (photos.length > 0) {
+      // main preview image (click -> modal slider)
+      photosHTML = `
+        <div class="mt-4" data-slider="1">
+          <div class="rounded-xl overflow-hidden border bg-gray-50">
+            <img
+              src="${photos[0]}"
+              data-main-photo="1"
+              class="w-full h-48 object-cover cursor-pointer"
+              alt="Foto e shërbimeve"
+            />
+          </div>
 
-    /* Only Standard & Premium show gallery */
-    if (firm.photos && firm.photos.length > 0 && firm.plan !== "basic") {
-      photosHTML += `
-        <div class="flex space-x-2 mt-3 overflow-x-auto pb-2">
-          ${firm.photos
-            .map(
-              (p, i) => `
-              <img src="${p}" 
-                   onclick="openModal('${p}')"
-                   class="w-20 h-20 object-cover rounded-lg cursor-pointer shadow-sm">
-            `
-            )
-            .join("")}
+          <div class="flex items-center justify-between mt-2">
+            <div class="flex gap-1">
+              ${photos.map((_, i) => `
+                <span data-dot="${i}" class="${i === 0 ? "w-2 h-2 rounded-full bg-blue-600" : "w-2 h-2 rounded-full bg-gray-300"}"></span>
+              `).join("")}
+            </div>
+            <div class="text-xs text-gray-500">${photos.length} foto</div>
+          </div>
+
+          <div class="flex space-x-2 mt-3 overflow-x-auto pb-1">
+            ${photos.map((p, i) => `
+              <img
+                src="${p}"
+                data-thumb-index="${i}"
+                class="w-20 h-20 object-cover rounded-lg cursor-pointer shadow-sm border"
+                alt="Foto ${i+1}"
+              />
+            `).join("")}
+          </div>
         </div>
       `;
     }
 
     div.innerHTML = `
-      <div class="flex items-center mb-3">
-        <img src="${logo}" class="w-14 h-14 rounded-full object-cover border shadow-sm mr-3" />
-
-        <div>
-          <h3 class="text-xl font-bold text-blue-700">${sanitize(firm.name)}</h3>
-          ${
-            firm.plan === "premium"
-              ? `<span class="badge-premium px-3 py-1 rounded-full text-xs font-bold">Premium</span>`
-            : firm.plan === "standard"
-              ? `<span class="badge-standard px-3 py-1 rounded-full text-xs font-bold">Standard</span>`
-            : `<span class="badge-basic px-3 py-1 rounded-full text-xs font-bold">Basic</span>`
-          }
-        </div>
-      </div>
+      ${headerHTML}
 
       <p><strong>Adresa:</strong> ${sanitize(firm.address)}</p>
       <p><strong>Telefoni:</strong> ${sanitize(firm.phone)}</p>
-      <p><strong>Email:</strong> 
+      <p><strong>Email:</strong>
         <a href="mailto:${sanitize(firm.email)}" class="text-blue-600 underline">
           ${sanitize(firm.email)}
         </a>
       </p>
       <p><strong>Kategoria:</strong> ${sanitize(firm.category)}</p>
+
       ${photosHTML}
     `;
+
+    // attach events for slider/modal
+    if (photos.length > 0) {
+      const slider = div.querySelector("[data-slider='1']");
+      const mainImg = slider.querySelector("img[data-main-photo='1']");
+      const thumbs = Array.from(slider.querySelectorAll("[data-thumb-index]"));
+      const dots = Array.from(slider.querySelectorAll("[data-dot]"));
+
+      let currentIndex = 0;
+
+      function setIndex(i) {
+        currentIndex = i;
+        mainImg.src = photos[currentIndex];
+        dots.forEach((d, idx) => {
+          d.className = idx === currentIndex
+            ? "w-2 h-2 rounded-full bg-blue-600"
+            : "w-2 h-2 rounded-full bg-gray-300";
+        });
+      }
+
+      // click main -> open modal slider at current index
+      mainImg.addEventListener("click", () => {
+        openModalSlider({ photos, startIndex: currentIndex, firmName: firm.name });
+      });
+
+      // click thumbs
+      thumbs.forEach(t => {
+        t.addEventListener("click", () => {
+          const i = Number(t.getAttribute("data-thumb-index") || "0");
+          setIndex(i);
+          // optional: open modal immediately when clicking thumb
+          openModalSlider({ photos, startIndex: i, firmName: firm.name });
+        });
+      });
+
+      // autoplay only premium
+      if ((firm.plan || "").toLowerCase() === "premium") {
+        startAutoplay(slider, photos);
+      }
+    }
 
     firmsContainer.appendChild(div);
   });
 }
 
+/* =================== filter =================== */
 function filterFirms() {
   const txt = searchInput.value.toLowerCase();
   const cat = categorySelect.value;
@@ -215,18 +474,35 @@ function filterFirms() {
   renderFirms(filtered);
 }
 
-/* FETCH FIRMS */
+/* =================== focus from URL =================== */
+function focusFirmFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const focus = normalizeEmail(params.get("focus") || "");
+  if (!focus) return;
+
+  const el = firmsContainer.querySelector(`[data-email="${focus.replace(/"/g, '\\"')}"]`);
+  if (!el) return;
+
+  el.classList.add("focus-ring");
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+  // remove highlight after a bit
+  setTimeout(() => el.classList.remove("focus-ring"), 6000);
+}
+
+/* =================== fetch firms =================== */
 fetch(`${API_URL}/firms`)
   .then(res => res.json())
   .then(data => {
-
-    allFirms = data.sort((a, b) => {
+    // sort by plan
+    allFirms = (data || []).sort((a, b) => {
       const order = { premium: 1, standard: 2, basic: 3 };
-      return order[a.plan] - order[b.plan];
+      return (order[a.plan] || 9) - (order[b.plan] || 9);
     });
 
     populateCategoryFilter(allFirms);
     renderFirms(allFirms);
+    focusFirmFromUrl();
   })
   .catch(err => {
     console.error("Gabim:", err);
@@ -236,7 +512,6 @@ fetch(`${API_URL}/firms`)
 
 searchInput.addEventListener("input", filterFirms);
 categorySelect.addEventListener("change", filterFirms);
-
 </script>
 
 </body>

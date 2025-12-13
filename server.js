@@ -13,9 +13,26 @@ app.use(cors());
 
 /* ================= CONFIG ================= */
 const PORT = process.env.PORT || 5000;
-const LEMON_SECRET = process.env.LEMON_WEBHOOK_SECRET;
+
+const LEMON_WEBHOOK_SECRET = process.env.LEMON_WEBHOOK_SECRET || "";
+const LEMON_API_KEY = process.env.LEMON_API_KEY || "";          // NEW
+const LEMON_STORE_ID = Number(process.env.LEMON_STORE_ID || 0); // NEW
+
+const VARIANT_BASIC = String(process.env.VARIANT_BASIC || "");
+const VARIANT_STANDARD = String(process.env.VARIANT_STANDARD || "");
+const VARIANT_PREMIUM = String(process.env.VARIANT_PREMIUM || "");
+
 const DELETE_AFTER_DAYS = Number(process.env.DELETE_AFTER_DAYS || 2);
 const CHECK_INTERVAL_MINUTES = Number(process.env.CHECK_INTERVAL_MINUTES || 60);
+
+// ku e ke success.html (GitHub Pages)
+const FRONTEND_SUCCESS_URL =
+  process.env.FRONTEND_SUCCESS_URL || "https://sabriaj.github.io/EasyFix/success.html";
+
+/* ================= LOG HELPERS ================= */
+function now() { return new Date().toISOString(); }
+function log(...args) { console.log(now(), ...args); }
+function errorWithTime(...args) { console.error(now(), ...args); }
 
 /* ================= CLOUDINARY ================= */
 cloudinary.config({
@@ -30,37 +47,34 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-const uploadBuffer = (buffer, folder) =>
-  new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder },
-      (err, result) => {
-        if (err) reject(err);
-        else resolve(result.secure_url);
-      }
-    );
+function uploadBufferToCloudinary(buffer, folder = "easyfix") {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream({ folder }, (err, result) => {
+      if (err) return reject(err);
+      resolve(result.secure_url);
+    });
     stream.end(buffer);
   });
+}
 
 /* ================= MONGO ================= */
 mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.error("MongoDB error:", err));
+  .connect(process.env.MONGO_URI, { autoIndex: true })
+  .then(() => log("✅ MongoDB Connected"))
+  .catch((err) => errorWithTime("MongoDB Error:", err));
 
 /* ================= SCHEMA ================= */
-const FirmaSchema = new mongoose.Schema(
+const firmaSchema = new mongoose.Schema(
   {
     name: String,
-    email: { type: String, unique: true },
+    email: { type: String, unique: true, required: true },
     phone: String,
     address: String,
     category: String,
 
-    plan: { type: String, default: "basic" },
-    payment_status: { type: String, default: "pending" },
+    plan: { type: String, default: "basic" }, // basic, standard, premium
+    payment_status: { type: String, default: "pending" }, // pending, paid, expired
 
-    advantages: [String],
     logoUrl: String,
     photos: [String],
 
@@ -71,105 +85,149 @@ const FirmaSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const Firma = mongoose.model("Firma", FirmaSchema);
+const Firma = mongoose.model("Firma", firmaSchema);
 
-/* ================= PLAN ADVANTAGES ================= */
-const planAdvantages = {
-  basic: [
-    "Listim bazë",
-    "Kontakt bazë",
-    "Shfaqje standard",
-  ],
-  standard: [
-    "Të gjitha nga BASIC",
-    "Logo e kompanisë",
-    "Deri 3 foto",
-    "Pozicion më i mirë",
-  ],
-  premium: [
-    "Të gjitha nga STANDARD",
-    "Deri 8 foto",
-    "Pozicion Top",
-    "Promovim i avancuar",
-  ],
+/* ================= PLAN RULES ================= */
+const planPhotoLimit = {
+  basic: 0,
+  standard: 3,
+  premium: 8,
 };
 
-/* ================= WEBHOOK ================= */
-app.post(
-  "/webhook",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    try {
-      const signature = req.headers["x-signature"] || "";
-      const hmac = crypto
-        .createHmac("sha256", LEMON_SECRET)
-        .update(req.body)
-        .digest("hex");
-
-      if (signature !== hmac) {
-        console.warn("❌ Invalid webhook signature");
-        return res.status(400).send("Invalid signature");
-      }
-
-      const payload = JSON.parse(req.body.toString());
-      const event = payload?.meta?.event_name;
-
-      const email =
-        payload?.data?.attributes?.checkout_data?.custom?.email ||
-        payload?.data?.attributes?.user_email ||
-        payload?.data?.attributes?.customer_email;
-
-      if (!email) return res.sendStatus(200);
-
-      /* 🔑 VARIANT → PLAN (PA DEFAULT BASIC!) */
-      const variantId =
-        payload?.data?.attributes?.first_order_item?.variant_id ||
-        payload?.data?.attributes?.variant_id ||
-        null;
-
-      let detectedPlan = null;
-      if (variantId == process.env.VARIANT_STANDARD) detectedPlan = "standard";
-      if (variantId == process.env.VARIANT_PREMIUM) detectedPlan = "premium";
-
-      /* ✅ UPDATE SAFE (NUK ULET PLANI) */
-      if (
-        event === "order_paid" ||
-        event === "subscription_payment_success"
-      ) {
-        const update = {
-          payment_status: "paid",
-          paid_at: new Date(),
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          deleted_at: null,
-        };
-
-        if (detectedPlan) {
-          update.plan = detectedPlan;
-          update.advantages = planAdvantages[detectedPlan];
-        }
-
-        await Firma.findOneAndUpdate(
-          { email },
-          { $set: update },
-          { new: true }
-        );
-
-        return res.sendStatus(200);
-      }
-
-      return res.sendStatus(200);
-    } catch (err) {
-      console.error("WEBHOOK ERROR:", err);
-      return res.sendStatus(500);
-    }
+/* ================= CREATE CHECKOUT (API) =================
+   Lemonsqueezy Checkout supports product_options.redirect_url :contentReference[oaicite:1]{index=1}
+*/
+async function createLemonCheckout({ variantId, email }) {
+  if (!LEMON_API_KEY || !LEMON_STORE_ID) {
+    throw new Error("Missing LEMON_API_KEY or LEMON_STORE_ID in env");
   }
-);
 
-/* ================= JSON ================= */
+  const redirectUrl = `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}`;
+
+  const payload = {
+    data: {
+      type: "checkouts",
+      attributes: {
+        store_id: LEMON_STORE_ID,
+        variant_id: Number(variantId),
+        product_options: {
+          redirect_url: redirectUrl,
+        },
+        checkout_data: {
+          email,
+          custom: { email },
+        },
+      },
+    },
+  };
+
+  const resp = await fetch("https://api.lemonsqueezy.com/v1/checkouts", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LEMON_API_KEY}`,
+      Accept: "application/vnd.api+json",
+      "Content-Type": "application/vnd.api+json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const json = await resp.json();
+  if (!resp.ok) {
+    throw new Error(`Lemon API error: ${resp.status} ${JSON.stringify(json)}`);
+  }
+
+  const url = json?.data?.attributes?.url;
+  if (!url) throw new Error("Checkout URL missing from Lemon response");
+  return url;
+}
+
+/* ================= WEBHOOK (RAW BODY) ================= */
+app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  try {
+    const signature =
+      req.headers["x-signature"] ||
+      req.headers["x-signature-256"] ||
+      "";
+
+    const hmac = crypto
+      .createHmac("sha256", LEMON_WEBHOOK_SECRET)
+      .update(req.body)
+      .digest("hex");
+
+    if (!signature || signature !== hmac) {
+      log("❌ Invalid signature");
+      return res.status(400).send("Invalid signature");
+    }
+
+    const payload = JSON.parse(req.body.toString());
+    const event = payload?.meta?.event_name || payload?.event || "unknown";
+
+    const email =
+      payload?.data?.attributes?.checkout_data?.custom?.email ||
+      payload?.data?.attributes?.checkout_data?.email ||
+      payload?.data?.attributes?.user_email ||
+      payload?.data?.attributes?.customer_email ||
+      null;
+
+    const variantId =
+      payload?.data?.attributes?.first_order_item?.variant_id ||
+      payload?.data?.attributes?.variant_id ||
+      payload?.data?.attributes?.subscription?.variant_id ||
+      null;
+
+    if (!email) return res.status(200).send("No email");
+
+    // plan detect (mos e ul planin pa arsye)
+    let detectedPlan = null;
+    const v = variantId != null ? String(variantId) : "";
+    if (v && v === VARIANT_BASIC) detectedPlan = "basic";
+    if (v && v === VARIANT_STANDARD) detectedPlan = "standard";
+    if (v && v === VARIANT_PREMIUM) detectedPlan = "premium";
+
+    log("🔔 Webhook:", event, "email:", email, "variant:", variantId, "plan:", detectedPlan);
+
+    // vetëm kur është pagu realisht
+    if (event === "order_paid" || event === "subscription_payment_success") {
+      const update = {
+        payment_status: "paid",
+        paid_at: new Date(),
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        deleted_at: null,
+      };
+
+      // vendose planin vetëm nëse e detekton sakt
+      if (detectedPlan) update.plan = detectedPlan;
+
+      await Firma.findOneAndUpdate(
+        { email },
+        { $set: update },
+        { upsert: true, new: true }
+      );
+
+      return res.status(200).send("OK");
+    }
+
+    // cancel/refund -> expired
+    if (event === "subscription_cancelled" || event === "subscription_expired" || event === "order_refunded") {
+      await Firma.findOneAndUpdate(
+        { email },
+        { $set: { payment_status: "expired", expires_at: new Date() } },
+        { new: true }
+      );
+      return res.status(200).send("OK");
+    }
+
+    return res.status(200).send("Ignored");
+  } catch (err) {
+    errorWithTime("WEBHOOK ERROR:", err);
+    return res.status(500).send("Webhook error");
+  }
+});
+
+/* ================= JSON (AFTER WEBHOOK) ================= */
 app.use(express.json());
 
-/* ================= REGISTER ================= */
-// --- REGISTER endpoint (me logo + foto për standard/premium) ---
+/* ================= REGISTER (multipart) ================= */
 app.post(
   "/register",
   upload.fields([
@@ -181,114 +239,123 @@ app.post(
       const { name, email, phone, address, category, plan } = req.body;
 
       if (!name || !email || !phone || !address || !category || !plan) {
-        return res
-          .status(400)
-          .json({ success: false, error: "Missing fields" });
+        return res.status(400).json({ success: false, error: "Missing fields" });
+      }
+
+      if (!["basic", "standard", "premium"].includes(plan)) {
+        return res.status(400).json({ success: false, error: "Invalid plan" });
       }
 
       const exists = await Firma.findOne({ email });
       if (exists) {
-        return res
-          .status(409)
-          .json({ success: false, error: "Ky email tashmë është i ekzistuar" });
+        return res.status(409).json({ success: false, error: "Ky email tashmë ekziston" });
       }
 
-      // Përgatit advantage sipas planit
-      const advantages = planAdvantages[plan] || [];
-
-      let logoUrl = "";
+      let logoUrl = null;
       let photos = [];
 
-      // Logo & foto LEJOHEN VETËM për standard/premium
+      // Upload vetëm për standard/premium
       if (plan === "standard" || plan === "premium") {
         const files = req.files || {};
 
-        // LOGO
-        if (files.logo && files.logo[0]) {
-          try {
-            logoUrl = await uploadBufferToCloudinary(
-              files.logo[0].buffer,
-              "easyfix/logos"
-            );
-          } catch (err) {
-            console.errorWithTime("Cloudinary logo upload error:", err);
-          }
+        if (files.logo?.[0]) {
+          logoUrl = await uploadBufferToCloudinary(files.logo[0].buffer, "easyfix/logos");
         }
 
-        // FOTOT
-        if (files.photos && files.photos.length > 0) {
-          // limit fotot sipas planit
-          const maxPhotos = plan === "standard" ? 3 : 20;
-          const slice = files.photos.slice(0, maxPhotos);
+        const maxPhotos = planPhotoLimit[plan] || 0;
+        const picked = (files.photos || []).slice(0, maxPhotos);
 
-          for (const file of slice) {
-            try {
-              const url = await uploadBufferToCloudinary(
-                file.buffer,
-                "easyfix/photos"
-              );
-              photos.push(url);
-            } catch (err) {
-              console.errorWithTime("Cloudinary photo upload error:", err);
-            }
-          }
+        for (const f of picked) {
+          const url = await uploadBufferToCloudinary(f.buffer, "easyfix/photos");
+          photos.push(url);
         }
       }
 
-      const firma = new Firma({
+      // Basic: mos ruaj logo/foto
+      if (plan === "basic") {
+        logoUrl = null;
+        photos = [];
+      }
+
+      const firma = await Firma.create({
         name,
         email,
         phone,
         address,
         category,
         plan,
-        advantages,
-        payment_status: "pending", // fillimisht pending
-        logoUrl: logoUrl || null,
+        payment_status: "pending",
+        logoUrl,
         photos,
       });
 
-      await firma.save();
-      log("🆕 Registered (pending):", email);
+      // Krijo checkout URL me redirect te success.html
+      const variantId =
+        plan === "premium" ? VARIANT_PREMIUM :
+        plan === "standard" ? VARIANT_STANDARD :
+        VARIANT_BASIC;
+
+      const checkoutUrl = await createLemonCheckout({ variantId, email });
 
       return res.json({
         success: true,
-        message: "Regjistrimi u ruajt si pending. Vazhdoni me pagesën.",
-        redirectUrl: `/success.html?email=${email}`, // Send the user to the success page
+        message: "Regjistrimi u ruajt. Vazhdoni me pagesën.",
+        checkoutUrl,
+        firmId: String(firma._id),
       });
     } catch (err) {
-      console.errorWithTime("REGISTER ERROR:", err);
+      errorWithTime("REGISTER ERROR:", err);
       return res.status(500).json({ success: false, error: "Server error" });
     }
   }
 );
 
 /* ================= PUBLIC ================= */
-app.get("/firms", async (_, res) => {
-  const firms = await Firma.find({ payment_status: "paid" });
-  res.json(firms);
+app.get("/firms", async (req, res) => {
+  try {
+    const firms = await Firma.find({ payment_status: "paid" }).select("-__v");
+    res.json(firms);
+  } catch (err) {
+    errorWithTime("FIRMS ERROR:", err);
+    res.status(500).send("Server error");
+  }
+});
+
+app.get("/check-status", async (req, res) => {
+  try {
+    const email = req.query.email;
+    if (!email) return res.status(400).json({ success: false, error: "Missing email" });
+
+    const f = await Firma.findOne({ email }).select("-__v");
+    if (!f) return res.status(404).json({ success: false, error: "Not found" });
+
+    return res.json({ success: true, firma: f });
+  } catch (err) {
+    errorWithTime("CHECK-STATUS ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
 });
 
 /* ================= CLEANUP ================= */
-setInterval(async () => {
-  const now = new Date();
+async function runCleanup() {
+  const nowDate = new Date();
 
   await Firma.updateMany(
-    { payment_status: "paid", expires_at: { $lte: now } },
-    { payment_status: "expired" }
+    { payment_status: "paid", expires_at: { $lte: nowDate } },
+    { $set: { payment_status: "expired" } }
   );
 
-  const cutoff = new Date(
-    Date.now() - DELETE_AFTER_DAYS * 24 * 60 * 60 * 1000
-  );
+  const cutoff = new Date(Date.now() - DELETE_AFTER_DAYS * 24 * 60 * 60 * 1000);
+  await Firma.deleteMany({ payment_status: "expired", expires_at: { $lte: cutoff } });
+}
 
-  await Firma.deleteMany({
-    payment_status: "expired",
-    expires_at: { $lte: cutoff },
-  });
+setInterval(async () => {
+  try {
+    await runCleanup();
+  } catch (e) {
+    errorWithTime("Cleanup error:", e);
+  }
 }, CHECK_INTERVAL_MINUTES * 60 * 1000);
 
 /* ================= START ================= */
-app.listen(PORT, () =>
-  console.log(`🚀 Server running on port ${PORT}`)
-);
+app.listen(PORT, () => log(`🚀 Server running on port ${PORT}`));

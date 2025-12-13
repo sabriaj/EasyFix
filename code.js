@@ -1,11 +1,5 @@
 const BACKEND_URL = "https://easyfix.onrender.com";
 
-const CHECKOUT_URLS = {
-  basic: "https://easyfixx.lemonsqueezy.com/buy/d78e48d9-9c54-4ee3-8aed-d4a63ecbd31a?logo=0",
-  standard: "https://easyfixx.lemonsqueezy.com/buy/544a4069-7897-4cb0-a8e4-62e0aeb54b4b?logo=0",
-  premium: "https://easyfixx.lemonsqueezy.com/buy/700a3989-d2c8-4f8a-be82-57157c75b585?logo=0",
-};
-
 function $(s) { return document.querySelector(s); }
 
 function showStatus(msg, type = "info") {
@@ -26,7 +20,7 @@ function showStatus(msg, type = "info") {
 
 let selectedPlan = "";
 
-// PLAN SELECTION
+// plan selection + show/hide uploads
 document.querySelectorAll(".plan-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".plan-btn").forEach(b => b.classList.remove("active"));
@@ -46,26 +40,7 @@ document.querySelectorAll(".plan-btn").forEach(btn => {
   });
 });
 
-
-//lidhja me success html//
-const base = CHECKOUT_URLS[selectedPlan] || CHECKOUT_URLS.standard;
-
-const checkoutUrl =
-  base +
-  `&checkout[email]=${encodeURIComponent(emaili)}` +
-  `&checkout[custom][email]=${encodeURIComponent(emaili)}` +
-  `&redirect_url=${encodeURIComponent(
-    "https://easyfix.mk/success.html?email=" + emaili
-  )}`;
-
-setTimeout(() => {
-  window.location.href = checkoutUrl;
-}, 1000);
-
-
-// SUBMIT FORM
 const form = $("#registerForm");
-
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -85,7 +60,10 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
-  // FORM-DATA (PËR MULTER)
+  // photo limits
+  const maxPhotos = selectedPlan === "standard" ? 3 : selectedPlan === "premium" ? 8 : 0;
+
+  // build multipart
   const formData = new FormData();
   formData.append("name", name);
   formData.append("email", email);
@@ -94,18 +72,17 @@ form.addEventListener("submit", async (e) => {
   formData.append("category", category);
   formData.append("plan", selectedPlan);
 
-  // Logo
-  const logoFile = $("#logoUpload").files[0];
-  if ((selectedPlan === "standard" || selectedPlan === "premium") && logoFile) {
-    formData.append("logo", logoFile);
-  }
+  // logo + photos only for standard/premium
+  if (selectedPlan === "standard" || selectedPlan === "premium") {
+    const logoFile = $("#logoUpload").files[0];
+    if (logoFile) formData.append("logo", logoFile);
 
-  // Photos
-  const photos = $("#photoUpload").files;
-  if (selectedPlan !== "basic") {
-    for (let i = 0; i < photos.length; i++) {
-      formData.append("photos", photos[i]);
+    const photos = Array.from($("#photoUpload").files || []);
+    if (photos.length > maxPhotos) {
+      showStatus(`Mund të ngarkoni maksimum ${maxPhotos} foto për planin ${selectedPlan}.`, "error");
+      return;
     }
+    photos.forEach(f => formData.append("photos", f));
   }
 
   showStatus("Duke ruajtur regjistrimin...", "loading");
@@ -113,7 +90,7 @@ form.addEventListener("submit", async (e) => {
   try {
     const res = await fetch(`${BACKEND_URL}/register`, {
       method: "POST",
-      body: formData // JO JSON
+      body: formData
     });
 
     if (res.status === 409) {
@@ -123,21 +100,17 @@ form.addEventListener("submit", async (e) => {
 
     const data = await res.json();
 
-    if (!data.success) {
-      showStatus("Gabim në regjistrim.", "error");
+    if (!res.ok || !data.success) {
+      showStatus(data?.error || "Gabim në regjistrim.", "error");
       return;
     }
 
-    showStatus("Regjistrimi u krye me sukses.", "success");
+    showStatus("Po ju dërgojmë te pagesa...", "success");
 
-    const checkoutUrl =
-      CHECKOUT_URLS[selectedPlan] +
-      `&checkout[email]=${encodeURIComponent(email)}` +
-      `&checkout[custom][email]=${encodeURIComponent(email)}`;
-
+    // redirect te checkout url (krijuar nga serveri me redirect_url te success.html)
     setTimeout(() => {
-      window.location.href = checkoutUrl;
-    }, 1000);
+      window.location.href = data.checkoutUrl;
+    }, 700);
 
   } catch (err) {
     console.error(err);

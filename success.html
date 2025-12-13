@@ -1,31 +1,62 @@
-<!-- success.html -->
 <!DOCTYPE html>
 <html lang="sq">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Regjistrimi i Firmës - EasyFix</title>
+  <title>Pagesa u Krye - EasyFix</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
+
 <body class="bg-gray-100 min-h-screen flex flex-col">
 
   <header class="bg-blue-700 text-white py-6 shadow-md">
     <div class="container mx-auto px-4 flex justify-between items-center">
       <h1 class="text-3xl font-extrabold">EasyFix</h1>
+      <a href="index.html" class="text-white underline">Faqja Kryesore</a>
     </div>
   </header>
 
-  <main class="container mx-auto px-4 py-10 flex-grow">
-    <h2 class="text-4xl font-bold text-blue-900 mb-8 text-center">Regjistrimi u krye me sukses!</h2>
-    <p class="text-center">Faleminderit për regjistrimin tuaj! Tani mund të shihni regjistrimin tuaj më poshtë.</p>
+  <main class="container mx-auto px-4 py-10 flex-grow max-w-2xl">
+    <h2 class="text-3xl md:text-4xl font-bold text-blue-900 mb-4 text-center">Faleminderit!</h2>
 
-    <div class="text-center mt-6">
-      <button
-        id="viewOrderBtn"
-        class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
-      >
-        Shiko Regjistrimin
-      </button>
+    <p id="subtitle" class="text-center text-gray-700">
+      Po verifikojmë pagesën dhe aktivizimin e firmës suaj…
+    </p>
+
+    <div id="card" class="bg-white rounded-xl shadow p-6 mt-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-500">Statusi</p>
+          <p id="statusText" class="text-lg font-semibold text-blue-700">Duke verifikuar…</p>
+        </div>
+        <div id="spinner" class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-700"></div>
+      </div>
+
+      <div class="mt-4 text-sm text-gray-600">
+        <p id="hint">
+          Nëse sapo e kryet pagesën, zakonisht aktivizimi vjen brenda pak sekondash.
+        </p>
+        <p id="emailLine" class="mt-2"></p>
+      </div>
+
+      <div class="mt-6 flex flex-col sm:flex-row gap-3">
+        <button
+          id="goBtn"
+          class="w-full sm:w-auto bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+          disabled
+        >
+          Shko te firma jote
+        </button>
+
+        <button
+          id="retryBtn"
+          class="w-full sm:w-auto bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
+        >
+          Rifresko statusin
+        </button>
+      </div>
+
+      <p id="errorBox" class="mt-4 text-sm text-red-600 hidden"></p>
     </div>
   </main>
 
@@ -34,13 +65,108 @@
   </footer>
 
   <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const email = urlParams.get('email');
-    const viewOrderBtn = document.getElementById('viewOrderBtn');
-    
-    viewOrderBtn.addEventListener('click', () => {
-      window.location.href = `https://easyfix.onrender.com/check-status?email=${email}`;
+    const API_URL = "https://easyfix.onrender.com";
+    const params = new URLSearchParams(window.location.search);
+    const email = params.get("email");
+
+    const statusText = document.getElementById("statusText");
+    const spinner = document.getElementById("spinner");
+    const goBtn = document.getElementById("goBtn");
+    const retryBtn = document.getElementById("retryBtn");
+    const errorBox = document.getElementById("errorBox");
+    const emailLine = document.getElementById("emailLine");
+    const subtitle = document.getElementById("subtitle");
+
+    if (email) {
+      emailLine.textContent = "Email i regjistrimit: " + email;
+    } else {
+      subtitle.textContent = "Mungon email në link. Ju lutem kthehuni te faqja kryesore.";
+      statusText.textContent = "Gabim: email mungon";
+      spinner.classList.add("hidden");
+      errorBox.classList.remove("hidden");
+      errorBox.textContent = "Nuk u gjet parametri ?email=... në URL.";
+      retryBtn.textContent = "Kthehu te faqja kryesore";
+      retryBtn.addEventListener("click", () => window.location.href = "index.html");
+    }
+
+    let tries = 0;
+    const MAX_TRIES = 20;       // ~60 sekonda nëse intervali është 3s
+    const INTERVAL_MS = 3000;
+
+    async function checkStatus() {
+      if (!email) return;
+
+      tries++;
+      errorBox.classList.add("hidden");
+      statusText.textContent = "Duke verifikuar… (" + tries + "/" + MAX_TRIES + ")";
+
+      try {
+        const res = await fetch(`${API_URL}/check-status?email=${encodeURIComponent(email)}`);
+        if (!res.ok) {
+          throw new Error("HTTP " + res.status);
+        }
+
+        const data = await res.json();
+        const firma = data?.firma;
+
+        if (!data?.success || !firma) {
+          throw new Error("Nuk u gjet firma");
+        }
+
+        if (firma.payment_status === "paid") {
+          spinner.classList.add("hidden");
+          statusText.textContent = "Aktive (paid)";
+          subtitle.textContent = "Firma juaj është aktivizuar me sukses.";
+
+          goBtn.disabled = false;
+          goBtn.addEventListener("click", () => {
+            // e çon te index.html dhe e fokuson kartën sipas email-it
+            window.location.href = `index.html?focus=${encodeURIComponent(email)}`;
+          });
+
+          return true;
+        }
+
+        // ende pending/expired
+        spinner.classList.remove("hidden");
+        statusText.textContent = "Ende në proces: " + (firma.payment_status || "pending");
+
+        return false;
+
+      } catch (err) {
+        errorBox.classList.remove("hidden");
+        errorBox.textContent = "Gabim gjatë verifikimit: " + err.message;
+        return false;
+      }
+    }
+
+    async function startPolling() {
+      tries = 0;
+
+      // provo menjëherë njëherë
+      let ok = await checkStatus();
+      if (ok) return;
+
+      const timer = setInterval(async () => {
+        const done = await checkStatus();
+        if (done || tries >= MAX_TRIES) {
+          clearInterval(timer);
+          spinner.classList.add("hidden");
+
+          if (!done) {
+            statusText.textContent = "Nuk u konfirmua automatikisht (provoni përsëri).";
+            subtitle.textContent = "Nëse pagesa u krye, provoni butonin “Rifresko statusin”.";
+          }
+        }
+      }, INTERVAL_MS);
+    }
+
+    retryBtn.addEventListener("click", async () => {
+      spinner.classList.remove("hidden");
+      await startPolling();
     });
+
+    if (email) startPolling();
   </script>
 
 </body>

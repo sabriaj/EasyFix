@@ -3,7 +3,7 @@ const BACKEND_URL = "https://easyfix.onrender.com";
 const CHECKOUT_URLS = {
   basic: "https://easyfixx.lemonsqueezy.com/buy/d78e48d9-9c54-4ee3-8aed-d4a63ecbd31a?logo=0",
   standard: "https://easyfixx.lemonsqueezy.com/buy/544a4069-7897-4cb0-a8e4-62e0aeb54b4b?logo=0",
-  premium: "https://easyfixx.lemonsqueezy.com/buy/700a3989-d2c8-4f8a-be82-57157c75b585?logo=0"
+  premium: "https://easyfixx.lemonsqueezy.com/buy/700a3989-d2c8-4f8a-be82-57157c75b585?logo=0",
 };
 
 function $(s) { return document.querySelector(s); }
@@ -45,6 +45,23 @@ document.querySelectorAll(".plan-btn").forEach(btn => {
     }
   });
 });
+
+
+//lidhja me success html//
+const base = CHECKOUT_URLS[selectedPlan] || CHECKOUT_URLS.standard;
+
+const checkoutUrl =
+  base +
+  `&checkout[email]=${encodeURIComponent(emaili)}` +
+  `&checkout[custom][email]=${encodeURIComponent(emaili)}` +
+  `&redirect_url=${encodeURIComponent(
+    "https://easyfix.mk/success.html?email=" + emaili
+  )}`;
+
+setTimeout(() => {
+  window.location.href = checkoutUrl;
+}, 1000);
+
 
 // SUBMIT FORM
 const form = $("#registerForm");

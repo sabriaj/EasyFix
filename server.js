@@ -15,8 +15,8 @@ app.use(cors());
 const PORT = process.env.PORT || 5000;
 
 const LEMON_WEBHOOK_SECRET = process.env.LEMON_WEBHOOK_SECRET || "";
-const LEMON_API_KEY = process.env.LEMON_API_KEY || "";          // NEW
-const LEMON_STORE_ID = Number(process.env.LEMON_STORE_ID || 0); // NEW
+const LEMON_API_KEY = process.env.LEMON_API_KEY || "";
+const LEMON_STORE_ID = String(process.env.LEMON_STORE_ID || ""); // keep as string
 
 const VARIANT_BASIC = String(process.env.VARIANT_BASIC || "");
 const VARIANT_STANDARD = String(process.env.VARIANT_STANDARD || "");
@@ -25,7 +25,6 @@ const VARIANT_PREMIUM = String(process.env.VARIANT_PREMIUM || "");
 const DELETE_AFTER_DAYS = Number(process.env.DELETE_AFTER_DAYS || 2);
 const CHECK_INTERVAL_MINUTES = Number(process.env.CHECK_INTERVAL_MINUTES || 60);
 
-// ku e ke success.html (GitHub Pages)
 const FRONTEND_SUCCESS_URL =
   process.env.FRONTEND_SUCCESS_URL || "https://sabriaj.github.io/EasyFix/success.html";
 
@@ -33,6 +32,13 @@ const FRONTEND_SUCCESS_URL =
 function now() { return new Date().toISOString(); }
 function log(...args) { console.log(now(), ...args); }
 function errorWithTime(...args) { console.error(now(), ...args); }
+
+/* ================= FETCH (Node fallback) ================= */
+async function httpFetch(...args) {
+  if (typeof fetch === "function") return fetch(...args);
+  const mod = await import("node-fetch");
+  return mod.default(...args);
+}
 
 /* ================= CLOUDINARY ================= */
 cloudinary.config({
@@ -94,22 +100,27 @@ const planPhotoLimit = {
   premium: 8,
 };
 
-/* ================= CREATE CHECKOUT (API) =================
-   Lemonsqueezy Checkout supports product_options.redirect_url :contentReference[oaicite:1]{index=1}
-*/
+/* ================= CREATE CHECKOUT (API) ================= */
 async function createLemonCheckout({ variantId, email }) {
-  if (!LEMON_API_KEY || !LEMON_STORE_ID) {
-    throw new Error("Missing LEMON_API_KEY or LEMON_STORE_ID in env");
-  }
+  if (!LEMON_API_KEY) throw new Error("Missing LEMON_API_KEY in env");
+  if (!LEMON_STORE_ID) throw new Error("Missing LEMON_STORE_ID in env");
+  if (!variantId) throw new Error("Missing variantId");
 
   const redirectUrl = `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}`;
 
+  // ✅ FIX: Lemon kërkon store & variant te relationships, jo store_id/variant_id te attributes
   const payload = {
     data: {
       type: "checkouts",
+      relationships: {
+        store: {
+          data: { type: "stores", id: String(LEMON_STORE_ID) },
+        },
+        variant: {
+          data: { type: "variants", id: String(variantId) },
+        },
+      },
       attributes: {
-        store_id: LEMON_STORE_ID,
-        variant_id: Number(variantId),
         product_options: {
           redirect_url: redirectUrl,
         },
@@ -121,7 +132,7 @@ async function createLemonCheckout({ variantId, email }) {
     },
   };
 
-  const resp = await fetch("https://api.lemonsqueezy.com/v1/checkouts", {
+  const resp = await httpFetch("https://api.lemonsqueezy.com/v1/checkouts", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${LEMON_API_KEY}`,
@@ -131,7 +142,7 @@ async function createLemonCheckout({ variantId, email }) {
     body: JSON.stringify(payload),
   });
 
-  const json = await resp.json();
+  const json = await resp.json().catch(() => ({}));
   if (!resp.ok) {
     throw new Error(`Lemon API error: ${resp.status} ${JSON.stringify(json)}`);
   }
@@ -177,7 +188,6 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 
     if (!email) return res.status(200).send("No email");
 
-    // plan detect (mos e ul planin pa arsye)
     let detectedPlan = null;
     const v = variantId != null ? String(variantId) : "";
     if (v && v === VARIANT_BASIC) detectedPlan = "basic";
@@ -186,7 +196,6 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 
     log("🔔 Webhook:", event, "email:", email, "variant:", variantId, "plan:", detectedPlan);
 
-    // vetëm kur është pagu realisht
     if (event === "order_paid" || event === "subscription_payment_success") {
       const update = {
         payment_status: "paid",
@@ -195,7 +204,6 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
         deleted_at: null,
       };
 
-      // vendose planin vetëm nëse e detekton sakt
       if (detectedPlan) update.plan = detectedPlan;
 
       await Firma.findOneAndUpdate(
@@ -207,7 +215,6 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
       return res.status(200).send("OK");
     }
 
-    // cancel/refund -> expired
     if (event === "subscription_cancelled" || event === "subscription_expired" || event === "order_refunded") {
       await Firma.findOneAndUpdate(
         { email },
@@ -254,7 +261,6 @@ app.post(
       let logoUrl = null;
       let photos = [];
 
-      // Upload vetëm për standard/premium
       if (plan === "standard" || plan === "premium") {
         const files = req.files || {};
 
@@ -271,7 +277,6 @@ app.post(
         }
       }
 
-      // Basic: mos ruaj logo/foto
       if (plan === "basic") {
         logoUrl = null;
         photos = [];
@@ -289,7 +294,6 @@ app.post(
         photos,
       });
 
-      // Krijo checkout URL me redirect te success.html
       const variantId =
         plan === "premium" ? VARIANT_PREMIUM :
         plan === "standard" ? VARIANT_STANDARD :
@@ -305,7 +309,7 @@ app.post(
       });
     } catch (err) {
       errorWithTime("REGISTER ERROR:", err);
-      return res.status(500).json({ success: false, error: "Server error" });
+      return res.status(500).json({ success: false, error: err?.message || "Server error" });
     }
   }
 );

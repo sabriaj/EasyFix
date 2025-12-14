@@ -16,29 +16,23 @@ const PORT = process.env.PORT || 5000;
 
 const LEMON_WEBHOOK_SECRET = process.env.LEMON_WEBHOOK_SECRET || "";
 const LEMON_API_KEY = process.env.LEMON_API_KEY || "";
-const LEMON_STORE_ID = String(process.env.LEMON_STORE_ID || ""); // keep as string
+const LEMON_STORE_ID = String(process.env.LEMON_STORE_ID || "");
 
 const VARIANT_BASIC = String(process.env.VARIANT_BASIC || "");
 const VARIANT_STANDARD = String(process.env.VARIANT_STANDARD || "");
 const VARIANT_PREMIUM = String(process.env.VARIANT_PREMIUM || "");
 
+const FRONTEND_SUCCESS_URL =
+  process.env.FRONTEND_SUCCESS_URL ||
+  "https://sabriaj.github.io/EasyFix/success.html";
+
 const DELETE_AFTER_DAYS = Number(process.env.DELETE_AFTER_DAYS || 2);
 const CHECK_INTERVAL_MINUTES = Number(process.env.CHECK_INTERVAL_MINUTES || 60);
-
-const FRONTEND_SUCCESS_URL =
-  process.env.FRONTEND_SUCCESS_URL || "https://sabriaj.github.io/EasyFix/success.html";
 
 /* ================= LOG HELPERS ================= */
 function now() { return new Date().toISOString(); }
 function log(...args) { console.log(now(), ...args); }
 function errorWithTime(...args) { console.error(now(), ...args); }
-
-/* ================= FETCH (Node fallback) ================= */
-async function httpFetch(...args) {
-  if (typeof fetch === "function") return fetch(...args);
-  const mod = await import("node-fetch");
-  return mod.default(...args);
-}
 
 /* ================= CLOUDINARY ================= */
 cloudinary.config({
@@ -50,7 +44,7 @@ cloudinary.config({
 /* ================= MULTER ================= */
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB/file
 });
 
 function uploadBufferToCloudinary(buffer, folder = "easyfix") {
@@ -73,7 +67,7 @@ mongoose
 const firmaSchema = new mongoose.Schema(
   {
     name: String,
-    email: { type: String, unique: true, required: true },
+    email: { type: String, unique: true, required: true }, // ruajme lowercase
     phone: String,
     address: String,
     category: String,
@@ -94,45 +88,55 @@ const firmaSchema = new mongoose.Schema(
 const Firma = mongoose.model("Firma", firmaSchema);
 
 /* ================= PLAN RULES ================= */
-const planPhotoLimit = {
-  basic: 0,
-  standard: 3,
-  premium: 8,
-};
+const planPhotoLimit = { basic: 0, standard: 3, premium: 8 };
 
-/* ================= CREATE CHECKOUT (API) ================= */
+function normalizeEmail(e) {
+  return String(e || "").trim().toLowerCase();
+}
+
+function detectPlanFromVariant(variantId) {
+  const v = String(variantId || "");
+  if (v && v === VARIANT_BASIC) return "basic";
+  if (v && v === VARIANT_STANDARD) return "standard";
+  if (v && v === VARIANT_PREMIUM) return "premium";
+  return null;
+}
+
+function planToVariant(plan) {
+  if (plan === "premium") return VARIANT_PREMIUM;
+  if (plan === "standard") return VARIANT_STANDARD;
+  return VARIANT_BASIC;
+}
+
+/* ================= CREATE CHECKOUT (LEMON API) =================
+   Fix 422: store/variant duhet te jene te relationships, jo store_id/variant_id ne attributes.
+*/
 async function createLemonCheckout({ variantId, email }) {
-  if (!LEMON_API_KEY) throw new Error("Missing LEMON_API_KEY in env");
-  if (!LEMON_STORE_ID) throw new Error("Missing LEMON_STORE_ID in env");
+  if (!LEMON_API_KEY) throw new Error("Missing LEMON_API_KEY");
+  if (!LEMON_STORE_ID) throw new Error("Missing LEMON_STORE_ID");
   if (!variantId) throw new Error("Missing variantId");
 
-  const redirectUrl = `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}`;
+  const redirectUrl =
+    `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}`;
 
-  // ✅ FIX: Lemon kërkon store & variant te relationships, jo store_id/variant_id te attributes
   const payload = {
     data: {
       type: "checkouts",
-      relationships: {
-        store: {
-          data: { type: "stores", id: String(LEMON_STORE_ID) },
-        },
-        variant: {
-          data: { type: "variants", id: String(variantId) },
-        },
-      },
       attributes: {
-        product_options: {
-          redirect_url: redirectUrl,
-        },
+        product_options: { redirect_url: redirectUrl },
         checkout_data: {
           email,
-          custom: { email },
+          custom: { email }, // kjo na duhet per webhook email
         },
+      },
+      relationships: {
+        store: { data: { type: "stores", id: String(LEMON_STORE_ID) } },
+        variant: { data: { type: "variants", id: String(variantId) } },
       },
     },
   };
 
-  const resp = await httpFetch("https://api.lemonsqueezy.com/v1/checkouts", {
+  const resp = await fetch("https://api.lemonsqueezy.com/v1/checkouts", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${LEMON_API_KEY}`,
@@ -155,30 +159,38 @@ async function createLemonCheckout({ variantId, email }) {
 /* ================= WEBHOOK (RAW BODY) ================= */
 app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
-    const signature =
+    // Lemon mund ta dergoje si x-signature ose x-signature-256.
+    let signature =
       req.headers["x-signature"] ||
       req.headers["x-signature-256"] ||
       "";
+
+    signature = String(signature || "").trim();
 
     const hmac = crypto
       .createHmac("sha256", LEMON_WEBHOOK_SECRET)
       .update(req.body)
       .digest("hex");
 
+    // Nese vjen me prefix si "sha256=....", hiqe.
+    if (signature.startsWith("sha256=")) signature = signature.slice(7);
+
     if (!signature || signature !== hmac) {
-      log("❌ Invalid signature");
+      log("❌ Invalid signature", { received: signature, computed: hmac });
       return res.status(400).send("Invalid signature");
     }
 
     const payload = JSON.parse(req.body.toString());
     const event = payload?.meta?.event_name || payload?.event || "unknown";
 
-    const email =
+    const emailRaw =
       payload?.data?.attributes?.checkout_data?.custom?.email ||
       payload?.data?.attributes?.checkout_data?.email ||
       payload?.data?.attributes?.user_email ||
       payload?.data?.attributes?.customer_email ||
       null;
+
+    const email = normalizeEmail(emailRaw);
 
     const variantId =
       payload?.data?.attributes?.first_order_item?.variant_id ||
@@ -186,16 +198,13 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
       payload?.data?.attributes?.subscription?.variant_id ||
       null;
 
+    const detectedPlan = detectPlanFromVariant(variantId);
+
+    log("🔔 Webhook", { event, email, variantId, detectedPlan });
+
     if (!email) return res.status(200).send("No email");
 
-    let detectedPlan = null;
-    const v = variantId != null ? String(variantId) : "";
-    if (v && v === VARIANT_BASIC) detectedPlan = "basic";
-    if (v && v === VARIANT_STANDARD) detectedPlan = "standard";
-    if (v && v === VARIANT_PREMIUM) detectedPlan = "premium";
-
-    log("🔔 Webhook:", event, "email:", email, "variant:", variantId, "plan:", detectedPlan);
-
+    // Vetem kur realisht eshte pagu:
     if (event === "order_paid" || event === "subscription_payment_success") {
       const update = {
         payment_status: "paid",
@@ -204,13 +213,21 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
         deleted_at: null,
       };
 
+      // Vendose planin vetem nese e detekton sakt (mos e ulin gabimisht)
       if (detectedPlan) update.plan = detectedPlan;
 
-      await Firma.findOneAndUpdate(
+      const updated = await Firma.findOneAndUpdate(
         { email },
         { $set: update },
-        { upsert: true, new: true }
+        { upsert: false, new: true }
       );
+
+      // Nese s’gjen firmë (rast kur email s’perputhet), mos krijo doc te ri pa logo/foto.
+      if (!updated) {
+        log("⚠️ Paid webhook but firm not found for email:", email);
+      } else {
+        log("✅ Marked paid:", { email, plan: updated.plan });
+      }
 
       return res.status(200).send("OK");
     }
@@ -234,6 +251,9 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 /* ================= JSON (AFTER WEBHOOK) ================= */
 app.use(express.json());
 
+/* ================= HEALTH ================= */
+app.get("/health", (req, res) => res.json({ ok: true, time: now() }));
+
 /* ================= REGISTER (multipart) ================= */
 app.post(
   "/register",
@@ -242,13 +262,15 @@ app.post(
     { name: "photos", maxCount: 10 },
   ]),
   async (req, res) => {
+    let createdId = null;
     try {
-      const { name, email, phone, address, category, plan } = req.body;
+      let { name, email, phone, address, category, plan } = req.body;
+
+      email = normalizeEmail(email);
 
       if (!name || !email || !phone || !address || !category || !plan) {
         return res.status(400).json({ success: false, error: "Missing fields" });
       }
-
       if (!["basic", "standard", "premium"].includes(plan)) {
         return res.status(400).json({ success: false, error: "Invalid plan" });
       }
@@ -263,7 +285,6 @@ app.post(
 
       if (plan === "standard" || plan === "premium") {
         const files = req.files || {};
-
         if (files.logo?.[0]) {
           logoUrl = await uploadBufferToCloudinary(files.logo[0].buffer, "easyfix/logos");
         }
@@ -294,22 +315,26 @@ app.post(
         photos,
       });
 
-      const variantId =
-        plan === "premium" ? VARIANT_PREMIUM :
-        plan === "standard" ? VARIANT_STANDARD :
-        VARIANT_BASIC;
+      createdId = firma._id;
 
+      // Create checkout URL (redirect te success.html)
+      const variantId = planToVariant(plan);
       const checkoutUrl = await createLemonCheckout({ variantId, email });
 
       return res.json({
         success: true,
         message: "Regjistrimi u ruajt. Vazhdoni me pagesën.",
         checkoutUrl,
-        firmId: String(firma._id),
       });
     } catch (err) {
       errorWithTime("REGISTER ERROR:", err);
-      return res.status(500).json({ success: false, error: err?.message || "Server error" });
+
+      // nese u kriju firma por checkout deshtoi, fshije qe mos rrin pending kot
+      if (createdId) {
+        try { await Firma.deleteOne({ _id: createdId }); } catch {}
+      }
+
+      return res.status(500).json({ success: false, error: "Server error" });
     }
   }
 );
@@ -327,7 +352,7 @@ app.get("/firms", async (req, res) => {
 
 app.get("/check-status", async (req, res) => {
   try {
-    const email = req.query.email;
+    const email = normalizeEmail(req.query.email);
     if (!email) return res.status(400).json({ success: false, error: "Missing email" });
 
     const f = await Firma.findOne({ email }).select("-__v");
@@ -354,11 +379,8 @@ async function runCleanup() {
 }
 
 setInterval(async () => {
-  try {
-    await runCleanup();
-  } catch (e) {
-    errorWithTime("Cleanup error:", e);
-  }
+  try { await runCleanup(); }
+  catch (e) { errorWithTime("Cleanup error:", e); }
 }, CHECK_INTERVAL_MINUTES * 60 * 1000);
 
 /* ================= START ================= */

@@ -46,6 +46,8 @@ form.addEventListener("submit", async (e) => {
 
   const name = $("#emri").value.trim();
   const address = $("#adresa").value.trim();
+  const city = $("#city").value.trim();     // NEW
+  const zone = $("#zone").value.trim();     // NEW
   const phone = $("#telefoni").value.trim();
   const email = $("#emaili").value.trim();
   const category = $("#kategoria").value.trim();
@@ -54,25 +56,27 @@ form.addEventListener("submit", async (e) => {
     showStatus("Ju lutem plotësoni të gjitha fushat.", "error");
     return;
   }
-
+  if (!city) {
+    showStatus("Ju lutem shkruani Qytetin (për ‘afër meje’).", "error");
+    return;
+  }
   if (!selectedPlan) {
     showStatus("Ju lutem zgjidhni një plan.", "error");
     return;
   }
 
-  // photo limits
   const maxPhotos = selectedPlan === "standard" ? 3 : selectedPlan === "premium" ? 8 : 0;
 
-  // build multipart
   const formData = new FormData();
   formData.append("name", name);
   formData.append("email", email);
   formData.append("phone", phone);
   formData.append("address", address);
+  formData.append("city", city);     // NEW
+  formData.append("zone", zone);     // NEW
   formData.append("category", category);
   formData.append("plan", selectedPlan);
 
-  // logo + photos only for standard/premium
   if (selectedPlan === "standard" || selectedPlan === "premium") {
     const logoFile = $("#logoUpload").files[0];
     if (logoFile) formData.append("logo", logoFile);
@@ -98,7 +102,7 @@ form.addEventListener("submit", async (e) => {
       return;
     }
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
 
     if (!res.ok || !data.success) {
       showStatus(data?.error || "Gabim në regjistrim.", "error");
@@ -107,7 +111,6 @@ form.addEventListener("submit", async (e) => {
 
     showStatus("Po ju dërgojmë te pagesa...", "success");
 
-    // redirect te checkout url (krijuar nga serveri me redirect_url te success.html)
     setTimeout(() => {
       window.location.href = data.checkoutUrl;
     }, 700);

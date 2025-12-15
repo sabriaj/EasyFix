@@ -11,16 +11,12 @@
   <script defer src="code.js"></script>
 
   <style>
-    .plan-btn.active {
-      border: 3px solid #2563eb;
-      background: #dbeafe;
-    }
+    .plan-btn.active { border: 3px solid #2563eb; background: #dbeafe; }
   </style>
 </head>
 
 <body class="bg-gray-100 min-h-screen">
 
-  <!-- HEADER -->
   <header class="bg-blue-700 text-white py-6 shadow-md">
     <div class="container mx-auto px-4 flex justify-between items-center">
       <h1 class="text-3xl font-extrabold">EasyFix</h1>
@@ -32,16 +28,12 @@
     </div>
   </header>
 
-  <!-- MAIN CONTENT -->
   <section class="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-xl mt-10">
     <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Regjistrimi i Firmës</h1>
 
-    <!-- PLAN SELECTION -->
     <h2 class="text-xl font-semibold mb-3">Zgjidh Planin</h2>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-
-      <!-- BASIC -->
       <button data-plan="basic" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
         <h3 class="text-lg font-bold mb-1">Basic – 15€/muaj</h3>
         <ul class="text-sm text-gray-600 space-y-1">
@@ -51,7 +43,6 @@
         </ul>
       </button>
 
-      <!-- STANDARD -->
       <button data-plan="standard" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
         <h3 class="text-lg font-bold mb-1">Standard – 20€/muaj</h3>
         <ul class="text-sm text-gray-600 space-y-1">
@@ -62,7 +53,6 @@
         </ul>
       </button>
 
-      <!-- PREMIUM -->
       <button data-plan="premium" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
         <h3 class="text-lg font-bold mb-1">Premium – 30€/muaj</h3>
         <ul class="text-sm text-gray-600 space-y-1">
@@ -72,23 +62,21 @@
           <li>• Promovim javor</li>
         </ul>
       </button>
-
     </div>
 
     <input type="hidden" id="selectedPlan">
 
-    <!-- LOGO & PHOTOS SECTION (Hidden for BASIC) -->
     <div id="uploadSection" class="hidden mt-6 p-4 border rounded-xl bg-gray-50">
       <h3 class="font-semibold mb-3 text-gray-800">Ngarko Logo dhe Foto</h3>
 
       <label class="block mb-2 font-medium">Logo e Kompanisë</label>
       <input type="file" id="logoUpload" accept="image/*" class="mb-4 w-full">
 
-      <label class="block mb-2 font-medium">Foto të Shërbimeve (max 3)</label>
+      <label class="block mb-2 font-medium">Foto të Shërbimeve (max 3 / 8)</label>
       <input type="file" id="photoUpload" accept="image/*" multiple class="w-full">
+      <p class="text-xs text-gray-500 mt-1">Standard: max 3 foto. Premium: max 8 foto.</p>
     </div>
 
-    <!-- REGISTRATION FORM -->
     <form id="registerForm" class="grid grid-cols-1 gap-4 mt-6">
 
       <div>
@@ -99,6 +87,20 @@
       <div>
         <label class="font-semibold">Adresa</label>
         <input id="adresa" type="text" class="w-full border p-2 rounded">
+      </div>
+
+      <!-- NEW: City + Zone -->
+      <div>
+        <label class="font-semibold">Qyteti</label>
+        <input id="city" type="text" placeholder="p.sh. Shkup / Skopje, Tetovë..."
+               class="w-full border p-2 rounded">
+        <p class="text-xs text-gray-500 mt-1">Kjo përdoret për t’u shfaqur automatikisht te klientët “afër meje”.</p>
+      </div>
+
+      <div>
+        <label class="font-semibold">Zona / Lagjja (opsionale)</label>
+        <input id="zone" type="text" placeholder="p.sh. Çair, Karposh..."
+               class="w-full border p-2 rounded">
       </div>
 
       <div>
@@ -126,7 +128,6 @@
         Vazhdo te Pagesa
       </button>
     </form>
-
   </section>
 
 </body>

@@ -11,7 +11,6 @@
     .badge-standard { background: #3b82f6; color: white; }
     .badge-basic { background: #6b7280; color: white; }
 
-    /* MODAL FULLSCREEN */
     #photoModal {
       display: none;
       position: fixed;
@@ -22,7 +21,6 @@
       z-index: 9999;
       padding: 24px;
     }
-
     #photoModal .modal-card {
       width: min(1100px, 95vw);
       height: min(720px, 92vh);
@@ -30,7 +28,6 @@
       flex-direction: column;
       gap: 12px;
     }
-
     #photoModal .modal-img-wrap {
       position: relative;
       flex: 1;
@@ -42,7 +39,6 @@
       background: rgba(255,255,255,0.06);
       box-shadow: 0 0 24px rgba(0,0,0,0.35);
     }
-
     #photoModal img {
       max-width: 100%;
       max-height: 100%;
@@ -50,7 +46,6 @@
       user-select: none;
       -webkit-user-drag: none;
     }
-
     #photoModal .modal-actions {
       display: flex;
       justify-content: space-between;
@@ -58,7 +53,6 @@
       color: white;
       gap: 12px;
     }
-
     .modal-btn {
       background: rgba(255,255,255,0.14);
       border: 1px solid rgba(255,255,255,0.18);
@@ -78,7 +72,6 @@
       font-weight: 800;
     }
 
-    /* highlight when focused */
     .focus-ring {
       outline: 3px solid rgba(37,99,235,0.9);
       outline-offset: 2px;
@@ -89,7 +82,6 @@
 
 <body class="bg-gray-50 min-h-screen flex flex-col">
 
-  <!-- Header -->
   <header class="bg-blue-700 text-white py-6 shadow-md">
     <div class="container mx-auto px-4 flex justify-between items-center">
       <h1 class="text-3xl font-extrabold tracking-tight">EasyFix</h1>
@@ -102,13 +94,18 @@
     </div>
   </header>
 
-  <!-- MAIN -->
   <main class="container mx-auto px-4 py-10 flex-grow">
     <h2 class="text-4xl font-bold text-blue-900 mb-8 text-center">
       Gjej mjeshtrin që të duhet me shpejtësi
     </h2>
 
     <section class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6">
+
+      <!-- Location info (no button) -->
+      <div id="locationInfo" class="mb-4 text-sm text-gray-600">
+        Po përpiqemi të marrim lokacionin...
+      </div>
+
       <div class="flex flex-col md:flex-row md:space-x-6 mb-6">
         <input
           id="searchInput"
@@ -133,7 +130,6 @@
     </section>
   </main>
 
-  <!-- FOOTER -->
   <footer class="bg-blue-700 text-white text-center py-6 mt-auto">
     &copy; 2025 EasyFix.mk - Ndihma për çdo shtëpi
   </footer>
@@ -171,12 +167,11 @@ const categorySelect = document.getElementById("categorySelect");
 const searchInput = document.getElementById("searchInput");
 const firmsContainer = document.getElementById("firmsContainer");
 const noResults = document.getElementById("noResults");
+const locationInfo = document.getElementById("locationInfo");
 
-/* =================== helpers =================== */
 function sanitize(text) {
   return text ? text.toString().trim() : "";
 }
-
 function normalizeEmail(email) {
   return sanitize(email).toLowerCase();
 }
@@ -188,7 +183,6 @@ function clampPhotos(firm) {
   return [];
 }
 
-/* =================== categories =================== */
 function populateCategoryFilter(firms) {
   categorySelect.innerHTML = `<option value="">Të gjitha kategoritë</option>`;
   const categories = [...new Set(firms.map(f => sanitize(f.category)))].sort();
@@ -201,13 +195,12 @@ function populateCategoryFilter(firms) {
   });
 }
 
-/* =================== modal slider =================== */
+/* ===== modal slider ===== */
 const photoModal = document.getElementById("photoModal");
 const modalImage = document.getElementById("modalImage");
 const modalTitle = document.getElementById("modalTitle");
 const modalCounter = document.getElementById("modalCounter");
 const modalBackdrop = document.getElementById("modalBackdrop");
-
 const modalCloseBtn = document.getElementById("modalCloseBtn");
 const modalPrevBtn = document.getElementById("modalPrevBtn");
 const modalNextBtn = document.getElementById("modalNextBtn");
@@ -220,20 +213,17 @@ let modalIndex = 0;
 function openModalSlider({ photos, startIndex, firmName }) {
   modalPhotos = photos || [];
   modalIndex = Math.max(0, Math.min(startIndex || 0, modalPhotos.length - 1));
-
   modalTitle.textContent = firmName ? sanitize(firmName) : "";
   updateModalImage();
   photoModal.style.display = "flex";
   photoModal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
 }
-
 function updateModalImage() {
   if (!modalPhotos.length) return;
   modalImage.src = modalPhotos[modalIndex];
   modalCounter.textContent = `(${modalIndex + 1}/${modalPhotos.length})`;
 }
-
 function closeModal() {
   photoModal.style.display = "none";
   photoModal.setAttribute("aria-hidden", "true");
@@ -241,34 +231,28 @@ function closeModal() {
   modalPhotos = [];
   modalIndex = 0;
 }
-
 function modalPrev() {
   if (!modalPhotos.length) return;
   modalIndex = (modalIndex - 1 + modalPhotos.length) % modalPhotos.length;
   updateModalImage();
 }
-
 function modalNext() {
   if (!modalPhotos.length) return;
   modalIndex = (modalIndex + 1) % modalPhotos.length;
   updateModalImage();
 }
-
 modalCloseBtn.addEventListener("click", closeModal);
 modalPrevBtn.addEventListener("click", modalPrev);
 modalNextBtn.addEventListener("click", modalNext);
 modalPrevBtn2.addEventListener("click", modalPrev);
 modalNextBtn2.addEventListener("click", modalNext);
 
-// click outside image -> close (but not when clicking buttons)
 photoModal.addEventListener("click", (e) => {
   if (e.target === photoModal) closeModal();
 });
 modalBackdrop.addEventListener("click", (e) => {
-  // clicking the backdrop area closes, clicking image/buttons does not
   if (e.target === modalBackdrop) closeModal();
 });
-
 document.addEventListener("keydown", (e) => {
   if (photoModal.style.display !== "flex") return;
   if (e.key === "Escape") closeModal();
@@ -276,9 +260,8 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") modalNext();
 });
 
-/* =================== autoplay per premium (card slider) =================== */
+/* ===== autoplay (premium only) ===== */
 const autoplayTimers = new Map();
-
 function startAutoplay(containerEl, photos) {
   stopAutoplay(containerEl);
   if (!photos || photos.length <= 1) return;
@@ -300,16 +283,14 @@ function startAutoplay(containerEl, photos) {
   const t = setInterval(tick, 5000);
   autoplayTimers.set(containerEl, t);
 }
-
 function stopAutoplay(containerEl) {
   const t = autoplayTimers.get(containerEl);
   if (t) clearInterval(t);
   autoplayTimers.delete(containerEl);
 }
 
-/* =================== render =================== */
+/* ===== render firms ===== */
 function renderFirms(firms) {
-  // stop old autoplay timers
   autoplayTimers.forEach((t) => clearInterval(t));
   autoplayTimers.clear();
 
@@ -327,14 +308,13 @@ function renderFirms(firms) {
     div.className = "border border-gray-300 rounded-xl p-5 shadow bg-white hover:shadow-md transition";
     div.dataset.email = normalizeEmail(firm.email);
 
-    const plan = firm.plan || "basic";
+    const plan = (firm.plan || "basic").toLowerCase();
 
     // Basic: no logo, no photos
     const showMedia = plan !== "basic";
     const logo = showMedia ? (firm.logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png") : null;
     const photos = showMedia ? clampPhotos(firm) : [];
 
-    // badge
     const badgeHTML =
       plan === "premium"
         ? `<span class="badge-premium px-3 py-1 rounded-full text-xs font-bold">Premium</span>`
@@ -342,12 +322,10 @@ function renderFirms(firms) {
           ? `<span class="badge-standard px-3 py-1 rounded-full text-xs font-bold">Standard</span>`
           : `<span class="badge-basic px-3 py-1 rounded-full text-xs font-bold">Basic</span>`;
 
-    // header
     const headerHTML = showMedia
       ? `
         <div class="flex items-center mb-3">
-          <img src="${logo}"
-               class="w-14 h-14 rounded-full object-cover border shadow-sm mr-3" />
+          <img src="${logo}" class="w-14 h-14 rounded-full object-cover border shadow-sm mr-3" />
           <div>
             <h3 class="text-xl font-bold text-blue-700">${sanitize(firm.name)}</h3>
             ${badgeHTML}
@@ -363,10 +341,8 @@ function renderFirms(firms) {
         </div>
       `;
 
-    // photos block (standard/premium only)
     let photosHTML = "";
     if (photos.length > 0) {
-      // main preview image (click -> modal slider)
       photosHTML = `
         <div class="mt-4" data-slider="1">
           <div class="rounded-xl overflow-hidden border bg-gray-50">
@@ -403,7 +379,6 @@ function renderFirms(firms) {
 
     div.innerHTML = `
       ${headerHTML}
-
       <p><strong>Adresa:</strong> ${sanitize(firm.address)}</p>
       <p><strong>Telefoni:</strong> ${sanitize(firm.phone)}</p>
       <p><strong>Email:</strong>
@@ -412,11 +387,9 @@ function renderFirms(firms) {
         </a>
       </p>
       <p><strong>Kategoria:</strong> ${sanitize(firm.category)}</p>
-
       ${photosHTML}
     `;
 
-    // attach events for slider/modal
     if (photos.length > 0) {
       const slider = div.querySelector("[data-slider='1']");
       const mainImg = slider.querySelector("img[data-main-photo='1']");
@@ -435,32 +408,26 @@ function renderFirms(firms) {
         });
       }
 
-      // click main -> open modal slider at current index
       mainImg.addEventListener("click", () => {
         openModalSlider({ photos, startIndex: currentIndex, firmName: firm.name });
       });
 
-      // click thumbs
       thumbs.forEach(t => {
         t.addEventListener("click", () => {
           const i = Number(t.getAttribute("data-thumb-index") || "0");
           setIndex(i);
-          // optional: open modal immediately when clicking thumb
           openModalSlider({ photos, startIndex: i, firmName: firm.name });
         });
       });
 
-      // autoplay only premium
-      if ((firm.plan || "").toLowerCase() === "premium") {
-        startAutoplay(slider, photos);
-      }
+      if (plan === "premium") startAutoplay(slider, photos);
     }
 
     firmsContainer.appendChild(div);
   });
 }
 
-/* =================== filter =================== */
+/* ===== filter ===== */
 function filterFirms() {
   const txt = searchInput.value.toLowerCase();
   const cat = categorySelect.value;
@@ -474,7 +441,7 @@ function filterFirms() {
   renderFirms(filtered);
 }
 
-/* =================== focus from URL =================== */
+/* ===== focus from URL ===== */
 function focusFirmFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const focus = normalizeEmail(params.get("focus") || "");
@@ -485,33 +452,98 @@ function focusFirmFromUrl() {
 
   el.classList.add("focus-ring");
   el.scrollIntoView({ behavior: "smooth", block: "center" });
-
-  // remove highlight after a bit
   setTimeout(() => el.classList.remove("focus-ring"), 6000);
 }
 
-/* =================== fetch firms =================== */
-fetch(`${API_URL}/firms`)
-  .then(res => res.json())
-  .then(data => {
-    // sort by plan
-    allFirms = (data || []).sort((a, b) => {
-      const order = { premium: 1, standard: 2, basic: 3 };
-      return (order[a.plan] || 9) - (order[b.plan] || 9);
-    });
+/* ===== fetch firms helper ===== */
+async function fetchFirms(params = "") {
+  const res = await fetch(`${API_URL}/firms${params}`);
+  if (!res.ok) throw new Error("Failed to fetch firms");
+  return await res.json();
+}
 
-    populateCategoryFilter(allFirms);
-    renderFirms(allFirms);
-    focusFirmFromUrl();
-  })
-  .catch(err => {
-    console.error("Gabim:", err);
-    noResults.textContent = "Gabim në server. Provo më vonë.";
-    noResults.classList.remove("hidden");
-  });
+/* ===== init with auto location ===== */
+async function init() {
+  try {
+    // try geolocation
+    if (!navigator.geolocation) {
+      locationInfo.textContent = "Shfaqen të gjitha firmat (browser s’e mbështet lokacionin).";
+      allFirms = await fetchFirms("");
+      postFetch();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        // reverse to city/zone
+        const r = await fetch(`${API_URL}/geo/reverse?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`);
+        const j = await r.json().catch(() => ({}));
+
+        const city = sanitize(j.city);
+        const zone = sanitize(j.zone);
+
+        if (!j.success || !city) {
+          locationInfo.textContent = "Shfaqen të gjitha firmat (s’u gjet qyteti nga lokacioni).";
+          allFirms = await fetchFirms("");
+          postFetch();
+          return;
+        }
+
+        // first try city + zone
+        locationInfo.textContent = zone
+          ? `Po shfaqim firmat në: ${city} (${zone})`
+          : `Po shfaqim firmat në: ${city}`;
+
+        let data = [];
+        if (zone) {
+          data = await fetchFirms(`?city=${encodeURIComponent(city)}&zone=${encodeURIComponent(zone)}`);
+        }
+
+        // fallback: city only
+        if (!data || data.length === 0) {
+          data = await fetchFirms(`?city=${encodeURIComponent(city)}`);
+        }
+
+        allFirms = (data || []).sort((a, b) => {
+          const order = { premium: 1, standard: 2, basic: 3 };
+          return (order[a.plan] || 9) - (order[b.plan] || 9);
+        });
+
+        postFetch();
+      } catch (e) {
+        console.error(e);
+        locationInfo.textContent = "Shfaqen të gjitha firmat (problem me lokacionin).";
+        allFirms = await fetchFirms("");
+        postFetch();
+      }
+    }, async () => {
+      // user denied
+      locationInfo.textContent = "Shfaqen të gjitha firmat (lokacioni nuk u lejua).";
+      allFirms = await fetchFirms("");
+      postFetch();
+    }, { enableHighAccuracy: false, timeout: 6000, maximumAge: 300000 });
+
+  } catch (e) {
+    console.error(e);
+    locationInfo.textContent = "Shfaqen të gjitha firmat (gabim).";
+    allFirms = await fetchFirms("");
+    postFetch();
+  }
+}
+
+function postFetch() {
+  populateCategoryFilter(allFirms);
+  renderFirms(allFirms);
+  focusFirmFromUrl();
+}
 
 searchInput.addEventListener("input", filterFirms);
 categorySelect.addEventListener("change", filterFirms);
+
+init();
 </script>
 
 </body>

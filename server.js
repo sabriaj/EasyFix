@@ -57,6 +57,59 @@ function uploadBufferToCloudinary(buffer, folder = "easyfix") {
   });
 }
 
+/* ================= NORMALIZERS ================= */
+function normalizeEmail(e) {
+  return String(e || "").trim().toLowerCase();
+}
+
+function normalizePlace(s) {
+  const v = String(s || "").trim().toLowerCase();
+  if (!v) return "";
+  // hiq diakritikat kur është e mundur
+  try {
+    return v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+  } catch {
+    return v.replace(/\s+/g, " ");
+  }
+}
+
+// alias për qytete (ALB/MK/EN) – sa për me shmang “Shkup vs Skopje” etj.
+const cityAlias = {
+  "shkup": "skopje",
+  "skopje": "skopje",
+
+  "tetove": "tetovo",
+  "tetov": "tetovo",
+  "tetovo": "tetovo",
+
+  "kercove": "kicevo",
+  "kercova": "kicevo",
+  "kicevo": "kicevo",
+
+  "strumice": "strumica",
+  "strumica": "strumica",
+
+  "kumanove": "kumanovo",
+  "kumanovo": "kumanovo",
+
+  "ohri": "ohrid",
+  "ohrid": "ohrid",
+
+  "prilep": "prilep",
+  "gostivar": "gostivar",
+  "debar": "debar",
+  "dibra": "debar",
+  "stip": "stip",
+  "stipp": "stip",
+  "bitola": "bitola",
+  "manastir": "bitola",
+};
+
+function cityKey(city) {
+  const n = normalizePlace(city);
+  return cityAlias[n] || n;
+}
+
 /* ================= MONGO ================= */
 mongoose
   .connect(process.env.MONGO_URI, { autoIndex: true })
@@ -67,10 +120,17 @@ mongoose
 const firmaSchema = new mongoose.Schema(
   {
     name: String,
-    email: { type: String, unique: true, required: true }, // ruajme lowercase
+    email: { type: String, unique: true, required: true },
+
     phone: String,
     address: String,
     category: String,
+
+    // LOCATION (NEW)
+    city: String,
+    zone: String,
+    city_key: String,
+    zone_key: String,
 
     plan: { type: String, default: "basic" }, // basic, standard, premium
     payment_status: { type: String, default: "pending" }, // pending, paid, expired
@@ -90,10 +150,6 @@ const Firma = mongoose.model("Firma", firmaSchema);
 /* ================= PLAN RULES ================= */
 const planPhotoLimit = { basic: 0, standard: 3, premium: 8 };
 
-function normalizeEmail(e) {
-  return String(e || "").trim().toLowerCase();
-}
-
 function detectPlanFromVariant(variantId) {
   const v = String(variantId || "");
   if (v && v === VARIANT_BASIC) return "basic";
@@ -108,16 +164,13 @@ function planToVariant(plan) {
   return VARIANT_BASIC;
 }
 
-/* ================= CREATE CHECKOUT (LEMON API) =================
-   Fix 422: store/variant duhet te jene te relationships, jo store_id/variant_id ne attributes.
-*/
+/* ================= CREATE CHECKOUT (LEMON API) ================= */
 async function createLemonCheckout({ variantId, email }) {
   if (!LEMON_API_KEY) throw new Error("Missing LEMON_API_KEY");
   if (!LEMON_STORE_ID) throw new Error("Missing LEMON_STORE_ID");
   if (!variantId) throw new Error("Missing variantId");
 
-  const redirectUrl =
-    `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}`;
+  const redirectUrl = `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}`;
 
   const payload = {
     data: {
@@ -126,7 +179,7 @@ async function createLemonCheckout({ variantId, email }) {
         product_options: { redirect_url: redirectUrl },
         checkout_data: {
           email,
-          custom: { email }, // kjo na duhet per webhook email
+          custom: { email },
         },
       },
       relationships: {
@@ -159,7 +212,6 @@ async function createLemonCheckout({ variantId, email }) {
 /* ================= WEBHOOK (RAW BODY) ================= */
 app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
-    // Lemon mund ta dergoje si x-signature ose x-signature-256.
     let signature =
       req.headers["x-signature"] ||
       req.headers["x-signature-256"] ||
@@ -172,7 +224,6 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
       .update(req.body)
       .digest("hex");
 
-    // Nese vjen me prefix si "sha256=....", hiqe.
     if (signature.startsWith("sha256=")) signature = signature.slice(7);
 
     if (!signature || signature !== hmac) {
@@ -204,7 +255,6 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 
     if (!email) return res.status(200).send("No email");
 
-    // Vetem kur realisht eshte pagu:
     if (event === "order_paid" || event === "subscription_payment_success") {
       const update = {
         payment_status: "paid",
@@ -213,7 +263,6 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
         deleted_at: null,
       };
 
-      // Vendose planin vetem nese e detekton sakt (mos e ulin gabimisht)
       if (detectedPlan) update.plan = detectedPlan;
 
       const updated = await Firma.findOneAndUpdate(
@@ -222,7 +271,6 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
         { upsert: false, new: true }
       );
 
-      // Nese s’gjen firmë (rast kur email s’perputhet), mos krijo doc te ri pa logo/foto.
       if (!updated) {
         log("⚠️ Paid webhook but firm not found for email:", email);
       } else {
@@ -254,6 +302,75 @@ app.use(express.json());
 /* ================= HEALTH ================= */
 app.get("/health", (req, res) => res.json({ ok: true, time: now() }));
 
+/* ================= GEO: REVERSE =================
+   Nominatim (OSM) reverse -> kthen city/zone
+*/
+const geoCache = new Map(); // key -> { expires, data }
+function geoCacheGet(key) {
+  const v = geoCache.get(key);
+  if (!v) return null;
+  if (Date.now() > v.expires) { geoCache.delete(key); return null; }
+  return v.data;
+}
+function geoCacheSet(key, data, ttlMs = 60 * 60 * 1000) {
+  geoCache.set(key, { data, expires: Date.now() + ttlMs });
+}
+
+app.get("/geo/reverse", async (req, res) => {
+  try {
+    const lat = Number(req.query.lat);
+    const lng = Number(req.query.lng);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return res.status(400).json({ success: false, error: "Missing/invalid lat/lng" });
+    }
+
+    const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+    const cached = geoCacheGet(key);
+    if (cached) return res.json({ success: true, ...cached });
+
+    const url =
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&addressdetails=1`;
+
+    const resp = await fetch(url, {
+      headers: {
+        "User-Agent": "EasyFix/1.0 (https://easyfix.mk)",
+        "Accept-Language": "sq,en;q=0.8",
+      },
+    });
+
+    if (!resp.ok) {
+      return res.status(502).json({ success: false, error: "Reverse geocode failed" });
+    }
+
+    const json = await resp.json();
+    const a = json?.address || {};
+
+    const city =
+      a.city ||
+      a.town ||
+      a.village ||
+      a.municipality ||
+      a.county ||
+      "";
+
+    const zone =
+      a.suburb ||
+      a.neighbourhood ||
+      a.city_district ||
+      a.quarter ||
+      a.hamlet ||
+      "";
+
+    const out = { city, zone };
+    geoCacheSet(key, out);
+    return res.json({ success: true, ...out });
+  } catch (e) {
+    errorWithTime("GEO REVERSE ERROR:", e);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
 /* ================= REGISTER (multipart) ================= */
 app.post(
   "/register",
@@ -264,7 +381,7 @@ app.post(
   async (req, res) => {
     let createdId = null;
     try {
-      let { name, email, phone, address, category, plan } = req.body;
+      let { name, email, phone, address, category, plan, city, zone } = req.body;
 
       email = normalizeEmail(email);
 
@@ -273,6 +390,13 @@ app.post(
       }
       if (!["basic", "standard", "premium"].includes(plan)) {
         return res.status(400).json({ success: false, error: "Invalid plan" });
+      }
+
+      // LOCATION: city është e detyrueshme për “afër meje”
+      city = String(city || "").trim();
+      zone = String(zone || "").trim();
+      if (!city) {
+        return res.status(400).json({ success: false, error: "Qyteti është i detyrueshëm." });
       }
 
       const exists = await Firma.findOne({ email });
@@ -313,11 +437,15 @@ app.post(
         payment_status: "pending",
         logoUrl,
         photos,
+
+        city,
+        zone,
+        city_key: cityKey(city),
+        zone_key: normalizePlace(zone),
       });
 
       createdId = firma._id;
 
-      // Create checkout URL (redirect te success.html)
       const variantId = planToVariant(plan);
       const checkoutUrl = await createLemonCheckout({ variantId, email });
 
@@ -329,7 +457,7 @@ app.post(
     } catch (err) {
       errorWithTime("REGISTER ERROR:", err);
 
-      // nese u kriju firma por checkout deshtoi, fshije qe mos rrin pending kot
+      // nëse u kriju firma por checkout dështoi, fshije
       if (createdId) {
         try { await Firma.deleteOne({ _id: createdId }); } catch {}
       }
@@ -339,10 +467,18 @@ app.post(
   }
 );
 
-/* ================= PUBLIC ================= */
+/* ================= PUBLIC: FIRMS (filters) ================= */
 app.get("/firms", async (req, res) => {
   try {
-    const firms = await Firma.find({ payment_status: "paid" }).select("-__v");
+    const qCity = String(req.query.city || "").trim();
+    const qZone = String(req.query.zone || "").trim();
+
+    const filter = { payment_status: "paid" };
+
+    if (qCity) filter.city_key = cityKey(qCity);
+    if (qZone) filter.zone_key = normalizePlace(qZone);
+
+    const firms = await Firma.find(filter).select("-__v");
     res.json(firms);
   } catch (err) {
     errorWithTime("FIRMS ERROR:", err);

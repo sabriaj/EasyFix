@@ -21,6 +21,7 @@
       z-index: 9999;
       padding: 24px;
     }
+
     #photoModal .modal-card {
       width: min(1100px, 95vw);
       height: min(720px, 92vh);
@@ -28,6 +29,7 @@
       flex-direction: column;
       gap: 12px;
     }
+
     #photoModal .modal-img-wrap {
       position: relative;
       flex: 1;
@@ -39,6 +41,7 @@
       background: rgba(255,255,255,0.06);
       box-shadow: 0 0 24px rgba(0,0,0,0.35);
     }
+
     #photoModal img {
       max-width: 100%;
       max-height: 100%;
@@ -46,6 +49,7 @@
       user-select: none;
       -webkit-user-drag: none;
     }
+
     #photoModal .modal-actions {
       display: flex;
       justify-content: space-between;
@@ -53,6 +57,7 @@
       color: white;
       gap: 12px;
     }
+
     .modal-btn {
       background: rgba(255,255,255,0.14);
       border: 1px solid rgba(255,255,255,0.18);
@@ -95,17 +100,13 @@
   </header>
 
   <main class="container mx-auto px-4 py-10 flex-grow">
-    <h2 class="text-4xl font-bold text-blue-900 mb-8 text-center">
+    <h2 class="text-4xl font-bold text-blue-900 mb-3 text-center">
       Gjej mjeshtrin që të duhet me shpejtësi
     </h2>
 
+    <p id="countryInfo" class="text-center text-sm text-gray-600 mb-8"></p>
+
     <section class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6">
-
-      <!-- Location info (no button) -->
-      <div id="locationInfo" class="mb-4 text-sm text-gray-600">
-        Po përpiqemi të marrim lokacionin...
-      </div>
-
       <div class="flex flex-col md:flex-row md:space-x-6 mb-6">
         <input
           id="searchInput"
@@ -134,7 +135,6 @@
     &copy; 2025 EasyFix.mk - Ndihma për çdo shtëpi
   </footer>
 
-  <!-- MODAL -->
   <div id="photoModal" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-actions">
@@ -161,20 +161,19 @@
 
 <script>
 const API_URL = "https://easyfix.onrender.com";
+const DEFAULT_COUNTRY = "MK";
+
 let allFirms = [];
 
 const categorySelect = document.getElementById("categorySelect");
 const searchInput = document.getElementById("searchInput");
 const firmsContainer = document.getElementById("firmsContainer");
 const noResults = document.getElementById("noResults");
-const locationInfo = document.getElementById("locationInfo");
+const countryInfo = document.getElementById("countryInfo");
 
-function sanitize(text) {
-  return text ? text.toString().trim() : "";
-}
-function normalizeEmail(email) {
-  return sanitize(email).toLowerCase();
-}
+/* =================== helpers =================== */
+function sanitize(text) { return text ? text.toString().trim() : ""; }
+function normalizeEmail(email) { return sanitize(email).toLowerCase(); }
 
 function clampPhotos(firm) {
   const photos = Array.isArray(firm.photos) ? firm.photos : [];
@@ -183,6 +182,7 @@ function clampPhotos(firm) {
   return [];
 }
 
+/* =================== categories =================== */
 function populateCategoryFilter(firms) {
   categorySelect.innerHTML = `<option value="">Të gjitha kategoritë</option>`;
   const categories = [...new Set(firms.map(f => sanitize(f.category)))].sort();
@@ -195,12 +195,13 @@ function populateCategoryFilter(firms) {
   });
 }
 
-/* ===== modal slider ===== */
+/* =================== modal slider =================== */
 const photoModal = document.getElementById("photoModal");
 const modalImage = document.getElementById("modalImage");
 const modalTitle = document.getElementById("modalTitle");
 const modalCounter = document.getElementById("modalCounter");
 const modalBackdrop = document.getElementById("modalBackdrop");
+
 const modalCloseBtn = document.getElementById("modalCloseBtn");
 const modalPrevBtn = document.getElementById("modalPrevBtn");
 const modalNextBtn = document.getElementById("modalNextBtn");
@@ -219,11 +220,13 @@ function openModalSlider({ photos, startIndex, firmName }) {
   photoModal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
 }
+
 function updateModalImage() {
   if (!modalPhotos.length) return;
   modalImage.src = modalPhotos[modalIndex];
   modalCounter.textContent = `(${modalIndex + 1}/${modalPhotos.length})`;
 }
+
 function closeModal() {
   photoModal.style.display = "none";
   photoModal.setAttribute("aria-hidden", "true");
@@ -231,6 +234,7 @@ function closeModal() {
   modalPhotos = [];
   modalIndex = 0;
 }
+
 function modalPrev() {
   if (!modalPhotos.length) return;
   modalIndex = (modalIndex - 1 + modalPhotos.length) % modalPhotos.length;
@@ -241,18 +245,16 @@ function modalNext() {
   modalIndex = (modalIndex + 1) % modalPhotos.length;
   updateModalImage();
 }
+
 modalCloseBtn.addEventListener("click", closeModal);
 modalPrevBtn.addEventListener("click", modalPrev);
 modalNextBtn.addEventListener("click", modalNext);
 modalPrevBtn2.addEventListener("click", modalPrev);
 modalNextBtn2.addEventListener("click", modalNext);
 
-photoModal.addEventListener("click", (e) => {
-  if (e.target === photoModal) closeModal();
-});
-modalBackdrop.addEventListener("click", (e) => {
-  if (e.target === modalBackdrop) closeModal();
-});
+photoModal.addEventListener("click", (e) => { if (e.target === photoModal) closeModal(); });
+modalBackdrop.addEventListener("click", (e) => { if (e.target === modalBackdrop) closeModal(); });
+
 document.addEventListener("keydown", (e) => {
   if (photoModal.style.display !== "flex") return;
   if (e.key === "Escape") closeModal();
@@ -260,8 +262,9 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") modalNext();
 });
 
-/* ===== autoplay (premium only) ===== */
+/* =================== autoplay per premium =================== */
 const autoplayTimers = new Map();
+
 function startAutoplay(containerEl, photos) {
   stopAutoplay(containerEl);
   if (!photos || photos.length <= 1) return;
@@ -289,7 +292,7 @@ function stopAutoplay(containerEl) {
   autoplayTimers.delete(containerEl);
 }
 
-/* ===== render firms ===== */
+/* =================== render =================== */
 function renderFirms(firms) {
   autoplayTimers.forEach((t) => clearInterval(t));
   autoplayTimers.clear();
@@ -379,7 +382,9 @@ function renderFirms(firms) {
 
     div.innerHTML = `
       ${headerHTML}
+
       <p><strong>Adresa:</strong> ${sanitize(firm.address)}</p>
+      <p><strong>Qyteti:</strong> ${sanitize(firm.city || "")}</p>
       <p><strong>Telefoni:</strong> ${sanitize(firm.phone)}</p>
       <p><strong>Email:</strong>
         <a href="mailto:${sanitize(firm.email)}" class="text-blue-600 underline">
@@ -387,6 +392,7 @@ function renderFirms(firms) {
         </a>
       </p>
       <p><strong>Kategoria:</strong> ${sanitize(firm.category)}</p>
+
       ${photosHTML}
     `;
 
@@ -420,14 +426,16 @@ function renderFirms(firms) {
         });
       });
 
-      if (plan === "premium") startAutoplay(slider, photos);
+      if (plan === "premium") {
+        startAutoplay(slider, photos);
+      }
     }
 
     firmsContainer.appendChild(div);
   });
 }
 
-/* ===== filter ===== */
+/* =================== filter =================== */
 function filterFirms() {
   const txt = searchInput.value.toLowerCase();
   const cat = categorySelect.value;
@@ -441,7 +449,7 @@ function filterFirms() {
   renderFirms(filtered);
 }
 
-/* ===== focus from URL ===== */
+/* =================== focus from URL =================== */
 function focusFirmFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const focus = normalizeEmail(params.get("focus") || "");
@@ -455,95 +463,65 @@ function focusFirmFromUrl() {
   setTimeout(() => el.classList.remove("focus-ring"), 6000);
 }
 
-/* ===== fetch firms helper ===== */
-async function fetchFirms(params = "") {
-  const res = await fetch(`${API_URL}/firms${params}`);
-  if (!res.ok) throw new Error("Failed to fetch firms");
-  return await res.json();
+/* =================== detect country =================== */
+async function detectUserCountry() {
+  const params = new URLSearchParams(window.location.search);
+  const forced = (params.get("country") || "").trim().toUpperCase();
+  if (forced) return forced;
+
+  try {
+    const r = await fetch("https://ipapi.co/json/");
+    const j = await r.json();
+    if (j && j.country_code) return String(j.country_code).toUpperCase();
+  } catch {}
+
+  return DEFAULT_COUNTRY;
 }
 
-/* ===== init with auto location ===== */
-async function init() {
+async function countryNameFromBackend(code) {
   try {
-    // try geolocation
-    if (!navigator.geolocation) {
-      locationInfo.textContent = "Shfaqen të gjitha firmat (browser s’e mbështet lokacionin).";
-      allFirms = await fetchFirms("");
-      postFetch();
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      try {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-
-        // reverse to city/zone
-        const r = await fetch(`${API_URL}/geo/reverse?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`);
-        const j = await r.json().catch(() => ({}));
-
-        const city = sanitize(j.city);
-        const zone = sanitize(j.zone);
-
-        if (!j.success || !city) {
-          locationInfo.textContent = "Shfaqen të gjitha firmat (s’u gjet qyteti nga lokacioni).";
-          allFirms = await fetchFirms("");
-          postFetch();
-          return;
-        }
-
-        // first try city + zone
-        locationInfo.textContent = zone
-          ? `Po shfaqim firmat në: ${city} (${zone})`
-          : `Po shfaqim firmat në: ${city}`;
-
-        let data = [];
-        if (zone) {
-          data = await fetchFirms(`?city=${encodeURIComponent(city)}&zone=${encodeURIComponent(zone)}`);
-        }
-
-        // fallback: city only
-        if (!data || data.length === 0) {
-          data = await fetchFirms(`?city=${encodeURIComponent(city)}`);
-        }
-
-        allFirms = (data || []).sort((a, b) => {
-          const order = { premium: 1, standard: 2, basic: 3 };
-          return (order[a.plan] || 9) - (order[b.plan] || 9);
-        });
-
-        postFetch();
-      } catch (e) {
-        console.error(e);
-        locationInfo.textContent = "Shfaqen të gjitha firmat (problem me lokacionin).";
-        allFirms = await fetchFirms("");
-        postFetch();
-      }
-    }, async () => {
-      // user denied
-      locationInfo.textContent = "Shfaqen të gjitha firmat (lokacioni nuk u lejua).";
-      allFirms = await fetchFirms("");
-      postFetch();
-    }, { enableHighAccuracy: false, timeout: 6000, maximumAge: 300000 });
-
-  } catch (e) {
-    console.error(e);
-    locationInfo.textContent = "Shfaqen të gjitha firmat (gabim).";
-    allFirms = await fetchFirms("");
-    postFetch();
+    const r = await fetch(`${API_URL}/meta/countries`);
+    const j = await r.json();
+    const c = (j?.countries || []).find(x => x.code === code);
+    return c?.name || code;
+  } catch {
+    return code;
   }
 }
 
-function postFetch() {
+/* =================== fetch firms =================== */
+async function loadFirmsByCountry() {
+  const country = await detectUserCountry();
+  const cname = await countryNameFromBackend(country);
+
+  countryInfo.textContent = `Po shfaqim firmat për: ${cname} (${country})`;
+
+  const res = await fetch(`${API_URL}/firms?country=${encodeURIComponent(country)}`);
+  const data = await res.json();
+
+  allFirms = (data || []).sort((a, b) => {
+    const order = { premium: 1, standard: 2, basic: 3 };
+    return (order[a.plan] || 9) - (order[b.plan] || 9);
+  });
+
   populateCategoryFilter(allFirms);
   renderFirms(allFirms);
   focusFirmFromUrl();
+
+  if (!allFirms.length) {
+    noResults.textContent = `Nuk ka ende firma aktive për ${cname} (${country}).`;
+    noResults.classList.remove("hidden");
+  }
 }
+
+loadFirmsByCountry().catch(err => {
+  console.error("Gabim:", err);
+  noResults.textContent = "Gabim në server. Provo më vonë.";
+  noResults.classList.remove("hidden");
+});
 
 searchInput.addEventListener("input", filterFirms);
 categorySelect.addEventListener("change", filterFirms);
-
-init();
 </script>
 
 </body>

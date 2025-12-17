@@ -16,13 +16,16 @@
 </head>
 
 <body class="bg-gray-100 min-h-screen">
-
   <header class="bg-blue-700 text-white py-6 shadow-md">
     <div class="container mx-auto px-4 flex justify-between items-center">
       <h1 class="text-3xl font-extrabold">EasyFix</h1>
       <nav>
         <ul class="flex space-x-6 text-lg">
-          <li><a href="index.html" class="hover:underline"><i class="fas fa-arrow-left mr-2"></i>Kthehu mbrapa</a></li>
+          <li>
+            <a href="index.html" class="hover:underline">
+              <i class="fas fa-arrow-left mr-2"></i>Kthehu mbrapa
+            </a>
+          </li>
         </ul>
       </nav>
     </div>
@@ -72,9 +75,9 @@
       <label class="block mb-2 font-medium">Logo e Kompanisë</label>
       <input type="file" id="logoUpload" accept="image/*" class="mb-4 w-full">
 
-      <label class="block mb-2 font-medium">Foto të Shërbimeve (max 3 / 8)</label>
+      <label class="block mb-2 font-medium">Foto të Shërbimeve</label>
+      <p class="text-xs text-gray-500 mb-2">Standard: max 3 foto • Premium: max 8 foto</p>
       <input type="file" id="photoUpload" accept="image/*" multiple class="w-full">
-      <p class="text-xs text-gray-500 mt-1">Standard: max 3 foto. Premium: max 8 foto.</p>
     </div>
 
     <form id="registerForm" class="grid grid-cols-1 gap-4 mt-6">
@@ -89,18 +92,20 @@
         <input id="adresa" type="text" class="w-full border p-2 rounded">
       </div>
 
-      <!-- NEW: City + Zone -->
-      <div>
-        <label class="font-semibold">Qyteti</label>
-        <input id="city" type="text" placeholder="p.sh. Shkup / Skopje, Tetovë..."
-               class="w-full border p-2 rounded">
-        <p class="text-xs text-gray-500 mt-1">Kjo përdoret për t’u shfaqur automatikisht te klientët “afër meje”.</p>
-      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="font-semibold">Shteti</label>
+          <select id="country" class="w-full border p-2 rounded">
+            <option value="">Po ngarkohet...</option>
+          </select>
+        </div>
 
-      <div>
-        <label class="font-semibold">Zona / Lagjja (opsionale)</label>
-        <input id="zone" type="text" placeholder="p.sh. Çair, Karposh..."
-               class="w-full border p-2 rounded">
+        <div>
+          <label class="font-semibold">Qyteti</label>
+          <select id="city" class="w-full border p-2 rounded">
+            <option value="">Zgjidh shtetin fillimisht...</option>
+          </select>
+        </div>
       </div>
 
       <div>
@@ -129,6 +134,5 @@
       </button>
     </form>
   </section>
-
 </body>
 </html>

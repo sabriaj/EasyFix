@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import crypto from "crypto";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
+import { Country, State, City } from "country-state-city";
 
 dotenv.config();
 
@@ -29,10 +30,23 @@ const FRONTEND_SUCCESS_URL =
 const DELETE_AFTER_DAYS = Number(process.env.DELETE_AFTER_DAYS || 2);
 const CHECK_INTERVAL_MINUTES = Number(process.env.CHECK_INTERVAL_MINUTES || 60);
 
+const DEFAULT_COUNTRY = String(process.env.DEFAULT_COUNTRY || "MK").toUpperCase();
+
 /* ================= LOG HELPERS ================= */
 function now() { return new Date().toISOString(); }
 function log(...args) { console.log(now(), ...args); }
 function errorWithTime(...args) { console.error(now(), ...args); }
+
+/* ================= NORMALIZERS ================= */
+function normalizeEmail(e) {
+  return String(e || "").trim().toLowerCase();
+}
+function normalizeCountry(c) {
+  return String(c || "").trim().toUpperCase();
+}
+function normalizeCity(c) {
+  return String(c || "").trim();
+}
 
 /* ================= CLOUDINARY ================= */
 cloudinary.config({
@@ -57,59 +71,6 @@ function uploadBufferToCloudinary(buffer, folder = "easyfix") {
   });
 }
 
-/* ================= NORMALIZERS ================= */
-function normalizeEmail(e) {
-  return String(e || "").trim().toLowerCase();
-}
-
-function normalizePlace(s) {
-  const v = String(s || "").trim().toLowerCase();
-  if (!v) return "";
-  // hiq diakritikat kur është e mundur
-  try {
-    return v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
-  } catch {
-    return v.replace(/\s+/g, " ");
-  }
-}
-
-// alias për qytete (ALB/MK/EN) – sa për me shmang “Shkup vs Skopje” etj.
-const cityAlias = {
-  "shkup": "skopje",
-  "skopje": "skopje",
-
-  "tetove": "tetovo",
-  "tetov": "tetovo",
-  "tetovo": "tetovo",
-
-  "kercove": "kicevo",
-  "kercova": "kicevo",
-  "kicevo": "kicevo",
-
-  "strumice": "strumica",
-  "strumica": "strumica",
-
-  "kumanove": "kumanovo",
-  "kumanovo": "kumanovo",
-
-  "ohri": "ohrid",
-  "ohrid": "ohrid",
-
-  "prilep": "prilep",
-  "gostivar": "gostivar",
-  "debar": "debar",
-  "dibra": "debar",
-  "stip": "stip",
-  "stipp": "stip",
-  "bitola": "bitola",
-  "manastir": "bitola",
-};
-
-function cityKey(city) {
-  const n = normalizePlace(city);
-  return cityAlias[n] || n;
-}
-
 /* ================= MONGO ================= */
 mongoose
   .connect(process.env.MONGO_URI, { autoIndex: true })
@@ -121,16 +82,12 @@ const firmaSchema = new mongoose.Schema(
   {
     name: String,
     email: { type: String, unique: true, required: true },
-
     phone: String,
     address: String,
     category: String,
 
-    // LOCATION (NEW)
-    city: String,
-    zone: String,
-    city_key: String,
-    zone_key: String,
+    country: { type: String, default: DEFAULT_COUNTRY }, // MK, DE, ...
+    city: { type: String, default: "Skopje" },
 
     plan: { type: String, default: "basic" }, // basic, standard, premium
     payment_status: { type: String, default: "pending" }, // pending, paid, expired
@@ -157,11 +114,57 @@ function detectPlanFromVariant(variantId) {
   if (v && v === VARIANT_PREMIUM) return "premium";
   return null;
 }
-
 function planToVariant(plan) {
   if (plan === "premium") return VARIANT_PREMIUM;
   if (plan === "standard") return VARIANT_STANDARD;
   return VARIANT_BASIC;
+}
+
+/* ================= COUNTRY/CITY CACHE ================= */
+const COUNTRIES_CACHE = (Country.getAllCountries() || [])
+  .map(c => ({ code: c.isoCode, name: c.name }))
+  .filter(x => x.code && x.name)
+  .sort((a, b) => a.name.localeCompare(b.name));
+
+const CITY_LIST_CACHE = new Map(); // countryCode -> [cityName...]
+const CITY_SET_CACHE = new Map();  // countryCode -> Set(cityName)
+
+function getCountryName(code) {
+  const c = Country.getCountryByCode(code);
+  return c?.name || code;
+}
+
+function computeCitiesForCountry(countryCode) {
+  const code = normalizeCountry(countryCode);
+  if (!code) return ["N/A"];
+
+  if (CITY_LIST_CACHE.has(code)) return CITY_LIST_CACHE.get(code);
+
+  const states = State.getStatesOfCountry(code) || [];
+  let allCities = [];
+
+  // If has states -> collect cities by state
+  if (states.length > 0) {
+    for (const st of states) {
+      const cs = City.getCitiesOfState(code, st.isoCode) || [];
+      allCities.push(...cs);
+    }
+  } else {
+    // Fallback (some versions have getCitiesOfCountry)
+    try {
+      if (typeof City.getCitiesOfCountry === "function") {
+        allCities = City.getCitiesOfCountry(code) || [];
+      }
+    } catch {}
+  }
+
+  const names = [...new Set((allCities || []).map(x => x?.name).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+
+  const finalList = names.length ? names : ["N/A"];
+  CITY_LIST_CACHE.set(code, finalList);
+  CITY_SET_CACHE.set(code, new Set(finalList));
+  return finalList;
 }
 
 /* ================= CREATE CHECKOUT (LEMON API) ================= */
@@ -172,6 +175,7 @@ async function createLemonCheckout({ variantId, email }) {
 
   const redirectUrl = `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}`;
 
+  // Correct Lemon JSON:API format (relationships store/variant)
   const payload = {
     data: {
       type: "checkouts",
@@ -255,6 +259,7 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 
     if (!email) return res.status(200).send("No email");
 
+    // Mark paid ONLY when actually paid
     if (event === "order_paid" || event === "subscription_payment_success") {
       const update = {
         payment_status: "paid",
@@ -280,6 +285,7 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
       return res.status(200).send("OK");
     }
 
+    // cancel/refund -> expired
     if (event === "subscription_cancelled" || event === "subscription_expired" || event === "order_refunded") {
       await Firma.findOneAndUpdate(
         { email },
@@ -299,77 +305,35 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 /* ================= JSON (AFTER WEBHOOK) ================= */
 app.use(express.json());
 
+/* ================= META: COUNTRIES/CITIES ================= */
+app.get("/meta/countries", (req, res) => {
+  return res.json({
+    success: true,
+    defaultCountry: DEFAULT_COUNTRY,
+    countries: COUNTRIES_CACHE,
+  });
+});
+
+app.get("/meta/cities", (req, res) => {
+  const country = normalizeCountry(req.query.country) || DEFAULT_COUNTRY;
+
+  // validate country code
+  const c = Country.getCountryByCode(country);
+  if (!c) {
+    return res.status(400).json({ success: false, error: "Invalid country" });
+  }
+
+  const cities = computeCitiesForCountry(country);
+  return res.json({
+    success: true,
+    country,
+    countryName: c.name,
+    cities,
+  });
+});
+
 /* ================= HEALTH ================= */
 app.get("/health", (req, res) => res.json({ ok: true, time: now() }));
-
-/* ================= GEO: REVERSE =================
-   Nominatim (OSM) reverse -> kthen city/zone
-*/
-const geoCache = new Map(); // key -> { expires, data }
-function geoCacheGet(key) {
-  const v = geoCache.get(key);
-  if (!v) return null;
-  if (Date.now() > v.expires) { geoCache.delete(key); return null; }
-  return v.data;
-}
-function geoCacheSet(key, data, ttlMs = 60 * 60 * 1000) {
-  geoCache.set(key, { data, expires: Date.now() + ttlMs });
-}
-
-app.get("/geo/reverse", async (req, res) => {
-  try {
-    const lat = Number(req.query.lat);
-    const lng = Number(req.query.lng);
-
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      return res.status(400).json({ success: false, error: "Missing/invalid lat/lng" });
-    }
-
-    const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
-    const cached = geoCacheGet(key);
-    if (cached) return res.json({ success: true, ...cached });
-
-    const url =
-      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&addressdetails=1`;
-
-    const resp = await fetch(url, {
-      headers: {
-        "User-Agent": "EasyFix/1.0 (https://easyfix.mk)",
-        "Accept-Language": "sq,en;q=0.8",
-      },
-    });
-
-    if (!resp.ok) {
-      return res.status(502).json({ success: false, error: "Reverse geocode failed" });
-    }
-
-    const json = await resp.json();
-    const a = json?.address || {};
-
-    const city =
-      a.city ||
-      a.town ||
-      a.village ||
-      a.municipality ||
-      a.county ||
-      "";
-
-    const zone =
-      a.suburb ||
-      a.neighbourhood ||
-      a.city_district ||
-      a.quarter ||
-      a.hamlet ||
-      "";
-
-    const out = { city, zone };
-    geoCacheSet(key, out);
-    return res.json({ success: true, ...out });
-  } catch (e) {
-    errorWithTime("GEO REVERSE ERROR:", e);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
 
 /* ================= REGISTER (multipart) ================= */
 app.post(
@@ -380,23 +344,33 @@ app.post(
   ]),
   async (req, res) => {
     let createdId = null;
+
     try {
-      let { name, email, phone, address, category, plan, city, zone } = req.body;
+      let { name, email, phone, address, category, plan, country, city } = req.body;
 
       email = normalizeEmail(email);
+      country = normalizeCountry(country) || DEFAULT_COUNTRY;
+      city = normalizeCity(city);
 
-      if (!name || !email || !phone || !address || !category || !plan) {
+      if (!name || !email || !phone || !address || !category || !plan || !country || !city) {
         return res.status(400).json({ success: false, error: "Missing fields" });
       }
       if (!["basic", "standard", "premium"].includes(plan)) {
         return res.status(400).json({ success: false, error: "Invalid plan" });
       }
 
-      // LOCATION: city është e detyrueshme për “afër meje”
-      city = String(city || "").trim();
-      zone = String(zone || "").trim();
-      if (!city) {
-        return res.status(400).json({ success: false, error: "Qyteti është i detyrueshëm." });
+      // validate country
+      const cObj = Country.getCountryByCode(country);
+      if (!cObj) return res.status(400).json({ success: false, error: "Invalid country" });
+
+      // validate city must be from list (select only)
+      const cityList = computeCitiesForCountry(country);
+      const citySet = CITY_SET_CACHE.get(country) || new Set(cityList);
+      if (!citySet.has(city)) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid city for ${getCountryName(country)}. Zgjidh qytetin nga lista.`,
+        });
       }
 
       const exists = await Firma.findOne({ email });
@@ -409,6 +383,7 @@ app.post(
 
       if (plan === "standard" || plan === "premium") {
         const files = req.files || {};
+
         if (files.logo?.[0]) {
           logoUrl = await uploadBufferToCloudinary(files.logo[0].buffer, "easyfix/logos");
         }
@@ -433,15 +408,12 @@ app.post(
         phone,
         address,
         category,
+        country,
+        city,
         plan,
         payment_status: "pending",
         logoUrl,
         photos,
-
-        city,
-        zone,
-        city_key: cityKey(city),
-        zone_key: normalizePlace(zone),
       });
 
       createdId = firma._id;
@@ -457,7 +429,6 @@ app.post(
     } catch (err) {
       errorWithTime("REGISTER ERROR:", err);
 
-      // nëse u kriju firma por checkout dështoi, fshije
       if (createdId) {
         try { await Firma.deleteOne({ _id: createdId }); } catch {}
       }
@@ -467,18 +438,31 @@ app.post(
   }
 );
 
-/* ================= PUBLIC: FIRMS (filters) ================= */
+/* ================= PUBLIC: FIRMS BY COUNTRY ================= */
 app.get("/firms", async (req, res) => {
   try {
-    const qCity = String(req.query.city || "").trim();
-    const qZone = String(req.query.zone || "").trim();
+    const requested = normalizeCountry(req.query.country);
+    const country = requested || DEFAULT_COUNTRY;
 
-    const filter = { payment_status: "paid" };
+    const base = { payment_status: "paid" };
 
-    if (qCity) filter.city_key = cityKey(qCity);
-    if (qZone) filter.zone_key = normalizePlace(qZone);
+    // MK site: also include old docs without country (treated as MK)
+    let query;
+    if (country === DEFAULT_COUNTRY) {
+      query = {
+        ...base,
+        $or: [
+          { country },
+          { country: { $exists: false } },
+          { country: null },
+          { country: "" },
+        ],
+      };
+    } else {
+      query = { ...base, country };
+    }
 
-    const firms = await Firma.find(filter).select("-__v");
+    const firms = await Firma.find(query).select("-__v");
     res.json(firms);
   } catch (err) {
     errorWithTime("FIRMS ERROR:", err);

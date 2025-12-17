@@ -1,5 +1,8 @@
 const BACKEND_URL = "https://easyfix.onrender.com";
-const DEFAULT_COUNTRY = "MK";
+
+// Countries & Cities API (dinamik – për listë pa mungesa)
+const COUNTRIES_API = "https://countriesnow.space/api/v0.1/countries/iso";
+const CITIES_API = "https://countriesnow.space/api/v0.1/countries/cities";
 
 function $(s) { return document.querySelector(s); }
 
@@ -21,7 +24,125 @@ function showStatus(msg, type = "info") {
 
 let selectedPlan = "";
 
-/* ============ Plan selection + uploads ============ */
+/* ================= Country/City ================= */
+const countrySelect = $("#countrySelect");
+const citySelect = $("#citySelect");
+const photoLimitLabel = $("#photoLimitLabel");
+
+// map: ISO2 -> CountryName
+let countries = []; // [{ name, Iso2 }]
+
+function setCityOptions(list, preferred = "") {
+  citySelect.innerHTML = "";
+  if (!Array.isArray(list) || list.length === 0) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "Nuk u gjetën qytete (provoni përsëri).";
+    citySelect.appendChild(opt);
+    return;
+  }
+
+  list.forEach((c) => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    citySelect.appendChild(opt);
+  });
+
+  if (preferred && list.includes(preferred)) {
+    citySelect.value = preferred;
+  } else {
+    citySelect.value = list[0];
+  }
+}
+
+async function fetchCountries() {
+  const resp = await fetch(COUNTRIES_API);
+  const json = await resp.json();
+  if (!json || json.error || !Array.isArray(json.data)) {
+    throw new Error("Countries API failed");
+  }
+  return json.data; // zakonisht [{name, Iso2, Iso3}]
+}
+
+async function fetchCities(countryName) {
+  const resp = await fetch(CITIES_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ country: countryName })
+  });
+  const json = await resp.json();
+  if (!json || json.error) throw new Error("Cities API failed");
+  return json.data || [];
+}
+
+function getSelectedCountryName() {
+  const code = (countrySelect.value || "").toUpperCase();
+  const item = countries.find(x => String(x.Iso2 || "").toUpperCase() === code);
+  return item?.name || countrySelect.options[countrySelect.selectedIndex]?.textContent || "North Macedonia";
+}
+
+async function initCountryCity() {
+  try {
+    // Fill countries
+    countries = await fetchCountries();
+
+    // sort alphabetically by name
+    countries.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+
+    countrySelect.innerHTML = "";
+    countries.forEach((c) => {
+      const iso2 = String(c.Iso2 || "").toUpperCase();
+      const name = String(c.name || "").trim();
+      if (!iso2 || !name) return;
+
+      const opt = document.createElement("option");
+      opt.value = iso2;
+      opt.textContent = name;
+      countrySelect.appendChild(opt);
+    });
+
+    // Default MK
+    const hasMK = Array.from(countrySelect.options).some(o => o.value === "MK");
+    countrySelect.value = hasMK ? "MK" : (countrySelect.options[0]?.value || "MK");
+
+    // Load cities for default
+    const countryName = getSelectedCountryName();
+    const cityList = await fetchCities(countryName);
+
+    // Prefer Skopje for MK
+    const preferredCity = (countrySelect.value === "MK") ? "Skopje" : "";
+    setCityOptions(cityList, preferredCity);
+
+  } catch (e) {
+    console.error("Country/City init error:", e);
+
+    // Hard fallback (minimum) – që mos me u blloku regjistrimi
+    countrySelect.innerHTML = `<option value="MK" selected>North Macedonia</option>`;
+    setCityOptions(["Skopje", "Tetovo", "Kumanovo", "Bitola", "Prilep", "Gostivar", "Struga", "Ohrid"], "Skopje");
+  }
+}
+
+countrySelect?.addEventListener("change", async () => {
+  try {
+    citySelect.innerHTML = `<option value="">Duke ngarkuar...</option>`;
+    const countryName = getSelectedCountryName();
+    const cityList = await fetchCities(countryName);
+    const preferredCity = (countrySelect.value === "MK") ? "Skopje" : "";
+    setCityOptions(cityList, preferredCity);
+  } catch (e) {
+    console.error("Cities fetch error:", e);
+    setCityOptions(["Capital", "Other"], "Capital");
+  }
+});
+
+/* ================= Plan UI ================= */
+function updatePhotoLimitLabel() {
+  const maxPhotos = selectedPlan === "standard" ? 3 : selectedPlan === "premium" ? 8 : 0;
+  if (photoLimitLabel) photoLimitLabel.textContent = `max ${maxPhotos}`;
+}
+
+// plan selection + show/hide uploads
 document.querySelectorAll(".plan-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".plan-btn").forEach(b => b.classList.remove("active"));
@@ -38,73 +159,13 @@ document.querySelectorAll(".plan-btn").forEach(btn => {
       $("#logoUpload").value = "";
       $("#photoUpload").value = "";
     }
+
+    updatePhotoLimitLabel();
   });
 });
 
-/* ============ Countries + cities (select only) ============ */
-const countrySel = $("#country");
-const citySel = $("#city");
-
-async function loadCountries() {
-  try {
-    const res = await fetch(`${BACKEND_URL}/meta/countries`);
-    const data = await res.json();
-
-    const countries = data?.countries || [];
-    countrySel.innerHTML = countries
-      .map(c => `<option value="${c.code}">${c.name} (${c.code})</option>`)
-      .join("");
-
-    // default MK
-    const hasMK = countries.some(c => c.code === DEFAULT_COUNTRY);
-    countrySel.value = hasMK ? DEFAULT_COUNTRY : (countries[0]?.code || DEFAULT_COUNTRY);
-
-    await loadCities(countrySel.value);
-  } catch (e) {
-    console.error(e);
-    countrySel.innerHTML = `<option value="${DEFAULT_COUNTRY}">North Macedonia (MK)</option>`;
-    countrySel.value = DEFAULT_COUNTRY;
-    await loadCities(DEFAULT_COUNTRY);
-  }
-}
-
-async function loadCities(countryCode) {
-  try {
-    citySel.innerHTML = `<option value="">Po ngarkohet...</option>`;
-    const res = await fetch(`${BACKEND_URL}/meta/cities?country=${encodeURIComponent(countryCode)}`);
-    const data = await res.json();
-
-    if (!res.ok || !data.success) {
-      citySel.innerHTML = `<option value="N/A">N/A</option>`;
-      citySel.value = "N/A";
-      return;
-    }
-
-    const cities = data?.cities || ["N/A"];
-    citySel.innerHTML = cities.map(name => `<option value="${name}">${name}</option>`).join("");
-
-    // default for MK -> Skopje if exists
-    if (countryCode === "MK" && cities.includes("Skopje")) {
-      citySel.value = "Skopje";
-    } else {
-      citySel.value = cities[0] || "N/A";
-    }
-  } catch (e) {
-    console.error(e);
-    citySel.innerHTML = `<option value="N/A">N/A</option>`;
-    citySel.value = "N/A";
-  }
-}
-
-countrySel.addEventListener("change", () => loadCities(countrySel.value));
-
-document.addEventListener("DOMContentLoaded", () => {
-  loadCountries();
-});
-
-/* ============ Submit ============ */
+/* ================= Submit ================= */
 const form = $("#registerForm");
-
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -114,8 +175,9 @@ form.addEventListener("submit", async (e) => {
   const email = $("#emaili").value.trim();
   const category = $("#kategoria").value.trim();
 
-  const country = (countrySel?.value || "").trim();
-  const city = (citySel?.value || "").trim();
+  const country = (countrySelect.value || "").trim().toUpperCase();
+  const countryName = getSelectedCountryName().trim();
+  const city = (citySelect.value || "").trim();
 
   if (!name || !address || !phone || !email || !category) {
     showStatus("Ju lutem plotësoni të gjitha fushat.", "error");
@@ -123,7 +185,7 @@ form.addEventListener("submit", async (e) => {
   }
 
   if (!country || !city) {
-    showStatus("Ju lutem zgjidhni shtetin dhe qytetin nga lista.", "error");
+    showStatus("Ju lutem zgjidhni shtetin dhe qytetin.", "error");
     return;
   }
 
@@ -132,8 +194,10 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
+  // photo limits
   const maxPhotos = selectedPlan === "standard" ? 3 : selectedPlan === "premium" ? 8 : 0;
 
+  // build multipart
   const formData = new FormData();
   formData.append("name", name);
   formData.append("email", email);
@@ -141,9 +205,13 @@ form.addEventListener("submit", async (e) => {
   formData.append("address", address);
   formData.append("category", category);
   formData.append("plan", selectedPlan);
+
+  // NEW: country & city
   formData.append("country", country);
+  formData.append("countryName", countryName);
   formData.append("city", city);
 
+  // logo + photos only for standard/premium
   if (selectedPlan === "standard" || selectedPlan === "premium") {
     const logoFile = $("#logoUpload").files[0];
     if (logoFile) formData.append("logo", logoFile);
@@ -169,7 +237,7 @@ form.addEventListener("submit", async (e) => {
       return;
     }
 
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json();
 
     if (!res.ok || !data.success) {
       showStatus(data?.error || "Gabim në regjistrim.", "error");
@@ -187,3 +255,7 @@ form.addEventListener("submit", async (e) => {
     showStatus("Gabim gjatë komunikimit me serverin.", "error");
   }
 });
+
+/* ================= Init ================= */
+updatePhotoLimitLabel();
+initCountryCity();

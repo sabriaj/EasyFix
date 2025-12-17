@@ -11,6 +11,7 @@
     .badge-standard { background: #3b82f6; color: white; }
     .badge-basic { background: #6b7280; color: white; }
 
+    /* MODAL FULLSCREEN */
     #photoModal {
       display: none;
       position: fixed;
@@ -87,6 +88,7 @@
 
 <body class="bg-gray-50 min-h-screen flex flex-col">
 
+  <!-- Header -->
   <header class="bg-blue-700 text-white py-6 shadow-md">
     <div class="container mx-auto px-4 flex justify-between items-center">
       <h1 class="text-3xl font-extrabold tracking-tight">EasyFix</h1>
@@ -99,12 +101,13 @@
     </div>
   </header>
 
+  <!-- MAIN -->
   <main class="container mx-auto px-4 py-10 flex-grow">
     <h2 class="text-4xl font-bold text-blue-900 mb-3 text-center">
       Gjej mjeshtrin që të duhet me shpejtësi
     </h2>
 
-    <p id="countryInfo" class="text-center text-sm text-gray-600 mb-8"></p>
+    <p id="countryHint" class="text-center text-sm text-gray-600 mb-8"></p>
 
     <section class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6">
       <div class="flex flex-col md:flex-row md:space-x-6 mb-6">
@@ -131,10 +134,12 @@
     </section>
   </main>
 
+  <!-- FOOTER -->
   <footer class="bg-blue-700 text-white text-center py-6 mt-auto">
     &copy; 2025 EasyFix.mk - Ndihma për çdo shtëpi
   </footer>
 
+  <!-- MODAL -->
   <div id="photoModal" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-actions">
@@ -161,19 +166,22 @@
 
 <script>
 const API_URL = "https://easyfix.onrender.com";
-const DEFAULT_COUNTRY = "MK";
-
 let allFirms = [];
 
 const categorySelect = document.getElementById("categorySelect");
 const searchInput = document.getElementById("searchInput");
 const firmsContainer = document.getElementById("firmsContainer");
 const noResults = document.getElementById("noResults");
-const countryInfo = document.getElementById("countryInfo");
+const countryHint = document.getElementById("countryHint");
 
 /* =================== helpers =================== */
-function sanitize(text) { return text ? text.toString().trim() : ""; }
-function normalizeEmail(email) { return sanitize(email).toLowerCase(); }
+function sanitize(text) {
+  return text ? text.toString().trim() : "";
+}
+
+function normalizeEmail(email) {
+  return sanitize(email).toLowerCase();
+}
 
 function clampPhotos(firm) {
   const photos = Array.isArray(firm.photos) ? firm.photos : [];
@@ -214,6 +222,7 @@ let modalIndex = 0;
 function openModalSlider({ photos, startIndex, firmName }) {
   modalPhotos = photos || [];
   modalIndex = Math.max(0, Math.min(startIndex || 0, modalPhotos.length - 1));
+
   modalTitle.textContent = firmName ? sanitize(firmName) : "";
   updateModalImage();
   photoModal.style.display = "flex";
@@ -240,6 +249,7 @@ function modalPrev() {
   modalIndex = (modalIndex - 1 + modalPhotos.length) % modalPhotos.length;
   updateModalImage();
 }
+
 function modalNext() {
   if (!modalPhotos.length) return;
   modalIndex = (modalIndex + 1) % modalPhotos.length;
@@ -262,7 +272,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") modalNext();
 });
 
-/* =================== autoplay per premium =================== */
+/* =================== autoplay per premium (card slider) =================== */
 const autoplayTimers = new Map();
 
 function startAutoplay(containerEl, photos) {
@@ -286,6 +296,7 @@ function startAutoplay(containerEl, photos) {
   const t = setInterval(tick, 5000);
   autoplayTimers.set(containerEl, t);
 }
+
 function stopAutoplay(containerEl) {
   const t = autoplayTimers.get(containerEl);
   if (t) clearInterval(t);
@@ -328,7 +339,8 @@ function renderFirms(firms) {
     const headerHTML = showMedia
       ? `
         <div class="flex items-center mb-3">
-          <img src="${logo}" class="w-14 h-14 rounded-full object-cover border shadow-sm mr-3" />
+          <img src="${logo}"
+               class="w-14 h-14 rounded-full object-cover border shadow-sm mr-3" />
           <div>
             <h3 class="text-xl font-bold text-blue-700">${sanitize(firm.name)}</h3>
             ${badgeHTML}
@@ -426,9 +438,7 @@ function renderFirms(firms) {
         });
       });
 
-      if (plan === "premium") {
-        startAutoplay(slider, photos);
-      }
+      if (plan === "premium") startAutoplay(slider, photos);
     }
 
     firmsContainer.appendChild(div);
@@ -463,58 +473,51 @@ function focusFirmFromUrl() {
   setTimeout(() => el.classList.remove("focus-ring"), 6000);
 }
 
-/* =================== detect country =================== */
+/* =================== detect user country =================== */
 async function detectUserCountry() {
-  const params = new URLSearchParams(window.location.search);
-  const forced = (params.get("country") || "").trim().toUpperCase();
-  if (forced) return forced;
+  // cache (për mos me thirr shpesh)
+  const cached = sessionStorage.getItem("easyfix_country_code");
+  const cachedName = sessionStorage.getItem("easyfix_country_name");
+  if (cached) return { code: cached, name: cachedName || cached };
 
+  // IP-based detection (simple, no button)
   try {
     const r = await fetch("https://ipapi.co/json/");
     const j = await r.json();
-    if (j && j.country_code) return String(j.country_code).toUpperCase();
-  } catch {}
+    const code = (j?.country_code || "MK").toUpperCase();
+    const name = j?.country_name || code;
 
-  return DEFAULT_COUNTRY;
-}
+    sessionStorage.setItem("easyfix_country_code", code);
+    sessionStorage.setItem("easyfix_country_name", name);
 
-async function countryNameFromBackend(code) {
-  try {
-    const r = await fetch(`${API_URL}/meta/countries`);
-    const j = await r.json();
-    const c = (j?.countries || []).find(x => x.code === code);
-    return c?.name || code;
+    return { code, name };
   } catch {
-    return code;
+    sessionStorage.setItem("easyfix_country_code", "MK");
+    sessionStorage.setItem("easyfix_country_name", "North Macedonia");
+    return { code: "MK", name: "North Macedonia" };
   }
 }
 
-/* =================== fetch firms =================== */
-async function loadFirmsByCountry() {
-  const country = await detectUserCountry();
-  const cname = await countryNameFromBackend(country);
+/* =================== fetch firms by country =================== */
+async function loadFirms() {
+  const { code, name } = await detectUserCountry();
+  countryHint.textContent = `Po shfaqen firmat për shtetin: ${name} (${code})`;
 
-  countryInfo.textContent = `Po shfaqim firmat për: ${cname} (${country})`;
-
-  const res = await fetch(`${API_URL}/firms?country=${encodeURIComponent(country)}`);
+  const res = await fetch(`${API_URL}/firms?country=${encodeURIComponent(code)}`);
   const data = await res.json();
 
   allFirms = (data || []).sort((a, b) => {
     const order = { premium: 1, standard: 2, basic: 3 };
-    return (order[a.plan] || 9) - (order[b.plan] || 9);
+    return (order[(a.plan || "").toLowerCase()] || 9) - (order[(b.plan || "").toLowerCase()] || 9);
   });
 
   populateCategoryFilter(allFirms);
   renderFirms(allFirms);
   focusFirmFromUrl();
-
-  if (!allFirms.length) {
-    noResults.textContent = `Nuk ka ende firma aktive për ${cname} (${country}).`;
-    noResults.classList.remove("hidden");
-  }
 }
 
-loadFirmsByCountry().catch(err => {
+/* =================== init =================== */
+loadFirms().catch(err => {
   console.error("Gabim:", err);
   noResults.textContent = "Gabim në server. Provo më vonë.";
   noResults.classList.remove("hidden");

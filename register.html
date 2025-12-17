@@ -42,7 +42,7 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 
       <!-- BASIC -->
-      <button data-plan="basic" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
+      <button data-plan="basic" id="planBasic" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
         <h3 class="text-lg font-bold mb-1">Basic – 15€/muaj</h3>
         <ul class="text-sm text-gray-600 space-y-1">
           <li>• Listim bazë në EasyFix</li>
@@ -69,7 +69,7 @@
           <li>• Gjithë Standard +</li>
           <li>• Brandim më i fortë</li>
           <li>• Pozicion Top sipas shtetit</li>
-          <li>• Promovim javor</li>
+          <li>• Deri 8 foto</li>
         </ul>
       </button>
 
@@ -77,36 +77,25 @@
 
     <input type="hidden" id="selectedPlan">
 
-    <!-- LOGO & PHOTOS SECTION (Hidden for BASIC) -->
-    <div id="uploadSection" class="hidden mt-6 p-4 border rounded-xl bg-gray-50">
-      <h3 class="font-semibold mb-3 text-gray-800">Ngarko Logo dhe Foto</h3>
+    <!-- LOCATION (COUNTRY + CITY) -->
+    <div class="mt-6 p-4 border rounded-xl bg-gray-50">
+      <h3 class="font-semibold mb-3 text-gray-800">Lokacioni</h3>
 
-      <label class="block mb-2 font-medium">Logo e Kompanisë</label>
-      <input type="file" id="logoUpload" accept="image/*" class="mb-4 w-full">
-
-      <label class="block mb-2 font-medium">
-        Foto të Shërbimeve (<span id="photoLimitLabel">max 3</span>)
-      </label>
-      <input type="file" id="photoUpload" accept="image/*" multiple class="w-full">
-      <p class="text-xs text-gray-500 mt-2">Për Basic nuk lejohet logo/foto.</p>
-    </div>
-
-    <!-- REGISTRATION FORM -->
-    <form id="registerForm" class="grid grid-cols-1 gap-4 mt-6">
-
-      <div>
-        <label class="font-semibold">Emri i Firmës</label>
-        <input id="emri" type="text" class="w-full border p-2 rounded" required>
-      </div>
-
-      <!-- NEW: Country + City -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="font-semibold">Shteti</label>
+          <input
+            id="countrySearch"
+            type="text"
+            placeholder="Kërko shtetin..."
+            class="w-full border p-2 rounded mb-2"
+          />
           <select id="countrySelect" class="w-full border p-2 rounded" required>
-            <option value="MK" selected>North Macedonia</option>
+            <option value="MK" selected>🇲🇰 North Macedonia</option>
           </select>
-          <p class="text-xs text-gray-500 mt-1">Default: North Macedonia (MK)</p>
+          <p class="text-xs text-gray-500 mt-1">
+            Shteti vendoset automatikisht sipas lokacionit, por mundesh me e ndërru.
+          </p>
         </div>
 
         <div>
@@ -116,25 +105,46 @@
           </select>
         </div>
       </div>
+    </div>
+
+    <!-- LOGO & PHOTOS SECTION (Hidden for BASIC) -->
+    <div id="uploadSection" class="hidden mt-6 p-4 border rounded-xl bg-gray-50">
+      <h3 class="font-semibold mb-3 text-gray-800">Ngarko Logo dhe Foto</h3>
+
+      <label class="block mb-2 font-medium">Logo e Kompanisë</label>
+      <input type="file" id="logoUpload" accept="image/*" class="mb-4 w-full">
+
+      <label class="block mb-2 font-medium" id="photosLabel">Foto të Shërbimeve</label>
+      <input type="file" id="photoUpload" accept="image/*" multiple class="w-full">
+      <p class="text-xs text-gray-500 mt-1" id="photosHint"></p>
+    </div>
+
+    <!-- REGISTRATION FORM -->
+    <form id="registerForm" class="grid grid-cols-1 gap-4 mt-6">
+
+      <div>
+        <label class="font-semibold">Emri i Firmës</label>
+        <input id="emri" type="text" class="w-full border p-2 rounded">
+      </div>
 
       <div>
         <label class="font-semibold">Adresa</label>
-        <input id="adresa" type="text" class="w-full border p-2 rounded" required>
+        <input id="adresa" type="text" class="w-full border p-2 rounded">
       </div>
 
       <div>
         <label class="font-semibold">Telefoni</label>
-        <input id="telefoni" type="text" class="w-full border p-2 rounded" required>
+        <input id="telefoni" type="text" class="w-full border p-2 rounded">
       </div>
 
       <div>
         <label class="font-semibold">Email</label>
-        <input id="emaili" type="email" class="w-full border p-2 rounded" required>
+        <input id="emaili" type="email" class="w-full border p-2 rounded">
       </div>
 
       <div>
         <label class="font-semibold">Kategoria e Shërbimit</label>
-        <select id="kategoria" class="w-full border p-2 rounded" required>
+        <select id="kategoria" class="w-full border p-2 rounded">
           <option value="Elektricist">Elektricist</option>
           <option value="Hidraulik">Hidraulik</option>
           <option value="Murator">Murator</option>

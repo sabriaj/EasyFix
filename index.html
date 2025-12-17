@@ -103,11 +103,9 @@
 
   <!-- MAIN -->
   <main class="container mx-auto px-4 py-10 flex-grow">
-    <h2 class="text-4xl font-bold text-blue-900 mb-3 text-center">
+    <h2 class="text-4xl font-bold text-blue-900 mb-8 text-center">
       Gjej mjeshtrin që të duhet me shpejtësi
     </h2>
-
-    <p id="countryHint" class="text-center text-sm text-gray-600 mb-8"></p>
 
     <section class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6">
       <div class="flex flex-col md:flex-row md:space-x-6 mb-6">
@@ -172,7 +170,6 @@ const categorySelect = document.getElementById("categorySelect");
 const searchInput = document.getElementById("searchInput");
 const firmsContainer = document.getElementById("firmsContainer");
 const noResults = document.getElementById("noResults");
-const countryHint = document.getElementById("countryHint");
 
 /* =================== helpers =================== */
 function sanitize(text) {
@@ -188,6 +185,17 @@ function clampPhotos(firm) {
   if (firm.plan === "standard") return photos.slice(0, 3);
   if (firm.plan === "premium") return photos.slice(0, 8);
   return [];
+}
+
+async function detectUserCountryCode() {
+  try {
+    const r = await fetch("https://ipapi.co/json/");
+    const j = await r.json();
+    const code = (j?.country_code || "MK").toUpperCase();
+    return (code && code.length === 2) ? code : "MK";
+  } catch {
+    return "MK";
+  }
 }
 
 /* =================== categories =================== */
@@ -262,8 +270,12 @@ modalNextBtn.addEventListener("click", modalNext);
 modalPrevBtn2.addEventListener("click", modalPrev);
 modalNextBtn2.addEventListener("click", modalNext);
 
-photoModal.addEventListener("click", (e) => { if (e.target === photoModal) closeModal(); });
-modalBackdrop.addEventListener("click", (e) => { if (e.target === modalBackdrop) closeModal(); });
+photoModal.addEventListener("click", (e) => {
+  if (e.target === photoModal) closeModal();
+});
+modalBackdrop.addEventListener("click", (e) => {
+  if (e.target === modalBackdrop) closeModal();
+});
 
 document.addEventListener("keydown", (e) => {
   if (photoModal.style.display !== "flex") return;
@@ -396,7 +408,6 @@ function renderFirms(firms) {
       ${headerHTML}
 
       <p><strong>Adresa:</strong> ${sanitize(firm.address)}</p>
-      <p><strong>Qyteti:</strong> ${sanitize(firm.city || "")}</p>
       <p><strong>Telefoni:</strong> ${sanitize(firm.phone)}</p>
       <p><strong>Email:</strong>
         <a href="mailto:${sanitize(firm.email)}" class="text-blue-600 underline">
@@ -404,6 +415,7 @@ function renderFirms(firms) {
         </a>
       </p>
       <p><strong>Kategoria:</strong> ${sanitize(firm.category)}</p>
+      <p class="text-xs text-gray-500 mt-1"><strong>Lokacion:</strong> ${sanitize(firm.city)} (${sanitize(firm.country)})</p>
 
       ${photosHTML}
     `;
@@ -438,7 +450,9 @@ function renderFirms(firms) {
         });
       });
 
-      if (plan === "premium") startAutoplay(slider, photos);
+      if (plan === "premium") {
+        startAutoplay(slider, photos);
+      }
     }
 
     firmsContainer.appendChild(div);
@@ -470,45 +484,26 @@ function focusFirmFromUrl() {
 
   el.classList.add("focus-ring");
   el.scrollIntoView({ behavior: "smooth", block: "center" });
+
   setTimeout(() => el.classList.remove("focus-ring"), 6000);
 }
 
-/* =================== detect user country =================== */
-async function detectUserCountry() {
-  // cache (për mos me thirr shpesh)
-  const cached = sessionStorage.getItem("easyfix_country_code");
-  const cachedName = sessionStorage.getItem("easyfix_country_name");
-  if (cached) return { code: cached, name: cachedName || cached };
-
-  // IP-based detection (simple, no button)
-  try {
-    const r = await fetch("https://ipapi.co/json/");
-    const j = await r.json();
-    const code = (j?.country_code || "MK").toUpperCase();
-    const name = j?.country_name || code;
-
-    sessionStorage.setItem("easyfix_country_code", code);
-    sessionStorage.setItem("easyfix_country_name", name);
-
-    return { code, name };
-  } catch {
-    sessionStorage.setItem("easyfix_country_code", "MK");
-    sessionStorage.setItem("easyfix_country_name", "North Macedonia");
-    return { code: "MK", name: "North Macedonia" };
-  }
-}
-
-/* =================== fetch firms by country =================== */
+/* =================== fetch firms (by country) =================== */
 async function loadFirms() {
-  const { code, name } = await detectUserCountry();
-  countryHint.textContent = `Po shfaqen firmat për shtetin: ${name} (${code})`;
+  // override nga URL ?country=MK (p.sh. success.html mundet me e dërgu)
+  const params = new URLSearchParams(window.location.search);
+  const urlCountry = (params.get("country") || "").toUpperCase();
 
-  const res = await fetch(`${API_URL}/firms?country=${encodeURIComponent(code)}`);
-  const data = await res.json();
+  const country = (urlCountry && urlCountry.length === 2)
+    ? urlCountry
+    : await detectUserCountryCode();
+
+  const resp = await fetch(`${API_URL}/firms?country=${encodeURIComponent(country)}`);
+  const data = await resp.json();
 
   allFirms = (data || []).sort((a, b) => {
     const order = { premium: 1, standard: 2, basic: 3 };
-    return (order[(a.plan || "").toLowerCase()] || 9) - (order[(b.plan || "").toLowerCase()] || 9);
+    return (order[a.plan] || 9) - (order[b.plan] || 9);
   });
 
   populateCategoryFilter(allFirms);
@@ -516,7 +511,6 @@ async function loadFirms() {
   focusFirmFromUrl();
 }
 
-/* =================== init =================== */
 loadFirms().catch(err => {
   console.error("Gabim:", err);
   noResults.textContent = "Gabim në server. Provo më vonë.";

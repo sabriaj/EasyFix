@@ -72,12 +72,11 @@ const firmaSchema = new mongoose.Schema(
     address: String,
     category: String,
 
-    // NEW (country & city)
-    country: { type: String, default: "MK" },          // ISO2, p.sh. MK, DE, US
-    countryName: { type: String, default: "North Macedonia" },
+    // NEW: country/city
+    country: { type: String, default: "MK" }, // ISO2 p.sh. MK, DE, US
     city: { type: String, default: "" },
 
-    plan: { type: String, default: "basic" },          // basic, standard, premium
+    plan: { type: String, default: "basic" }, // basic, standard, premium
     payment_status: { type: String, default: "pending" }, // pending, paid, expired
 
     logoUrl: String,
@@ -99,10 +98,15 @@ function normalizeEmail(e) {
   return String(e || "").trim().toLowerCase();
 }
 
-function normalizeCountryCode(c) {
-  const x = String(c || "").trim().toUpperCase();
-  // ISO2 zakonisht 2 shkronja. Nëse vjen diçka tjetër, e ruajmë prapë si fallback.
-  return x || "MK";
+function normalizeCountryIso2(c) {
+  const v = String(c || "").trim().toUpperCase();
+  // ISO2 = 2 shkronja. Nëse s’vjen sakt, e bëjmë MK.
+  if (v.length !== 2) return "MK";
+  return v;
+}
+
+function normalizeCity(city) {
+  return String(city || "").trim();
 }
 
 function detectPlanFromVariant(variantId) {
@@ -119,13 +123,16 @@ function planToVariant(plan) {
   return VARIANT_BASIC;
 }
 
-/* ================= CREATE CHECKOUT (LEMON API) ================= */
+/* ================= CREATE CHECKOUT (LEMON API) =================
+   Fix 422: store/variant duhet te jene te relationships.
+*/
 async function createLemonCheckout({ variantId, email }) {
   if (!LEMON_API_KEY) throw new Error("Missing LEMON_API_KEY");
   if (!LEMON_STORE_ID) throw new Error("Missing LEMON_STORE_ID");
   if (!variantId) throw new Error("Missing variantId");
 
-  const redirectUrl = `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}`;
+  const redirectUrl =
+    `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}`;
 
   const payload = {
     data: {
@@ -134,7 +141,7 @@ async function createLemonCheckout({ variantId, email }) {
         product_options: { redirect_url: redirectUrl },
         checkout_data: {
           email,
-          custom: { email },
+          custom: { email }, // duhet per webhook
         },
       },
       relationships: {
@@ -235,11 +242,7 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
       return res.status(200).send("OK");
     }
 
-    if (
-      event === "subscription_cancelled" ||
-      event === "subscription_expired" ||
-      event === "order_refunded"
-    ) {
+    if (event === "subscription_cancelled" || event === "subscription_expired" || event === "order_refunded") {
       await Firma.findOneAndUpdate(
         { email },
         { $set: { payment_status: "expired", expires_at: new Date() } },
@@ -271,34 +274,17 @@ app.post(
   async (req, res) => {
     let createdId = null;
     try {
-      let {
-        name,
-        email,
-        phone,
-        address,
-        category,
-        plan,
-        country,
-        countryName,
-        city,
-      } = req.body;
+      let { name, email, phone, address, category, plan, country, city } = req.body;
 
       email = normalizeEmail(email);
+      country = normalizeCountryIso2(country);
+      city = normalizeCity(city);
 
-      if (!name || !email || !phone || !address || !category || !plan) {
+      if (!name || !email || !phone || !address || !category || !plan || !country || !city) {
         return res.status(400).json({ success: false, error: "Missing fields" });
       }
       if (!["basic", "standard", "premium"].includes(plan)) {
         return res.status(400).json({ success: false, error: "Invalid plan" });
-      }
-
-      // NEW: country/city required në praktikë, por për backward-compat i vendosim default
-      const countryCode = normalizeCountryCode(country || "MK");
-      const countryLabel = String(countryName || "North Macedonia").trim() || "North Macedonia";
-      const cityValue = String(city || "").trim();
-
-      if (!cityValue) {
-        return res.status(400).json({ success: false, error: "City is required" });
       }
 
       const exists = await Firma.findOne({ email });
@@ -335,9 +321,8 @@ app.post(
         phone,
         address,
         category,
-        country: countryCode,
-        countryName: countryLabel,
-        city: cityValue,
+        country,
+        city,
         plan,
         payment_status: "pending",
         logoUrl,
@@ -367,33 +352,30 @@ app.post(
 );
 
 /* ================= PUBLIC ================= */
+// GET /firms?country=MK
 app.get("/firms", async (req, res) => {
   try {
-    const countryQ = normalizeCountryCode(req.query.country || "");
-    const hasCountry = Boolean((req.query.country || "").trim());
+    const qCountryRaw = req.query.country;
+    const qCountry = qCountryRaw ? normalizeCountryIso2(qCountryRaw) : null;
 
-    const baseQuery = { payment_status: "paid" };
+    const base = { payment_status: "paid" };
 
-    // Nëse kërkohet country -> filtro sipas shtetit
-    // Backward-compat: nëse kërkohet MK, përfshi edhe docs pa country (të vjetrat)
-    let query = baseQuery;
-    if (hasCountry) {
-      if (countryQ === "MK") {
-        query = {
-          ...baseQuery,
-          $or: [
-            { country: "MK" },
-            { country: { $exists: false } },
-            { country: null },
-            { country: "" },
-          ],
-        };
+    // Nëse kërkon country, filtro
+    if (qCountry) {
+      // fallback për dokumentet e vjetra pa "country": i trajtojmë si MK
+      if (qCountry === "MK") {
+        base.$or = [
+          { country: "MK" },
+          { country: { $exists: false } },
+          { country: "" },
+          { country: null },
+        ];
       } else {
-        query = { ...baseQuery, country: countryQ };
+        base.country = qCountry;
       }
     }
 
-    const firms = await Firma.find(query).select("-__v");
+    const firms = await Firma.find(base).select("-__v");
     res.json(firms);
   } catch (err) {
     errorWithTime("FIRMS ERROR:", err);

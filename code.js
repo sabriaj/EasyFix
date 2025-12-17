@@ -1,9 +1,5 @@
 const BACKEND_URL = "https://easyfix.onrender.com";
 
-// Countries & Cities API (dinamik – për listë pa mungesa)
-const COUNTRIES_API = "https://countriesnow.space/api/v0.1/countries/iso";
-const CITIES_API = "https://countriesnow.space/api/v0.1/countries/cities";
-
 function $(s) { return document.querySelector(s); }
 
 function showStatus(msg, type = "info") {
@@ -22,124 +18,182 @@ function showStatus(msg, type = "info") {
     "#2563eb";
 }
 
-let selectedPlan = "";
-
-/* ================= Country/City ================= */
+/* ===================== COUNTRY/CITY UI ===================== */
+const countrySearch = $("#countrySearch");
 const countrySelect = $("#countrySelect");
 const citySelect = $("#citySelect");
-const photoLimitLabel = $("#photoLimitLabel");
 
-// map: ISO2 -> CountryName
-let countries = []; // [{ name, Iso2 }]
+let countriesAll = [];
 
-function setCityOptions(list, preferred = "") {
-  citySelect.innerHTML = "";
-  if (!Array.isArray(list) || list.length === 0) {
+function iso2ToFlagEmoji(iso2) {
+  const code = String(iso2 || "").toUpperCase();
+  if (code.length !== 2) return "🏳️";
+  const A = 0x1F1E6;
+  const base = "A".charCodeAt(0);
+  return String.fromCodePoint(A + (code.charCodeAt(0) - base), A + (code.charCodeAt(1) - base));
+}
+
+async function detectUserCountryCode() {
+  try {
+    const r = await fetch("https://ipapi.co/json/");
+    const j = await r.json();
+    const code = (j?.country_code || "MK").toUpperCase();
+    return code || "MK";
+  } catch {
+    return "MK";
+  }
+}
+
+// Countries list (ISO2)
+async function fetchCountries() {
+  const r = await fetch("https://countriesnow.space/api/v0.1/countries/iso");
+  const j = await r.json();
+  if (!j || !j.data) return [];
+  // data: [{ name, Iso2, Iso3 }]
+  return j.data.map(x => ({ name: x.name, Iso2: x.Iso2 }));
+}
+
+// Cities for a country name
+async function fetchCities(countryName) {
+  const r = await fetch("https://countriesnow.space/api/v0.1/countries/cities", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ country: countryName })
+  });
+  const j = await r.json();
+  if (!j || !j.data) return [];
+  return j.data;
+}
+
+function getSelectedCountryName() {
+  const iso2 = String(countrySelect.value || "").toUpperCase();
+  const found = countriesAll.find(c => String(c.Iso2 || "").toUpperCase() === iso2);
+  return found?.name || "North Macedonia";
+}
+
+function renderCountryOptions(filterText = "") {
+  const q = String(filterText || "").trim().toLowerCase();
+
+  const view = !q
+    ? [...countriesAll]
+    : countriesAll.filter(c => {
+        const name = String(c.name || "").toLowerCase();
+        const iso2 = String(c.Iso2 || "").toLowerCase();
+        return name.includes(q) || iso2.includes(q);
+      });
+
+  const current = String(countrySelect.value || "").toUpperCase();
+
+  countrySelect.innerHTML = "";
+  view.forEach(c => {
+    const iso2 = String(c.Iso2 || "").toUpperCase();
+    const name = String(c.name || "").trim();
+    if (!iso2 || !name) return;
+
     const opt = document.createElement("option");
-    opt.value = "";
-    opt.textContent = "Nuk u gjetën qytete (provoni përsëri).";
-    citySelect.appendChild(opt);
+    opt.value = iso2;
+    opt.textContent = `${iso2ToFlagEmoji(iso2)} ${name}`;
+    countrySelect.appendChild(opt);
+  });
+
+  const hasCurrent = Array.from(countrySelect.options).some(o => o.value === current);
+  if (hasCurrent) countrySelect.value = current;
+  else countrySelect.value = countrySelect.options[0]?.value || "MK";
+}
+
+function setCityOptions(cities, preferred = "") {
+  const list = Array.isArray(cities) ? cities : [];
+  const pref = String(preferred || "").trim();
+
+  citySelect.innerHTML = "";
+  if (!list.length) {
+    citySelect.innerHTML = `<option value="">Nuk u gjetën qytete</option>`;
     return;
   }
 
-  list.forEach((c) => {
+  list.forEach(ct => {
+    const c = String(ct || "").trim();
+    if (!c) return;
     const opt = document.createElement("option");
     opt.value = c;
     opt.textContent = c;
     citySelect.appendChild(opt);
   });
 
-  if (preferred && list.includes(preferred)) {
-    citySelect.value = preferred;
-  } else {
-    citySelect.value = list[0];
+  if (pref) {
+    const exists = Array.from(citySelect.options).some(o => o.value === pref);
+    if (exists) citySelect.value = pref;
   }
-}
-
-async function fetchCountries() {
-  const resp = await fetch(COUNTRIES_API);
-  const json = await resp.json();
-  if (!json || json.error || !Array.isArray(json.data)) {
-    throw new Error("Countries API failed");
-  }
-  return json.data; // zakonisht [{name, Iso2, Iso3}]
-}
-
-async function fetchCities(countryName) {
-  const resp = await fetch(CITIES_API, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ country: countryName })
-  });
-  const json = await resp.json();
-  if (!json || json.error) throw new Error("Cities API failed");
-  return json.data || [];
-}
-
-function getSelectedCountryName() {
-  const code = (countrySelect.value || "").toUpperCase();
-  const item = countries.find(x => String(x.Iso2 || "").toUpperCase() === code);
-  return item?.name || countrySelect.options[countrySelect.selectedIndex]?.textContent || "North Macedonia";
 }
 
 async function initCountryCity() {
   try {
-    // Fill countries
-    countries = await fetchCountries();
+    countriesAll = await fetchCountries();
 
-    // sort alphabetically by name
-    countries.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    // ensure MK always exists
+    const hasMK = countriesAll.some(x => String(x.Iso2 || "").toUpperCase() === "MK");
+    if (!hasMK) countriesAll.unshift({ name: "North Macedonia", Iso2: "MK" });
 
-    countrySelect.innerHTML = "";
-    countries.forEach((c) => {
-      const iso2 = String(c.Iso2 || "").toUpperCase();
-      const name = String(c.name || "").trim();
-      if (!iso2 || !name) return;
+    // sort but keep MK on top
+    const mk = countriesAll.find(x => String(x.Iso2 || "").toUpperCase() === "MK");
+    const rest = countriesAll
+      .filter(x => String(x.Iso2 || "").toUpperCase() !== "MK")
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    countriesAll = mk ? [mk, ...rest] : rest;
 
-      const opt = document.createElement("option");
-      opt.value = iso2;
-      opt.textContent = name;
-      countrySelect.appendChild(opt);
-    });
+    const detected = await detectUserCountryCode();
 
-    // Default MK
-    const hasMK = Array.from(countrySelect.options).some(o => o.value === "MK");
-    countrySelect.value = hasMK ? "MK" : (countrySelect.options[0]?.value || "MK");
+    renderCountryOptions("");
+    const existsDetected = countriesAll.some(x => String(x.Iso2 || "").toUpperCase() === detected);
+    countrySelect.value = existsDetected ? detected : "MK";
 
-    // Load cities for default
     const countryName = getSelectedCountryName();
     const cityList = await fetchCities(countryName);
-
-    // Prefer Skopje for MK
     const preferredCity = (countrySelect.value === "MK") ? "Skopje" : "";
     setCityOptions(cityList, preferredCity);
 
   } catch (e) {
     console.error("Country/City init error:", e);
-
-    // Hard fallback (minimum) – që mos me u blloku regjistrimi
-    countrySelect.innerHTML = `<option value="MK" selected>North Macedonia</option>`;
+    countriesAll = [{ name: "North Macedonia", Iso2: "MK" }];
+    renderCountryOptions("");
     setCityOptions(["Skopje", "Tetovo", "Kumanovo", "Bitola", "Prilep", "Gostivar", "Struga", "Ohrid"], "Skopje");
   }
 }
+
+countrySearch?.addEventListener("input", () => {
+  renderCountryOptions(countrySearch.value);
+});
 
 countrySelect?.addEventListener("change", async () => {
   try {
     citySelect.innerHTML = `<option value="">Duke ngarkuar...</option>`;
     const countryName = getSelectedCountryName();
     const cityList = await fetchCities(countryName);
-    const preferredCity = (countrySelect.value === "MK") ? "Skopje" : "";
-    setCityOptions(cityList, preferredCity);
+    setCityOptions(cityList, "");
   } catch (e) {
-    console.error("Cities fetch error:", e);
-    setCityOptions(["Capital", "Other"], "Capital");
+    console.error(e);
+    citySelect.innerHTML = `<option value="">Gabim gjatë ngarkimit</option>`;
   }
 });
 
-/* ================= Plan UI ================= */
-function updatePhotoLimitLabel() {
-  const maxPhotos = selectedPlan === "standard" ? 3 : selectedPlan === "premium" ? 8 : 0;
-  if (photoLimitLabel) photoLimitLabel.textContent = `max ${maxPhotos}`;
+/* ===================== PLAN UI ===================== */
+let selectedPlan = "";
+
+const photosLabel = $("#photosLabel");
+const photosHint = $("#photosHint");
+
+function updateUploadHints() {
+  if (!photosLabel || !photosHint) return;
+  if (selectedPlan === "standard") {
+    photosLabel.textContent = "Foto të Shërbimeve (max 3)";
+    photosHint.textContent = "Maksimum 3 foto për Standard.";
+  } else if (selectedPlan === "premium") {
+    photosLabel.textContent = "Foto të Shërbimeve (max 8)";
+    photosHint.textContent = "Maksimum 8 foto për Premium.";
+  } else {
+    photosLabel.textContent = "Foto të Shërbimeve";
+    photosHint.textContent = "";
+  }
 }
 
 // plan selection + show/hide uploads
@@ -160,11 +214,19 @@ document.querySelectorAll(".plan-btn").forEach(btn => {
       $("#photoUpload").value = "";
     }
 
-    updatePhotoLimitLabel();
+    updateUploadHints();
   });
 });
 
-/* ================= Submit ================= */
+// default plan = basic (më e lehtë për user)
+window.addEventListener("DOMContentLoaded", async () => {
+  await initCountryCity();
+
+  const basicBtn = $("#planBasic");
+  if (basicBtn) basicBtn.click();
+});
+
+/* ===================== SUBMIT ===================== */
 const form = $("#registerForm");
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -175,17 +237,11 @@ form.addEventListener("submit", async (e) => {
   const email = $("#emaili").value.trim();
   const category = $("#kategoria").value.trim();
 
-  const country = (countrySelect.value || "").trim().toUpperCase();
-  const countryName = getSelectedCountryName().trim();
-  const city = (citySelect.value || "").trim();
+  const country = String(countrySelect?.value || "MK").toUpperCase();
+  const city = String(citySelect?.value || "").trim();
 
-  if (!name || !address || !phone || !email || !category) {
-    showStatus("Ju lutem plotësoni të gjitha fushat.", "error");
-    return;
-  }
-
-  if (!country || !city) {
-    showStatus("Ju lutem zgjidhni shtetin dhe qytetin.", "error");
+  if (!name || !address || !phone || !email || !category || !country || !city) {
+    showStatus("Ju lutem plotësoni të gjitha fushat (përfshi shtetin & qytetin).", "error");
     return;
   }
 
@@ -206,9 +262,8 @@ form.addEventListener("submit", async (e) => {
   formData.append("category", category);
   formData.append("plan", selectedPlan);
 
-  // NEW: country & city
+  // NEW: country + city
   formData.append("country", country);
-  formData.append("countryName", countryName);
   formData.append("city", city);
 
   // logo + photos only for standard/premium
@@ -255,7 +310,3 @@ form.addEventListener("submit", async (e) => {
     showStatus("Gabim gjatë komunikimit me serverin.", "error");
   }
 });
-
-/* ================= Init ================= */
-updatePhotoLimitLabel();
-initCountryCity();

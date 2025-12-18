@@ -26,6 +26,8 @@
     "express": "^5.1.0",
     "mongodb": "^7.0.0",
     "mongoose": "^9.0.0",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "twilio": "^5.0.0"
+
   }
 }

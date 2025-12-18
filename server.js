@@ -30,13 +30,15 @@ const DELETE_AFTER_DAYS = Number(process.env.DELETE_AFTER_DAYS || 2);
 const CHECK_INTERVAL_MINUTES = Number(process.env.CHECK_INTERVAL_MINUTES || 60);
 
 /* ===== PHONE VERIFICATION CONFIG ===== */
-const REQUIRE_PHONE_VERIFICATION = String(process.env.REQUIRE_PHONE_VERIFICATION || "1") === "1";
+const REQUIRE_PHONE_VERIFICATION =
+  String(process.env.REQUIRE_PHONE_VERIFICATION || "1") === "1";
+
 const OTP_SECRET = process.env.OTP_SECRET || process.env.ADMIN_KEY || "dev_otp_secret";
 const OTP_TTL_MINUTES = Number(process.env.OTP_TTL_MINUTES || 5);
 const OTP_TOKEN_TTL_MINUTES = Number(process.env.OTP_TOKEN_TTL_MINUTES || 30);
 const OTP_DEBUG = String(process.env.OTP_DEBUG || "0") === "1";
 
-// Twilio (optional)
+// Twilio SMS (Messaging API)
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || "";
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || "";
 const TWILIO_FROM_NUMBER = process.env.TWILIO_FROM_NUMBER || "";
@@ -69,29 +71,37 @@ function uploadBufferToCloudinary(buffer, folder = "easyfix") {
   });
 }
 
-/* ================= MONGO ================= */
-mongoose
-  .connect(process.env.MONGO_URI, { autoIndex: true })
-  .then(() => log("✅ MongoDB Connected"))
-  .catch((err) => errorWithTime("MongoDB Error:", err));
-
 /* ================= HELPERS ================= */
 function normalizeEmail(e) {
   return String(e || "").trim().toLowerCase();
 }
 
-// shumë e thjeshtë: lejon + dhe numra; MK local (8/9 shifra) -> +389
+/**
+ * normalizePhone:
+ * - lejon + dhe numra
+ * - "00..." -> "+..."
+ * - MK local:
+ *    071234567 -> +38971234567  (hiq 0)
+ *    71234567  -> +38971234567
+ */
 function normalizePhone(raw) {
   let p = String(raw || "").trim();
   p = p.replace(/[^\d+]/g, "");
+
   if (p.startsWith("00")) p = "+" + p.slice(2);
 
-  // MK local (pa +) -> +389
-  if (!p.startsWith("+") && (p.length === 8 || p.length === 9)) {
-    p = "+389" + p;
+  if (!p.startsWith("+")) {
+    // vetëm numra (local)
+    const digits = p.replace(/[^\d]/g, "");
+    if (digits.length === 8) {
+      return "+389" + digits;
+    }
+    if (digits.length === 9 && digits.startsWith("0")) {
+      return "+389" + digits.slice(1);
+    }
+    return null;
   }
 
-  if (!p.startsWith("+")) return null;
   if (p.length < 9 || p.length > 16) return null;
   return p;
 }
@@ -103,21 +113,23 @@ function safeEq(a, b) {
   return crypto.timingSafeEqual(aa, bb);
 }
 
+/* ================= MONGO ================= */
+mongoose
+  .connect(process.env.MONGO_URI, { autoIndex: true })
+  .then(() => log("✅ MongoDB Connected"))
+  .catch((err) => errorWithTime("MongoDB Error:", err));
+
 /* ================= SCHEMA ================= */
 const firmaSchema = new mongoose.Schema(
   {
     name: String,
     email: { type: String, unique: true, required: true },
-    phone: String, // ruajme E.164 p.sh +3897xxxxxxx
+    phone: String, // E.164 +389...
     phone_verified: { type: Boolean, default: false },
     phone_verified_at: Date,
 
     address: String,
     category: String,
-
-    // (i lemë opsionale për të ardhmen – nuk i përdorim tash)
-    country: { type: String, default: "MK" },
-    city: { type: String, default: "" },
 
     plan: { type: String, default: "basic" },
     payment_status: { type: String, default: "pending" },
@@ -147,9 +159,7 @@ const phoneOtpSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// TTL index: fshihet automatikisht pas expires_at
 phoneOtpSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 });
-
 const PhoneOTP = mongoose.model("PhoneOTP", phoneOtpSchema);
 
 /* ================= PLAN RULES ================= */
@@ -175,18 +185,14 @@ async function createLemonCheckout({ variantId, email }) {
   if (!LEMON_STORE_ID) throw new Error("Missing LEMON_STORE_ID");
   if (!variantId) throw new Error("Missing variantId");
 
-  const redirectUrl =
-    `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}`;
+  const redirectUrl = `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}`;
 
   const payload = {
     data: {
       type: "checkouts",
       attributes: {
         product_options: { redirect_url: redirectUrl },
-        checkout_data: {
-          email,
-          custom: { email },
-        },
+        checkout_data: { email, custom: { email } },
       },
       relationships: {
         store: { data: { type: "stores", id: String(LEMON_STORE_ID) } },
@@ -277,11 +283,8 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
         { upsert: false, new: true }
       );
 
-      if (!updated) {
-        log("⚠️ Paid webhook but firm not found for email:", email);
-      } else {
-        log("✅ Marked paid:", { email, plan: updated.plan });
-      }
+      if (!updated) log("⚠️ Paid webhook but firm not found for email:", email);
+      else log("✅ Marked paid:", { email, plan: updated.plan });
 
       return res.status(200).send("OK");
     }
@@ -313,9 +316,14 @@ app.get("/health", (req, res) => res.json({ ok: true, time: now() }));
 const lastOtpSentAt = new Map(); // phone -> ms
 
 async function sendSmsTwilio({ to, body }) {
-  // nëse s'ke twilio creds, vetëm e logojmë kodin
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_FROM_NUMBER) {
-    log("📩 OTP (no SMS provider). To:", to, "Message:", body);
+  // Nëse s'ke Twilio, mos e lejo "success" pa SMS — veç nëse OTP_DEBUG=1
+  const twilioReady = TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_FROM_NUMBER;
+
+  if (!twilioReady) {
+    if (!OTP_DEBUG) {
+      throw new Error("Twilio is not configured (missing TWILIO_* env vars).");
+    }
+    log("📩 OTP DEBUG (no SMS). To:", to, "Message:", body);
     return { ok: true, dev: true };
   }
 
@@ -344,7 +352,12 @@ async function sendSmsTwilio({ to, body }) {
 app.post("/auth/send-otp", async (req, res) => {
   try {
     const phoneNorm = normalizePhone(req.body?.phone);
-    if (!phoneNorm) return res.status(400).json({ success: false, error: "Numër telefoni jo valid. Përdor + (p.sh. +389...)" });
+    if (!phoneNorm) {
+      return res.status(400).json({
+        success: false,
+        error: "Numër telefoni jo valid. Përdor format + (p.sh. +3897xxxxxxx) ose 07xxxxxxx.",
+      });
+    }
 
     const nowMs = Date.now();
     const last = lastOtpSentAt.get(phoneNorm) || 0;
@@ -379,10 +392,11 @@ app.post("/auth/send-otp", async (req, res) => {
       success: true,
       message: "Kodi u dërgua.",
       ...(OTP_DEBUG ? { dev_code: code } : {}),
+      phone: phoneNorm,
     });
   } catch (err) {
     errorWithTime("SEND-OTP ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
+    return res.status(500).json({ success: false, error: "Server error (send-otp)" });
   }
 });
 
@@ -417,13 +431,13 @@ app.post("/auth/verify-otp", async (req, res) => {
     doc.verified = true;
     doc.token = token;
     doc.used = false;
-    doc.expires_at = tokenExpiresAt; // e zgjatim për token
+    doc.expires_at = tokenExpiresAt; // zgjat TTL për token
     await doc.save();
 
     return res.json({ success: true, phone_verify_token: token, phone: phoneNorm });
   } catch (err) {
     errorWithTime("VERIFY-OTP ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
+    return res.status(500).json({ success: false, error: "Server error (verify-otp)" });
   }
 });
 
@@ -451,23 +465,31 @@ app.post(
 
       if (REQUIRE_PHONE_VERIFICATION) {
         if (!phone_verify_token) {
-          return res.status(400).json({ success: false, error: "Verifiko numrin e telefonit (kodi SMS) para regjistrimit." });
+          return res.status(400).json({
+            success: false,
+            error: "Verifiko numrin e telefonit (kodi SMS) para regjistrimit.",
+          });
         }
 
-        const tok = await PhoneOTP.findOne({
-          phone: phoneNorm,
-          token: String(phone_verify_token),
-          verified: true,
-          used: false,
-          expires_at: { $gt: new Date() },
-        });
+        // konsumim atomik (mos lejo reuse)
+        const tok = await PhoneOTP.findOneAndUpdate(
+          {
+            phone: phoneNorm,
+            token: String(phone_verify_token),
+            verified: true,
+            used: false,
+            expires_at: { $gt: new Date() },
+          },
+          { $set: { used: true } },
+          { new: true }
+        );
 
         if (!tok) {
-          return res.status(400).json({ success: false, error: "Verifikimi i telefonit s’është valid. Provo prap." });
+          return res.status(400).json({
+            success: false,
+            error: "Verifikimi i telefonit s’është valid ose ka skadu. Provo prap.",
+          });
         }
-
-        tok.used = true;
-        await tok.save();
       }
 
       const exists = await Firma.findOne({ email });
@@ -502,8 +524,8 @@ app.post(
         name,
         email,
         phone: phoneNorm,
-        phone_verified: true,
-        phone_verified_at: new Date(),
+        phone_verified: REQUIRE_PHONE_VERIFICATION ? true : false,
+        phone_verified_at: REQUIRE_PHONE_VERIFICATION ? new Date() : null,
         address,
         category,
         plan,

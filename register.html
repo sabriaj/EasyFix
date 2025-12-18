@@ -20,7 +20,6 @@
 
 <body class="bg-gray-100 min-h-screen">
 
-  <!-- HEADER -->
   <header class="bg-blue-700 text-white py-6 shadow-md">
     <div class="container mx-auto px-4 flex justify-between items-center">
       <h1 class="text-3xl font-extrabold">EasyFix</h1>
@@ -32,16 +31,12 @@
     </div>
   </header>
 
-  <!-- MAIN CONTENT -->
   <section class="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-xl mt-10">
     <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Regjistrimi i Firmës</h1>
 
-    <!-- PLAN SELECTION -->
     <h2 class="text-xl font-semibold mb-3">Zgjidh Planin</h2>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-
-      <!-- BASIC -->
       <button data-plan="basic" id="planBasic" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
         <h3 class="text-lg font-bold mb-1">Basic – 15€/muaj</h3>
         <ul class="text-sm text-gray-600 space-y-1">
@@ -51,7 +46,6 @@
         </ul>
       </button>
 
-      <!-- STANDARD -->
       <button data-plan="standard" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
         <h3 class="text-lg font-bold mb-1">Standard – 20€/muaj</h3>
         <ul class="text-sm text-gray-600 space-y-1">
@@ -62,52 +56,19 @@
         </ul>
       </button>
 
-      <!-- PREMIUM -->
       <button data-plan="premium" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
         <h3 class="text-lg font-bold mb-1">Premium – 30€/muaj</h3>
         <ul class="text-sm text-gray-600 space-y-1">
           <li>• Gjithë Standard +</li>
           <li>• Brandim më i fortë</li>
-          <li>• Pozicion Top sipas shtetit</li>
+          <li>• Pozicion Top</li>
           <li>• Deri 8 foto</li>
         </ul>
       </button>
-
     </div>
 
     <input type="hidden" id="selectedPlan">
 
-    <!-- LOCATION (COUNTRY + CITY) -->
-    <div class="mt-6 p-4 border rounded-xl bg-gray-50">
-      <h3 class="font-semibold mb-3 text-gray-800">Lokacioni</h3>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="font-semibold">Shteti</label>
-          <input
-            id="countrySearch"
-            type="text"
-            placeholder="Kërko shtetin..."
-            class="w-full border p-2 rounded mb-2"
-          />
-          <select id="countrySelect" class="w-full border p-2 rounded" required>
-            <option value="MK" selected>🇲🇰 North Macedonia</option>
-          </select>
-          <p class="text-xs text-gray-500 mt-1">
-            Shteti vendoset automatikisht sipas lokacionit, por mundesh me e ndërru.
-          </p>
-        </div>
-
-        <div>
-          <label class="font-semibold">Qyteti</label>
-          <select id="citySelect" class="w-full border p-2 rounded" required>
-            <option value="">Duke ngarkuar...</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- LOGO & PHOTOS SECTION (Hidden for BASIC) -->
     <div id="uploadSection" class="hidden mt-6 p-4 border rounded-xl bg-gray-50">
       <h3 class="font-semibold mb-3 text-gray-800">Ngarko Logo dhe Foto</h3>
 
@@ -119,7 +80,6 @@
       <p class="text-xs text-gray-500 mt-1" id="photosHint"></p>
     </div>
 
-    <!-- REGISTRATION FORM -->
     <form id="registerForm" class="grid grid-cols-1 gap-4 mt-6">
 
       <div>
@@ -134,7 +94,24 @@
 
       <div>
         <label class="font-semibold">Telefoni</label>
-        <input id="telefoni" type="text" class="w-full border p-2 rounded">
+        <input id="telefoni" type="text" class="w-full border p-2 rounded" placeholder="+3897xxxxxxx (ose 07xxxxxxx)">
+      </div>
+
+      <!-- VERIFIKIMI -->
+      <div class="p-4 border rounded-xl bg-gray-50">
+        <div class="font-semibold mb-2">Verifiko numrin (SMS)</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <button id="sendOtpBtn" type="button" class="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold">
+            Dërgo kodin
+          </button>
+
+          <input id="otpCode" type="text" class="border p-2 rounded" placeholder="Kodi 6-shifror" maxlength="6">
+
+          <button id="verifyOtpBtn" type="button" class="bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-bold">
+            Verifiko
+          </button>
+        </div>
+        <p id="otpStatus" class="text-sm text-gray-600 mt-2"></p>
       </div>
 
       <div>
@@ -153,7 +130,7 @@
         </select>
       </div>
 
-      <button class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-lg">
+      <button id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-lg">
         Vazhdo te Pagesa
       </button>
     </form>

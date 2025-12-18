@@ -18,167 +18,8 @@ function showStatus(msg, type = "info") {
     "#2563eb";
 }
 
-/* ===================== COUNTRY/CITY UI ===================== */
-const countrySearch = $("#countrySearch");
-const countrySelect = $("#countrySelect");
-const citySelect = $("#citySelect");
-
-let countriesAll = [];
-
-function iso2ToFlagEmoji(iso2) {
-  const code = String(iso2 || "").toUpperCase();
-  if (code.length !== 2) return "🏳️";
-  const A = 0x1F1E6;
-  const base = "A".charCodeAt(0);
-  return String.fromCodePoint(A + (code.charCodeAt(0) - base), A + (code.charCodeAt(1) - base));
-}
-
-async function detectUserCountryCode() {
-  try {
-    const r = await fetch("https://ipapi.co/json/");
-    const j = await r.json();
-    const code = (j?.country_code || "MK").toUpperCase();
-    return code || "MK";
-  } catch {
-    return "MK";
-  }
-}
-
-// Countries list (ISO2)
-async function fetchCountries() {
-  const r = await fetch("https://countriesnow.space/api/v0.1/countries/iso");
-  const j = await r.json();
-  if (!j || !j.data) return [];
-  // data: [{ name, Iso2, Iso3 }]
-  return j.data.map(x => ({ name: x.name, Iso2: x.Iso2 }));
-}
-
-// Cities for a country name
-async function fetchCities(countryName) {
-  const r = await fetch("https://countriesnow.space/api/v0.1/countries/cities", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ country: countryName })
-  });
-  const j = await r.json();
-  if (!j || !j.data) return [];
-  return j.data;
-}
-
-function getSelectedCountryName() {
-  const iso2 = String(countrySelect.value || "").toUpperCase();
-  const found = countriesAll.find(c => String(c.Iso2 || "").toUpperCase() === iso2);
-  return found?.name || "North Macedonia";
-}
-
-function renderCountryOptions(filterText = "") {
-  const q = String(filterText || "").trim().toLowerCase();
-
-  const view = !q
-    ? [...countriesAll]
-    : countriesAll.filter(c => {
-        const name = String(c.name || "").toLowerCase();
-        const iso2 = String(c.Iso2 || "").toLowerCase();
-        return name.includes(q) || iso2.includes(q);
-      });
-
-  const current = String(countrySelect.value || "").toUpperCase();
-
-  countrySelect.innerHTML = "";
-  view.forEach(c => {
-    const iso2 = String(c.Iso2 || "").toUpperCase();
-    const name = String(c.name || "").trim();
-    if (!iso2 || !name) return;
-
-    const opt = document.createElement("option");
-    opt.value = iso2;
-    opt.textContent = `${iso2ToFlagEmoji(iso2)} ${name}`;
-    countrySelect.appendChild(opt);
-  });
-
-  const hasCurrent = Array.from(countrySelect.options).some(o => o.value === current);
-  if (hasCurrent) countrySelect.value = current;
-  else countrySelect.value = countrySelect.options[0]?.value || "MK";
-}
-
-function setCityOptions(cities, preferred = "") {
-  const list = Array.isArray(cities) ? cities : [];
-  const pref = String(preferred || "").trim();
-
-  citySelect.innerHTML = "";
-  if (!list.length) {
-    citySelect.innerHTML = `<option value="">Nuk u gjetën qytete</option>`;
-    return;
-  }
-
-  list.forEach(ct => {
-    const c = String(ct || "").trim();
-    if (!c) return;
-    const opt = document.createElement("option");
-    opt.value = c;
-    opt.textContent = c;
-    citySelect.appendChild(opt);
-  });
-
-  if (pref) {
-    const exists = Array.from(citySelect.options).some(o => o.value === pref);
-    if (exists) citySelect.value = pref;
-  }
-}
-
-async function initCountryCity() {
-  try {
-    countriesAll = await fetchCountries();
-
-    // ensure MK always exists
-    const hasMK = countriesAll.some(x => String(x.Iso2 || "").toUpperCase() === "MK");
-    if (!hasMK) countriesAll.unshift({ name: "North Macedonia", Iso2: "MK" });
-
-    // sort but keep MK on top
-    const mk = countriesAll.find(x => String(x.Iso2 || "").toUpperCase() === "MK");
-    const rest = countriesAll
-      .filter(x => String(x.Iso2 || "").toUpperCase() !== "MK")
-      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
-    countriesAll = mk ? [mk, ...rest] : rest;
-
-    const detected = await detectUserCountryCode();
-
-    renderCountryOptions("");
-    const existsDetected = countriesAll.some(x => String(x.Iso2 || "").toUpperCase() === detected);
-    countrySelect.value = existsDetected ? detected : "MK";
-
-    const countryName = getSelectedCountryName();
-    const cityList = await fetchCities(countryName);
-    const preferredCity = (countrySelect.value === "MK") ? "Skopje" : "";
-    setCityOptions(cityList, preferredCity);
-
-  } catch (e) {
-    console.error("Country/City init error:", e);
-    countriesAll = [{ name: "North Macedonia", Iso2: "MK" }];
-    renderCountryOptions("");
-    setCityOptions(["Skopje", "Tetovo", "Kumanovo", "Bitola", "Prilep", "Gostivar", "Struga", "Ohrid"], "Skopje");
-  }
-}
-
-countrySearch?.addEventListener("input", () => {
-  renderCountryOptions(countrySearch.value);
-});
-
-countrySelect?.addEventListener("change", async () => {
-  try {
-    citySelect.innerHTML = `<option value="">Duke ngarkuar...</option>`;
-    const countryName = getSelectedCountryName();
-    const cityList = await fetchCities(countryName);
-    setCityOptions(cityList, "");
-  } catch (e) {
-    console.error(e);
-    citySelect.innerHTML = `<option value="">Gabim gjatë ngarkimit</option>`;
-  }
-});
-
 /* ===================== PLAN UI ===================== */
 let selectedPlan = "";
-
 const photosLabel = $("#photosLabel");
 const photosHint = $("#photosHint");
 
@@ -196,7 +37,6 @@ function updateUploadHints() {
   }
 }
 
-// plan selection + show/hide uploads
 document.querySelectorAll(".plan-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".plan-btn").forEach(b => b.classList.remove("active"));
@@ -218,12 +58,110 @@ document.querySelectorAll(".plan-btn").forEach(btn => {
   });
 });
 
-// default plan = basic (më e lehtë për user)
-window.addEventListener("DOMContentLoaded", async () => {
-  await initCountryCity();
+/* ===================== PHONE OTP ===================== */
+const sendOtpBtn = $("#sendOtpBtn");
+const verifyOtpBtn = $("#verifyOtpBtn");
+const otpCode = $("#otpCode");
+const otpStatus = $("#otpStatus");
+const phoneInput = $("#telefoni");
 
-  const basicBtn = $("#planBasic");
-  if (basicBtn) basicBtn.click();
+let phoneVerifyToken = "";
+let verifiedPhone = "";
+
+function setOtpStatus(text, ok = false) {
+  otpStatus.textContent = text;
+  otpStatus.style.color = ok ? "#16a34a" : "#374151";
+}
+
+function resetVerification() {
+  phoneVerifyToken = "";
+  verifiedPhone = "";
+  setOtpStatus("Numri nuk është verifikuar ende.", false);
+}
+
+phoneInput.addEventListener("input", () => {
+  // nëse user e ndryshon numrin, e prishim token-in
+  resetVerification();
+});
+
+sendOtpBtn.addEventListener("click", async () => {
+  const phone = phoneInput.value.trim();
+  if (!phone) {
+    setOtpStatus("Shkruaje numrin e telefonit.", false);
+    return;
+  }
+
+  setOtpStatus("Duke dërgu kodin...", false);
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/auth/send-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.success) {
+      setOtpStatus(data?.error || "Gabim gjatë dërgimit të kodit.", false);
+      return;
+    }
+
+    setOtpStatus("Kodi u dërgua. Shkruaje kodin 6-shifror.", true);
+
+    // vetëm nëse e ke OTP_DEBUG=1 në server
+    if (data.dev_code) {
+      setOtpStatus(`Kodi (DEV): ${data.dev_code} — vendose në fushë.`, true);
+    }
+  } catch (e) {
+    console.error(e);
+    setOtpStatus("Gabim në komunikim me serverin.", false);
+  }
+});
+
+verifyOtpBtn.addEventListener("click", async () => {
+  const phone = phoneInput.value.trim();
+  const code = otpCode.value.trim();
+
+  if (!phone) {
+    setOtpStatus("Shkruaje numrin e telefonit.", false);
+    return;
+  }
+  if (!/^\d{6}$/.test(code)) {
+    setOtpStatus("Kodi duhet me qenë 6 shifra.", false);
+    return;
+  }
+
+  setOtpStatus("Duke verifiku...", false);
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/auth/verify-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, code })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.success) {
+      setOtpStatus(data?.error || "Verifikimi dështoi.", false);
+      return;
+    }
+
+    phoneVerifyToken = data.phone_verify_token;
+    verifiedPhone = data.phone;
+
+    setOtpStatus("Numri u verifikua me sukses ✅", true);
+
+    // opcional: blloko ndryshimin e telefonit pas verifikimit
+    // phoneInput.disabled = true;
+    // sendOtpBtn.disabled = true;
+    // verifyOtpBtn.disabled = true;
+
+  } catch (e) {
+    console.error(e);
+    setOtpStatus("Gabim në komunikim me serverin.", false);
+  }
 });
 
 /* ===================== SUBMIT ===================== */
@@ -237,11 +175,8 @@ form.addEventListener("submit", async (e) => {
   const email = $("#emaili").value.trim();
   const category = $("#kategoria").value.trim();
 
-  const country = String(countrySelect?.value || "MK").toUpperCase();
-  const city = String(citySelect?.value || "").trim();
-
-  if (!name || !address || !phone || !email || !category || !country || !city) {
-    showStatus("Ju lutem plotësoni të gjitha fushat (përfshi shtetin & qytetin).", "error");
+  if (!name || !address || !phone || !email || !category) {
+    showStatus("Ju lutem plotësoni të gjitha fushat.", "error");
     return;
   }
 
@@ -250,10 +185,14 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
+  if (!phoneVerifyToken) {
+    showStatus("Duhet me verifiku numrin (SMS) para regjistrimit.", "error");
+    return;
+  }
+
   // photo limits
   const maxPhotos = selectedPlan === "standard" ? 3 : selectedPlan === "premium" ? 8 : 0;
 
-  // build multipart
   const formData = new FormData();
   formData.append("name", name);
   formData.append("email", email);
@@ -262,11 +201,9 @@ form.addEventListener("submit", async (e) => {
   formData.append("category", category);
   formData.append("plan", selectedPlan);
 
-  // NEW: country + city
-  formData.append("country", country);
-  formData.append("city", city);
+  // token për verifikim
+  formData.append("phone_verify_token", phoneVerifyToken);
 
-  // logo + photos only for standard/premium
   if (selectedPlan === "standard" || selectedPlan === "premium") {
     const logoFile = $("#logoUpload").files[0];
     if (logoFile) formData.append("logo", logoFile);
@@ -309,4 +246,11 @@ form.addEventListener("submit", async (e) => {
     console.error(err);
     showStatus("Gabim gjatë komunikimit me serverin.", "error");
   }
+});
+
+// default plan basic
+window.addEventListener("DOMContentLoaded", () => {
+  const basicBtn = $("#planBasic");
+  if (basicBtn) basicBtn.click();
+  resetVerification();
 });

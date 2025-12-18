@@ -180,22 +180,19 @@ function normalizeEmail(email) {
   return sanitize(email).toLowerCase();
 }
 
-function clampPhotos(firm) {
-  const photos = Array.isArray(firm.photos) ? firm.photos : [];
-  if (firm.plan === "standard") return photos.slice(0, 3);
-  if (firm.plan === "premium") return photos.slice(0, 8);
-  return [];
+function phoneToTelHref(phone) {
+  // lejon + dhe numra (heq hapesira, (), -, etj.)
+  const p = sanitize(phone).replace(/[^\d+]/g, "");
+  if (!p) return "";
+  // nëse dikush ka shkru 07... e leme siç është (tel:07...) prap punon në shumicën e rasteve
+  return p;
 }
 
-async function detectUserCountryCode() {
-  try {
-    const r = await fetch("https://ipapi.co/json/");
-    const j = await r.json();
-    const code = (j?.country_code || "MK").toUpperCase();
-    return (code && code.length === 2) ? code : "MK";
-  } catch {
-    return "MK";
-  }
+function clampPhotos(firm) {
+  const photos = Array.isArray(firm.photos) ? firm.photos : [];
+  if ((firm.plan || "").toLowerCase() === "standard") return photos.slice(0, 3);
+  if ((firm.plan || "").toLowerCase() === "premium") return photos.slice(0, 8);
+  return [];
 }
 
 /* =================== categories =================== */
@@ -336,10 +333,12 @@ function renderFirms(firms) {
 
     const plan = (firm.plan || "basic").toLowerCase();
 
-    // Basic: no logo, no photos
     const showMedia = plan !== "basic";
     const logo = showMedia ? (firm.logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png") : null;
     const photos = showMedia ? clampPhotos(firm) : [];
+
+    const tel = phoneToTelHref(firm.phone);
+    const hasTel = !!tel;
 
     const badgeHTML =
       plan === "premium"
@@ -404,19 +403,44 @@ function renderFirms(firms) {
       `;
     }
 
+    const phoneLine = hasTel
+      ? `
+        <p><strong>Telefoni:</strong>
+          <a href="tel:${tel}" class="text-blue-700 underline font-semibold">
+            ${sanitize(firm.phone)}
+          </a>
+        </p>
+      `
+      : `<p><strong>Telefoni:</strong> <span class="text-gray-500">Nuk është vendosur</span></p>`;
+
+    const callButtons = hasTel
+      ? `
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          <a href="tel:${tel}"
+             class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold">
+            📞 Thirr
+          </a>
+          <a href="sms:${tel}"
+             class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold">
+            ✉️ SMS
+          </a>
+        </div>
+      `
+      : "";
+
     div.innerHTML = `
       ${headerHTML}
 
       <p><strong>Adresa:</strong> ${sanitize(firm.address)}</p>
-      <p><strong>Telefoni:</strong> ${sanitize(firm.phone)}</p>
+      ${phoneLine}
       <p><strong>Email:</strong>
         <a href="mailto:${sanitize(firm.email)}" class="text-blue-600 underline">
           ${sanitize(firm.email)}
         </a>
       </p>
       <p><strong>Kategoria:</strong> ${sanitize(firm.category)}</p>
-      <p class="text-xs text-gray-500 mt-1"><strong>Lokacion:</strong> ${sanitize(firm.city)} (${sanitize(firm.country)})</p>
 
+      ${callButtons}
       ${photosHTML}
     `;
 
@@ -488,22 +512,14 @@ function focusFirmFromUrl() {
   setTimeout(() => el.classList.remove("focus-ring"), 6000);
 }
 
-/* =================== fetch firms (by country) =================== */
+/* =================== fetch firms =================== */
 async function loadFirms() {
-  // override nga URL ?country=MK (p.sh. success.html mundet me e dërgu)
-  const params = new URLSearchParams(window.location.search);
-  const urlCountry = (params.get("country") || "").toUpperCase();
-
-  const country = (urlCountry && urlCountry.length === 2)
-    ? urlCountry
-    : await detectUserCountryCode();
-
-  const resp = await fetch(`${API_URL}/firms?country=${encodeURIComponent(country)}`);
+  const resp = await fetch(`${API_URL}/firms`);
   const data = await resp.json();
 
   allFirms = (data || []).sort((a, b) => {
     const order = { premium: 1, standard: 2, basic: 3 };
-    return (order[a.plan] || 9) - (order[b.plan] || 9);
+    return (order[(a.plan || "").toLowerCase()] || 9) - (order[(b.plan || "").toLowerCase()] || 9);
   });
 
   populateCategoryFilter(allFirms);

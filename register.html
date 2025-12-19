@@ -8,10 +8,17 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
+  <!-- intl-tel-input (flags + dial code) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/css/intlTelInput.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/intlTelInput.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/utils.js"></script>
+
+  <!-- app script -->
   <script defer src="code.js"></script>
 
   <style>
     .plan-btn.active { border: 3px solid #2563eb; background: #dbeafe; }
+    .iti { width: 100%; }
   </style>
 </head>
 
@@ -81,27 +88,30 @@
 
       <div>
         <label class="font-semibold">Emri i Firmës</label>
-        <input id="emri" type="text" class="w-full border p-2 rounded">
+        <input id="emri" type="text" class="w-full border p-2 rounded" required>
       </div>
 
       <div>
         <label class="font-semibold">Adresa</label>
-        <input id="adresa" type="text" class="w-full border p-2 rounded">
+        <input id="adresa" type="text" class="w-full border p-2 rounded" required>
       </div>
 
       <div>
-        <label class="font-semibold">Telefoni</label>
-        <input id="telefoni" type="text" class="w-full border p-2 rounded" placeholder="+3897xxxxxxx (ose 07xxxxxxx)">
+        <label class="font-semibold">Telefoni (me shtet)</label>
+        <input id="telefoni" type="tel" class="w-full border p-2 rounded" inputmode="tel" placeholder="Numri i telefonit" required>
+        <p class="text-xs text-gray-500 mt-1">
+          Zgjidh shtetin (flamuri), pastaj shkruaj numrin. Prefiksi (+389, +49, +1…) vendoset vet.
+        </p>
       </div>
 
       <div>
         <label class="font-semibold">Email</label>
-        <input id="emaili" type="email" class="w-full border p-2 rounded">
+        <input id="emaili" type="email" class="w-full border p-2 rounded" required>
       </div>
 
       <div>
         <label class="font-semibold">Kategoria e Shërbimit</label>
-        <select id="kategoria" class="w-full border p-2 rounded">
+        <select id="kategoria" class="w-full border p-2 rounded" required>
           <option value="Elektricist">Elektricist</option>
           <option value="Hidraulik">Hidraulik</option>
           <option value="Murator">Murator</option>

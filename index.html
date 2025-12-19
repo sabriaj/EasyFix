@@ -11,7 +11,6 @@
     .badge-standard { background: #3b82f6; color: white; }
     .badge-basic { background: #6b7280; color: white; }
 
-    /* MODAL FULLSCREEN */
     #photoModal {
       display: none;
       position: fixed;
@@ -88,10 +87,12 @@
 
 <body class="bg-gray-50 min-h-screen flex flex-col">
 
-  <!-- Header -->
   <header class="bg-blue-700 text-white py-6 shadow-md">
     <div class="container mx-auto px-4 flex justify-between items-center">
-      <h1 class="text-3xl font-extrabold tracking-tight">EasyFix</h1>
+      <div class="flex items-center gap-3">
+        <h1 class="text-3xl font-extrabold tracking-tight">EasyFix</h1>
+        <span id="countryPill" class="hidden text-xs font-bold bg-white/20 px-2 py-1 rounded-full"></span>
+      </div>
       <nav>
         <ul class="flex space-x-6 text-lg">
           <li><a href="register.html" class="hover:underline">Regjistro Firmën</a></li>
@@ -101,7 +102,6 @@
     </div>
   </header>
 
-  <!-- MAIN -->
   <main class="container mx-auto px-4 py-10 flex-grow">
     <h2 class="text-4xl font-bold text-blue-900 mb-8 text-center">
       Gjej mjeshtrin që të duhet me shpejtësi
@@ -132,12 +132,10 @@
     </section>
   </main>
 
-  <!-- FOOTER -->
   <footer class="bg-blue-700 text-white text-center py-6 mt-auto">
     &copy; 2025 EasyFix.mk - Ndihma për çdo shtëpi
   </footer>
 
-  <!-- MODAL -->
   <div id="photoModal" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-actions">
@@ -170,6 +168,7 @@ const categorySelect = document.getElementById("categorySelect");
 const searchInput = document.getElementById("searchInput");
 const firmsContainer = document.getElementById("firmsContainer");
 const noResults = document.getElementById("noResults");
+const countryPill = document.getElementById("countryPill");
 
 /* =================== helpers =================== */
 function sanitize(text) {
@@ -181,18 +180,27 @@ function normalizeEmail(email) {
 }
 
 function phoneToTelHref(phone) {
-  // lejon + dhe numra (heq hapesira, (), -, etj.)
   const p = sanitize(phone).replace(/[^\d+]/g, "");
-  if (!p) return "";
-  // nëse dikush ka shkru 07... e leme siç është (tel:07...) prap punon në shumicën e rasteve
-  return p;
+  return p || "";
 }
 
 function clampPhotos(firm) {
   const photos = Array.isArray(firm.photos) ? firm.photos : [];
-  if ((firm.plan || "").toLowerCase() === "standard") return photos.slice(0, 3);
-  if ((firm.plan || "").toLowerCase() === "premium") return photos.slice(0, 8);
+  const plan = (firm.plan || "").toLowerCase();
+  if (plan === "standard") return photos.slice(0, 3);
+  if (plan === "premium") return photos.slice(0, 8);
   return [];
+}
+
+async function detectUserCountryCode() {
+  try {
+    const r = await fetch("https://ipapi.co/json/");
+    const j = await r.json();
+    const code = (j?.country_code || "MK").toUpperCase();
+    return (code && code.length === 2) ? code : "MK";
+  } catch {
+    return "MK";
+  }
 }
 
 /* =================== categories =================== */
@@ -281,7 +289,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") modalNext();
 });
 
-/* =================== autoplay per premium (card slider) =================== */
+/* =================== autoplay per premium =================== */
 const autoplayTimers = new Map();
 
 function startAutoplay(containerEl, photos) {
@@ -332,7 +340,6 @@ function renderFirms(firms) {
     div.dataset.email = normalizeEmail(firm.email);
 
     const plan = (firm.plan || "basic").toLowerCase();
-
     const showMedia = plan !== "basic";
     const logo = showMedia ? (firm.logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png") : null;
     const photos = showMedia ? clampPhotos(firm) : [];
@@ -439,6 +446,7 @@ function renderFirms(firms) {
         </a>
       </p>
       <p><strong>Kategoria:</strong> ${sanitize(firm.category)}</p>
+      <p class="text-xs text-gray-500 mt-1"><strong>Shteti:</strong> ${sanitize(firm.country || "MK")}</p>
 
       ${callButtons}
       ${photosHTML}
@@ -474,9 +482,7 @@ function renderFirms(firms) {
         });
       });
 
-      if (plan === "premium") {
-        startAutoplay(slider, photos);
-      }
+      if (plan === "premium") startAutoplay(slider, photos);
     }
 
     firmsContainer.appendChild(div);
@@ -512,9 +518,20 @@ function focusFirmFromUrl() {
   setTimeout(() => el.classList.remove("focus-ring"), 6000);
 }
 
-/* =================== fetch firms =================== */
+/* =================== fetch firms (by country) =================== */
 async function loadFirms() {
-  const resp = await fetch(`${API_URL}/firms`);
+  const params = new URLSearchParams(window.location.search);
+  const urlCountry = (params.get("country") || "").toUpperCase();
+
+  const country = (/^[A-Z]{2}$/.test(urlCountry))
+    ? urlCountry
+    : await detectUserCountryCode();
+
+  // UI pill
+  countryPill.textContent = country;
+  countryPill.classList.remove("hidden");
+
+  const resp = await fetch(`${API_URL}/firms?country=${encodeURIComponent(country)}`);
   const data = await resp.json();
 
   allFirms = (data || []).sort((a, b) => {

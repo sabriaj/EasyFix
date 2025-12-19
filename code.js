@@ -58,6 +58,36 @@ document.querySelectorAll(".plan-btn").forEach(btn => {
   });
 });
 
+/* ===================== PHONE (intl-tel-input) ===================== */
+let iti = null;
+
+async function detectUserCountryIso2() {
+  try {
+    const r = await fetch("https://ipapi.co/json/");
+    const j = await r.json();
+    const code = (j?.country_code || "MK").toLowerCase();
+    return /^[a-z]{2}$/.test(code) ? code : "mk";
+  } catch {
+    return "mk";
+  }
+}
+
+async function initPhoneInput() {
+  const phoneInput = $("#telefoni");
+  if (!phoneInput || !window.intlTelInput) return;
+
+  const iso2 = await detectUserCountryIso2();
+
+  iti = window.intlTelInput(phoneInput, {
+    initialCountry: iso2 || "mk",
+    separateDialCode: true,
+    nationalMode: true,
+    autoPlaceholder: "aggressive",
+    formatOnDisplay: true,
+    utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/utils.js",
+  });
+}
+
 /* ===================== SUBMIT ===================== */
 const form = $("#registerForm");
 form.addEventListener("submit", async (e) => {
@@ -65,11 +95,10 @@ form.addEventListener("submit", async (e) => {
 
   const name = $("#emri").value.trim();
   const address = $("#adresa").value.trim();
-  const phone = $("#telefoni").value.trim();
   const email = $("#emaili").value.trim();
-  const category = $("#kategoria").value.trim();
+  const category = $("#kategoria").value;
 
-  if (!name || !address || !phone || !email || !category) {
+  if (!name || !address || !email || !category) {
     showStatus("Ju lutem plotësoni të gjitha fushat.", "error");
     return;
   }
@@ -79,15 +108,32 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
+  if (!iti) {
+    showStatus("Telefon: nuk u inicializua sistemi i shteteve. Rifresko faqen.", "error");
+    return;
+  }
+
+  // ✅ validim real i numrit
+  if (!iti.isValidNumber()) {
+    showStatus("Numri i telefonit nuk është valid. Zgjidh shtetin dhe shkruaj numrin saktë.", "error");
+    return;
+  }
+
+  const phoneE164 = iti.getNumber(); // +49..., +389...
+  const countryIso2 = (iti.getSelectedCountryData()?.iso2 || "mk").toUpperCase();
+
   const maxPhotos = selectedPlan === "standard" ? 3 : selectedPlan === "premium" ? 8 : 0;
 
   const formData = new FormData();
   formData.append("name", name);
   formData.append("email", email);
-  formData.append("phone", phone);
+  formData.append("phone", phoneE164);
   formData.append("address", address);
   formData.append("category", category);
   formData.append("plan", selectedPlan);
+
+  // ✅ kjo përdoret për filtrimin në index
+  formData.append("country", countryIso2);
 
   if (selectedPlan === "standard" || selectedPlan === "premium") {
     const logoFile = $("#logoUpload").files[0];
@@ -133,8 +179,9 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
-// default plan basic
-window.addEventListener("DOMContentLoaded", () => {
+// default plan basic + init phone
+window.addEventListener("DOMContentLoaded", async () => {
   const basicBtn = $("#planBasic");
   if (basicBtn) basicBtn.click();
+  await initPhoneInput();
 });

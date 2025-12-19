@@ -29,6 +29,8 @@ const FRONTEND_SUCCESS_URL =
 const DELETE_AFTER_DAYS = Number(process.env.DELETE_AFTER_DAYS || 2);
 const CHECK_INTERVAL_MINUTES = Number(process.env.CHECK_INTERVAL_MINUTES || 60);
 
+const DEFAULT_COUNTRY = String(process.env.DEFAULT_COUNTRY || "MK").toUpperCase();
+
 /* ================= LOG HELPERS ================= */
 function now() { return new Date().toISOString(); }
 function log(...args) { console.log(now(), ...args); }
@@ -62,13 +64,17 @@ function normalizeEmail(e) {
   return String(e || "").trim().toLowerCase();
 }
 
+function normalizeCountry(raw) {
+  const c = String(raw || "").trim().toUpperCase();
+  if (/^[A-Z]{2}$/.test(c)) return c;
+  return DEFAULT_COUNTRY;
+}
+
 /**
  * normalizePhone:
- * - lejon + dhe numra
- * - "00..." -> "+..."
- * - MK local:
- *    071234567 -> +38971234567  (hiq 0)
- *    71234567  -> +38971234567
+ * - Preferon E.164 (+...).
+ * - Pranon vetëm + dhe numra.
+ * - Fallback MK local (8/9 shifra) -> +389...
  */
 function normalizePhone(raw) {
   let p = String(raw || "").trim();
@@ -76,15 +82,18 @@ function normalizePhone(raw) {
 
   if (p.startsWith("00")) p = "+" + p.slice(2);
 
-  if (!p.startsWith("+")) {
-    const digits = p.replace(/[^\d]/g, "");
-    if (digits.length === 8) return "+389" + digits;
-    if (digits.length === 9 && digits.startsWith("0")) return "+389" + digits.slice(1);
-    return null;
+  // E.164
+  if (p.startsWith("+")) {
+    if (p.length < 9 || p.length > 16) return null;
+    return p;
   }
 
-  if (p.length < 9 || p.length > 16) return null;
-  return p;
+  // fallback MK local (vetëm nëse vjen pa +)
+  const digits = p.replace(/[^\d]/g, "");
+  if (digits.length === 8) return "+389" + digits;
+  if (digits.length === 9 && digits.startsWith("0")) return "+389" + digits.slice(1);
+
+  return null;
 }
 
 /* ================= MONGO ================= */
@@ -98,16 +107,19 @@ const firmaSchema = new mongoose.Schema(
   {
     name: String,
     email: { type: String, unique: true, required: true },
-    phone: String, // E.164 +389...
-    // i lëmë këto fusha për të ardhmen (por nuk verifikojmë më):
+    phone: String, // E.164 +...
+    // i lëmë për të ardhmen:
     phone_verified: { type: Boolean, default: false },
     phone_verified_at: Date,
 
     address: String,
     category: String,
 
+    // ✅ Country for international use (ISO2)
+    country: { type: String, default: DEFAULT_COUNTRY, index: true },
+
     plan: { type: String, default: "basic" },
-    payment_status: { type: String, default: "pending" },
+    payment_status: { type: String, default: "pending", index: true },
 
     logoUrl: String,
     photos: [String],
@@ -156,7 +168,7 @@ async function createLemonCheckout({ variantId, email, firmId }) {
           email,
           custom: {
             email,
-            firmId: String(firmId || ""), // ✅ ky është çelësi
+            firmId: String(firmId || ""),
           },
         },
       },
@@ -186,7 +198,6 @@ async function createLemonCheckout({ variantId, email, firmId }) {
   if (!url) throw new Error("Checkout URL missing from Lemon response");
   return url;
 }
-
 
 /* ================= WEBHOOK (RAW BODY) ================= */
 app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
@@ -224,60 +235,63 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
       payload?.data?.attributes?.subscription?.variant_id ||
       null;
 
+    const firmIdRaw =
+      payload?.meta?.custom_data?.firmId ||
+      payload?.data?.attributes?.checkout_data?.custom?.firmId ||
+      payload?.data?.attributes?.checkout_data?.custom?.firm_id ||
+      null;
 
-
-      const firmIdRaw =
-  payload?.meta?.custom_data?.firmId ||
-  payload?.data?.attributes?.checkout_data?.custom?.firmId ||
-  payload?.data?.attributes?.checkout_data?.custom?.firm_id ||
-  null;
-
-const firmId = firmIdRaw ? String(firmIdRaw) : null;
-
-
-
-
+    const firmId = firmIdRaw ? String(firmIdRaw) : null;
 
     const detectedPlan = detectPlanFromVariant(variantId);
 
-    log("🔔 Webhook", { event, email, variantId, detectedPlan });
+    log("🔔 Webhook", { event, email, variantId, detectedPlan, firmId });
 
-    if (!email) return res.status(200).send("No email");
+    if (!email && !firmId) return res.status(200).send("No identifier");
 
     if (event === "order_paid" || event === "subscription_payment_success") {
-  const update = {
-    payment_status: "paid",
-    paid_at: new Date(),
-    expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    deleted_at: null,
-  };
+      const update = {
+        payment_status: "paid",
+        paid_at: new Date(),
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        deleted_at: null,
+      };
+      if (detectedPlan) update.plan = detectedPlan;
 
-  if (detectedPlan) update.plan = detectedPlan;
+      let updated = null;
 
-  let updated = null;
+      if (firmId) {
+        updated = await Firma.findByIdAndUpdate(
+          firmId,
+          { $set: update },
+          { new: true }
+        );
+      } else if (email) {
+        updated = await Firma.findOneAndUpdate(
+          { email },
+          { $set: update },
+          { upsert: false, new: true }
+        );
+      }
 
-  if (firmId) {
-    updated = await Firma.findByIdAndUpdate(
-      firmId,
-      { $set: update },
-      { new: true }
-    );
-  } else if (email) {
-    updated = await Firma.findOneAndUpdate(
-      { email },
-      { $set: update },
-      { upsert: false, new: true }
-    );
-  }
+      if (!updated) {
+        log("⚠️ Paid webhook but firm not found", { firmId, email });
+      } else {
+        log("✅ Marked paid:", { id: updated._id, email: updated.email, plan: updated.plan });
+      }
 
-  if (!updated) {
-    log("⚠️ Paid webhook but firm not found", { firmId, email });
-  } else {
-    log("✅ Marked paid:", { id: updated._id, email: updated.email, plan: updated.plan });
-  }
+      return res.status(200).send("OK");
+    }
 
-  return res.status(200).send("OK");
-}
+    // (opsionale) nëse i përdor këto evente:
+    if (event === "subscription_cancelled" || event === "subscription_expired" || event === "order_refunded") {
+      if (firmId) {
+        await Firma.findByIdAndUpdate(firmId, { $set: { payment_status: "expired", expires_at: new Date() } });
+      } else if (email) {
+        await Firma.findOneAndUpdate({ email }, { $set: { payment_status: "expired", expires_at: new Date() } });
+      }
+      return res.status(200).send("OK");
+    }
 
     return res.status(200).send("Ignored");
   } catch (err) {
@@ -302,10 +316,11 @@ app.post(
   async (req, res) => {
     let createdId = null;
     try {
-      let { name, email, phone, address, category, plan } = req.body;
+      let { name, email, phone, address, category, plan, country } = req.body;
 
       email = normalizeEmail(email);
       const phoneNorm = normalizePhone(phone);
+      const countryNorm = normalizeCountry(country);
 
       if (!name || !email || !phoneNorm || !address || !category || !plan) {
         return res.status(400).json({ success: false, error: "Missing fields" });
@@ -350,21 +365,21 @@ app.post(
         phone_verified_at: null,
         address,
         category,
+        country: countryNorm,
         plan,
         payment_status: "pending",
         logoUrl,
         photos,
       });
 
-     createdId = firma._id;
+      createdId = firma._id;
 
-const variantId = planToVariant(plan);
-const checkoutUrl = await createLemonCheckout({
-  variantId,
-  email,
-  firmId: String(firma._id), // ✅
-});
-
+      const variantId = planToVariant(plan);
+      const checkoutUrl = await createLemonCheckout({
+        variantId,
+        email,
+        firmId: String(firma._id),
+      });
 
       return res.json({
         success: true,
@@ -384,9 +399,36 @@ const checkoutUrl = await createLemonCheckout({
 );
 
 /* ================= PUBLIC ================= */
+// ✅ /firms?country=MK -> kthen vetëm firmat e atij shteti
 app.get("/firms", async (req, res) => {
   try {
-    const firms = await Firma.find({ payment_status: "paid" }).select("-__v");
+    const qCountry = String(req.query.country || "").trim().toUpperCase();
+
+    const base = { payment_status: "paid" };
+
+    // nëse kërkohet country:
+    if (/^[A-Z]{2}$/.test(qCountry)) {
+      // për MK, përfshi edhe firmat e vjetra pa field country (i trajtojmë si MK)
+      if (qCountry === "MK") {
+        const firms = await Firma.find({
+          ...base,
+          $or: [
+            { country: "MK" },
+            { country: { $exists: false } },
+            { country: null },
+            { country: "" },
+          ],
+        }).select("-__v");
+
+        return res.json(firms);
+      }
+
+      const firms = await Firma.find({ ...base, country: qCountry }).select("-__v");
+      return res.json(firms);
+    }
+
+    // default: krejt paid (nëse s’ka country param)
+    const firms = await Firma.find(base).select("-__v");
     res.json(firms);
   } catch (err) {
     errorWithTime("FIRMS ERROR:", err);

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EasyFix Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="admin.js"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+  <header class="bg-blue-700 text-white py-5 shadow">
+    <div class="container mx-auto px-4 flex items-center justify-between">
+      <div>
+        <div class="text-2xl font-extrabold">EasyFix Admin</div>
+        <div class="text-xs opacity-80">Menaxho firmat, pagesat, shtetet</div>
+      </div>
+      <div class="flex gap-2">
+        <a href="index.html" class="px-3 py-2 bg-white/15 rounded-lg hover:bg-white/25">Kthehu te faqja</a>
+        <button id="logoutBtn" class="px-3 py-2 bg-red-600 rounded-lg hover:bg-red-700">Dil</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-6">
+    <!-- Login box -->
+    <section id="loginBox" class="max-w-xl mx-auto bg-white rounded-2xl shadow p-6">
+      <h2 class="text-xl font-bold mb-2">Hyrje Admin</h2>
+      <p class="text-sm text-gray-600 mb-4">
+        Shkruaj <span class="font-semibold">ADMIN_KEY</span> (nga Render → Environment).
+      </p>
+
+      <label class="block text-sm font-semibold mb-1">Admin Key</label>
+      <input id="adminKeyInput" type="password" class="w-full border rounded-lg px-3 py-2" placeholder="Bearer token / ADMIN_KEY" />
+
+      <div class="mt-4 flex gap-2">
+        <button id="loginBtn" class="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 font-semibold">
+          Hyr
+        </button>
+        <div id="loginMsg" class="text-sm text-gray-600 flex items-center"></div>
+      </div>
+    </section>
+
+    <!-- Admin content -->
+    <section id="adminApp" class="hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-5">
+        <div class="bg-white rounded-2xl shadow p-4">
+          <div class="text-xs text-gray-500">Total</div>
+          <div id="statTotal" class="text-2xl font-extrabold">-</div>
+        </div>
+        <div class="bg-white rounded-2xl shadow p-4">
+          <div class="text-xs text-gray-500">Pending</div>
+          <div id="statPending" class="text-2xl font-extrabold">-</div>
+        </div>
+        <div class="bg-white rounded-2xl shadow p-4">
+          <div class="text-xs text-gray-500">Paid</div>
+          <div id="statPaid" class="text-2xl font-extrabold">-</div>
+        </div>
+        <div class="bg-white rounded-2xl shadow p-4">
+          <div class="text-xs text-gray-500">Expired</div>
+          <div id="statExpired" class="text-2xl font-extrabold">-</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-4 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <input id="searchInput" class="border rounded-lg px-3 py-2" placeholder="Kërko (name/email/phone/category)" />
+          <select id="statusSelect" class="border rounded-lg px-3 py-2">
+            <option value="all">All status</option>
+            <option value="pending">Pending</option>
+            <option value="paid">Paid</option>
+            <option value="expired">Expired</option>
+          </select>
+          <select id="planSelect" class="border rounded-lg px-3 py-2">
+            <option value="all">All plan</option>
+            <option value="basic">Basic</option>
+            <option value="standard">Standard</option>
+            <option value="premium">Premium</option>
+          </select>
+          <input id="countryInput" class="border rounded-lg px-3 py-2" placeholder="Country ISO2 (p.sh MK, DE) ose bosh" />
+        </div>
+
+        <div class="mt-3 flex gap-2">
+          <button id="refreshBtn" class="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-black font-semibold">Refresh</button>
+          <div id="appMsg" class="text-sm text-gray-600 flex items-center"></div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="text-left p-3">Firma</th>
+                <th class="text-left p-3">Email</th>
+                <th class="text-left p-3">Phone</th>
+                <th class="text-left p-3">Plan</th>
+                <th class="text-left p-3">Status</th>
+                <th class="text-left p-3">Country</th>
+                <th class="text-left p-3">Created</th>
+                <th class="text-left p-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="firmsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

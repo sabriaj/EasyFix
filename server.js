@@ -150,6 +150,216 @@ function planToVariant(plan) {
   return VARIANT_BASIC;
 }
 
+
+
+/* ================= ADMIN AUTH ================= */
+const ADMIN_KEY = String(process.env.ADMIN_KEY || "").trim();
+
+function requireAdmin(req, res, next) {
+  try {
+    if (!ADMIN_KEY) {
+      return res.status(500).json({ success: false, error: "ADMIN_KEY is not configured on server" });
+    }
+
+    const auth = String(req.headers.authorization || "");
+    const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+
+    if (!token || token !== ADMIN_KEY) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+
+    next();
+  } catch (e) {
+    return res.status(500).json({ success: false, error: "Admin auth error" });
+  }
+}
+
+/* ================= ADMIN: LIST FIRMS =================
+   Query params:
+   - status: paid|pending|expired|all
+   - plan: basic|standard|premium|all
+   - country: ISO2 (p.sh MK, DE, US) ose all
+   - search: kërko në name/email/phone/category
+*/
+app.get("/admin/firms", requireAdmin, async (req, res) => {
+  try {
+    const status = String(req.query.status || "all").toLowerCase();
+    const plan = String(req.query.plan || "all").toLowerCase();
+    const country = String(req.query.country || "all").toUpperCase();
+    const search = String(req.query.search || "").trim().toLowerCase();
+
+    const q = {};
+
+    if (status !== "all") q.payment_status = status;
+    if (plan !== "all") q.plan = plan;
+
+    // nëse e ke country në schema (unë e rekomandoj)
+    // nëse s’e ke ende, kjo s’prish punë — thjesht s’filtron
+    if (country !== "ALL") q.country = country;
+
+    let firms = await Firma.find(q).select("-__v").sort({ createdAt: -1 });
+
+    if (search) {
+      firms = firms.filter(f => {
+        const hay = [
+          f.name, f.email, f.phone, f.category, f.address,
+          f.country, f.city
+        ].map(x => String(x || "").toLowerCase()).join(" | ");
+        return hay.includes(search);
+      });
+    }
+
+    return res.json({ success: true, firms });
+  } catch (err) {
+    errorWithTime("ADMIN FIRMS ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+/* ================= ADMIN: UPDATE FIRM =================
+   Lejon me ndrru: name, phone, address, category, plan, country, city, payment_status, expires_at
+*/
+app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
+
+    const patch = {};
+    const allow = [
+      "name", "phone", "address", "category",
+      "plan", "country", "city",
+      "payment_status", "expires_at"
+    ];
+
+    for (const k of allow) {
+      if (req.body?.[k] !== undefined) patch[k] = req.body[k];
+    }
+
+    // normalizim telefoni nëse po e ndryshon
+    if (patch.phone !== undefined) {
+      const phoneNorm = normalizePhone(patch.phone);
+      if (!phoneNorm) return res.status(400).json({ success: false, error: "Invalid phone" });
+      patch.phone = phoneNorm;
+    }
+
+    // plan validation
+    if (patch.plan !== undefined) {
+      const p = String(patch.plan || "").toLowerCase();
+      if (!["basic", "standard", "premium"].includes(p)) {
+        return res.status(400).json({ success: false, error: "Invalid plan" });
+      }
+      patch.plan = p;
+    }
+
+    // status validation
+    if (patch.payment_status !== undefined) {
+      const s = String(patch.payment_status || "").toLowerCase();
+      if (!["pending", "paid", "expired"].includes(s)) {
+        return res.status(400).json({ success: false, error: "Invalid payment_status" });
+      }
+      patch.payment_status = s;
+    }
+
+    // country validation (ISO2)
+    if (patch.country !== undefined) {
+      const c = String(patch.country || "").toUpperCase();
+      if (c && c.length !== 2) {
+        return res.status(400).json({ success: false, error: "Country must be ISO2 (e.g. MK, DE, US)" });
+      }
+      patch.country = c;
+    }
+
+    const updated = await Firma.findByIdAndUpdate(
+      id,
+      { $set: patch },
+      { new: true }
+    ).select("-__v");
+
+    if (!updated) return res.status(404).json({ success: false, error: "Not found" });
+
+    return res.json({ success: true, firm: updated });
+  } catch (err) {
+    errorWithTime("ADMIN UPDATE ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+/* ================= ADMIN: MARK PAID (manual) ================= */
+app.post("/admin/firms/:id/mark-paid", requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
+
+    const days = Number(req.body?.days || 30);
+    const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+
+    const updated = await Firma.findByIdAndUpdate(
+      id,
+      { $set: { payment_status: "paid", paid_at: new Date(), expires_at: expires, deleted_at: null } },
+      { new: true }
+    ).select("-__v");
+
+    if (!updated) return res.status(404).json({ success: false, error: "Not found" });
+
+    return res.json({ success: true, firm: updated });
+  } catch (err) {
+    errorWithTime("ADMIN MARK PAID ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+/* ================= ADMIN: EXPIRE ================= */
+app.post("/admin/firms/:id/expire", requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || "").trim();
+
+    const updated = await Firma.findByIdAndUpdate(
+      id,
+      { $set: { payment_status: "expired", expires_at: new Date() } },
+      { new: true }
+    ).select("-__v");
+
+    if (!updated) return res.status(404).json({ success: false, error: "Not found" });
+
+    return res.json({ success: true, firm: updated });
+  } catch (err) {
+    errorWithTime("ADMIN EXPIRE ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+/* ================= ADMIN: DELETE ================= */
+app.delete("/admin/firms/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    const r = await Firma.deleteOne({ _id: id });
+    return res.json({ success: true, deleted: r.deletedCount === 1 });
+  } catch (err) {
+    errorWithTime("ADMIN DELETE ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+/* ================= ADMIN: STATS ================= */
+app.get("/admin/stats", requireAdmin, async (req, res) => {
+  try {
+    const [pending, paid, expired, total] = await Promise.all([
+      Firma.countDocuments({ payment_status: "pending" }),
+      Firma.countDocuments({ payment_status: "paid" }),
+      Firma.countDocuments({ payment_status: "expired" }),
+      Firma.countDocuments({}),
+    ]);
+
+    return res.json({ success: true, stats: { total, pending, paid, expired } });
+  } catch (err) {
+    errorWithTime("ADMIN STATS ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+
+
+
 /* ================= CREATE CHECKOUT (LEMON API) ================= */
 async function createLemonCheckout({ variantId, email, firmId }) {
   if (!LEMON_API_KEY) throw new Error("Missing LEMON_API_KEY");

@@ -139,19 +139,26 @@ function planToVariant(plan) {
 }
 
 /* ================= CREATE CHECKOUT (LEMON API) ================= */
-async function createLemonCheckout({ variantId, email }) {
+async function createLemonCheckout({ variantId, email, firmId }) {
   if (!LEMON_API_KEY) throw new Error("Missing LEMON_API_KEY");
   if (!LEMON_STORE_ID) throw new Error("Missing LEMON_STORE_ID");
   if (!variantId) throw new Error("Missing variantId");
 
-  const redirectUrl = `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}`;
+  const redirectUrl =
+    `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}&firmId=${encodeURIComponent(String(firmId || ""))}`;
 
   const payload = {
     data: {
       type: "checkouts",
       attributes: {
         product_options: { redirect_url: redirectUrl },
-        checkout_data: { email, custom: { email } },
+        checkout_data: {
+          email,
+          custom: {
+            email,
+            firmId: String(firmId || ""), // ✅ ky është çelësi
+          },
+        },
       },
       relationships: {
         store: { data: { type: "stores", id: String(LEMON_STORE_ID) } },
@@ -171,12 +178,15 @@ async function createLemonCheckout({ variantId, email }) {
   });
 
   const json = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(`Lemon API error: ${resp.status} ${JSON.stringify(json)}`);
+  if (!resp.ok) {
+    throw new Error(`Lemon API error: ${resp.status} ${JSON.stringify(json)}`);
+  }
 
   const url = json?.data?.attributes?.url;
   if (!url) throw new Error("Checkout URL missing from Lemon response");
   return url;
 }
+
 
 /* ================= WEBHOOK (RAW BODY) ================= */
 app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
@@ -214,6 +224,20 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
       payload?.data?.attributes?.subscription?.variant_id ||
       null;
 
+
+
+      const firmIdRaw =
+  payload?.meta?.custom_data?.firmId ||
+  payload?.data?.attributes?.checkout_data?.custom?.firmId ||
+  payload?.data?.attributes?.checkout_data?.custom?.firm_id ||
+  null;
+
+const firmId = firmIdRaw ? String(firmIdRaw) : null;
+
+
+
+
+
     const detectedPlan = detectPlanFromVariant(variantId);
 
     log("🔔 Webhook", { event, email, variantId, detectedPlan });
@@ -221,35 +245,39 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
     if (!email) return res.status(200).send("No email");
 
     if (event === "order_paid" || event === "subscription_payment_success") {
-      const update = {
-        payment_status: "paid",
-        paid_at: new Date(),
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        deleted_at: null,
-      };
+  const update = {
+    payment_status: "paid",
+    paid_at: new Date(),
+    expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    deleted_at: null,
+  };
 
-      if (detectedPlan) update.plan = detectedPlan;
+  if (detectedPlan) update.plan = detectedPlan;
 
-      const updated = await Firma.findOneAndUpdate(
-        { email },
-        { $set: update },
-        { upsert: false, new: true }
-      );
+  let updated = null;
 
-      if (!updated) log("⚠️ Paid webhook but firm not found for email:", email);
-      else log("✅ Marked paid:", { email, plan: updated.plan });
+  if (firmId) {
+    updated = await Firma.findByIdAndUpdate(
+      firmId,
+      { $set: update },
+      { new: true }
+    );
+  } else if (email) {
+    updated = await Firma.findOneAndUpdate(
+      { email },
+      { $set: update },
+      { upsert: false, new: true }
+    );
+  }
 
-      return res.status(200).send("OK");
-    }
+  if (!updated) {
+    log("⚠️ Paid webhook but firm not found", { firmId, email });
+  } else {
+    log("✅ Marked paid:", { id: updated._id, email: updated.email, plan: updated.plan });
+  }
 
-    if (event === "subscription_cancelled" || event === "subscription_expired" || event === "order_refunded") {
-      await Firma.findOneAndUpdate(
-        { email },
-        { $set: { payment_status: "expired", expires_at: new Date() } },
-        { new: true }
-      );
-      return res.status(200).send("OK");
-    }
+  return res.status(200).send("OK");
+}
 
     return res.status(200).send("Ignored");
   } catch (err) {
@@ -328,10 +356,15 @@ app.post(
         photos,
       });
 
-      createdId = firma._id;
+     createdId = firma._id;
 
-      const variantId = planToVariant(plan);
-      const checkoutUrl = await createLemonCheckout({ variantId, email });
+const variantId = planToVariant(plan);
+const checkoutUrl = await createLemonCheckout({
+  variantId,
+  email,
+  firmId: String(firma._id), // ✅
+});
+
 
       return res.json({
         success: true,

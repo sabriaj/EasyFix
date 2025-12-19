@@ -29,20 +29,6 @@ const FRONTEND_SUCCESS_URL =
 const DELETE_AFTER_DAYS = Number(process.env.DELETE_AFTER_DAYS || 2);
 const CHECK_INTERVAL_MINUTES = Number(process.env.CHECK_INTERVAL_MINUTES || 60);
 
-/* ===== PHONE VERIFICATION CONFIG ===== */
-const REQUIRE_PHONE_VERIFICATION =
-  String(process.env.REQUIRE_PHONE_VERIFICATION || "1") === "1";
-
-const OTP_SECRET = process.env.OTP_SECRET || process.env.ADMIN_KEY || "dev_otp_secret";
-const OTP_TTL_MINUTES = Number(process.env.OTP_TTL_MINUTES || 5);
-const OTP_TOKEN_TTL_MINUTES = Number(process.env.OTP_TOKEN_TTL_MINUTES || 30);
-const OTP_DEBUG = String(process.env.OTP_DEBUG || "0") === "1";
-
-// Twilio SMS (Messaging API)
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || "";
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || "";
-const TWILIO_FROM_NUMBER = process.env.TWILIO_FROM_NUMBER || "";
-
 /* ================= LOG HELPERS ================= */
 function now() { return new Date().toISOString(); }
 function log(...args) { console.log(now(), ...args); }
@@ -91,26 +77,14 @@ function normalizePhone(raw) {
   if (p.startsWith("00")) p = "+" + p.slice(2);
 
   if (!p.startsWith("+")) {
-    // vetëm numra (local)
     const digits = p.replace(/[^\d]/g, "");
-    if (digits.length === 8) {
-      return "+389" + digits;
-    }
-    if (digits.length === 9 && digits.startsWith("0")) {
-      return "+389" + digits.slice(1);
-    }
+    if (digits.length === 8) return "+389" + digits;
+    if (digits.length === 9 && digits.startsWith("0")) return "+389" + digits.slice(1);
     return null;
   }
 
   if (p.length < 9 || p.length > 16) return null;
   return p;
-}
-
-function safeEq(a, b) {
-  const aa = Buffer.from(String(a || ""));
-  const bb = Buffer.from(String(b || ""));
-  if (aa.length !== bb.length) return false;
-  return crypto.timingSafeEqual(aa, bb);
 }
 
 /* ================= MONGO ================= */
@@ -125,6 +99,7 @@ const firmaSchema = new mongoose.Schema(
     name: String,
     email: { type: String, unique: true, required: true },
     phone: String, // E.164 +389...
+    // i lëmë këto fusha për të ardhmen (por nuk verifikojmë më):
     phone_verified: { type: Boolean, default: false },
     phone_verified_at: Date,
 
@@ -145,22 +120,6 @@ const firmaSchema = new mongoose.Schema(
 );
 
 const Firma = mongoose.model("Firma", firmaSchema);
-
-/* OTP collection (TTL) */
-const phoneOtpSchema = new mongoose.Schema(
-  {
-    phone: { type: String, index: true },
-    code_hash: String,
-    token: String,
-    verified: { type: Boolean, default: false },
-    used: { type: Boolean, default: false },
-    expires_at: { type: Date, index: true }, // TTL
-  },
-  { timestamps: true }
-);
-
-phoneOtpSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 });
-const PhoneOTP = mongoose.model("PhoneOTP", phoneOtpSchema);
 
 /* ================= PLAN RULES ================= */
 const planPhotoLimit = { basic: 0, standard: 3, premium: 8 };
@@ -212,9 +171,7 @@ async function createLemonCheckout({ variantId, email }) {
   });
 
   const json = await resp.json().catch(() => ({}));
-  if (!resp.ok) {
-    throw new Error(`Lemon API error: ${resp.status} ${JSON.stringify(json)}`);
-  }
+  if (!resp.ok) throw new Error(`Lemon API error: ${resp.status} ${JSON.stringify(json)}`);
 
   const url = json?.data?.attributes?.url;
   if (!url) throw new Error("Checkout URL missing from Lemon response");
@@ -224,11 +181,7 @@ async function createLemonCheckout({ variantId, email }) {
 /* ================= WEBHOOK (RAW BODY) ================= */
 app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
-    let signature =
-      req.headers["x-signature"] ||
-      req.headers["x-signature-256"] ||
-      "";
-
+    let signature = req.headers["x-signature"] || req.headers["x-signature-256"] || "";
     signature = String(signature || "").trim();
 
     const hmac = crypto
@@ -311,136 +264,6 @@ app.use(express.json());
 /* ================= HEALTH ================= */
 app.get("/health", (req, res) => res.json({ ok: true, time: now() }));
 
-/* ================= PHONE OTP (SMS) ================= */
-// limiter i thjeshtë (in-memory)
-const lastOtpSentAt = new Map(); // phone -> ms
-
-async function sendSmsTwilio({ to, body }) {
-  // Nëse s'ke Twilio, mos e lejo "success" pa SMS — veç nëse OTP_DEBUG=1
-  const twilioReady = TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_FROM_NUMBER;
-
-  if (!twilioReady) {
-    if (!OTP_DEBUG) {
-      throw new Error("Twilio is not configured (missing TWILIO_* env vars).");
-    }
-    log("📩 OTP DEBUG (no SMS). To:", to, "Message:", body);
-    return { ok: true, dev: true };
-  }
-
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(TWILIO_ACCOUNT_SID)}/Messages.json`;
-  const auth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString("base64");
-
-  const form = new URLSearchParams();
-  form.append("To", to);
-  form.append("From", TWILIO_FROM_NUMBER);
-  form.append("Body", body);
-
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${auth}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: form.toString(),
-  });
-
-  const text = await resp.text();
-  if (!resp.ok) throw new Error(`Twilio error: ${resp.status} ${text}`);
-  return { ok: true };
-}
-
-app.post("/auth/send-otp", async (req, res) => {
-  try {
-    const phoneNorm = normalizePhone(req.body?.phone);
-    if (!phoneNorm) {
-      return res.status(400).json({
-        success: false,
-        error: "Numër telefoni jo valid. Përdor format + (p.sh. +3897xxxxxxx) ose 07xxxxxxx.",
-      });
-    }
-
-    const nowMs = Date.now();
-    const last = lastOtpSentAt.get(phoneNorm) || 0;
-    if (nowMs - last < 60_000) {
-      return res.status(429).json({ success: false, error: "Prit 60 sekonda para se me kërku kodin prap." });
-    }
-    lastOtpSentAt.set(phoneNorm, nowMs);
-
-    await PhoneOTP.deleteMany({ phone: phoneNorm });
-
-    const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
-    const codeHash = crypto
-      .createHmac("sha256", OTP_SECRET)
-      .update(`${phoneNorm}|${code}`)
-      .digest("hex");
-
-    const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
-
-    await PhoneOTP.create({
-      phone: phoneNorm,
-      code_hash: codeHash,
-      verified: false,
-      used: false,
-      expires_at: expiresAt,
-    });
-
-    const msg = `EasyFix: Kodi i verifikimit është ${code}. Vlen ${OTP_TTL_MINUTES} min.`;
-
-    await sendSmsTwilio({ to: phoneNorm, body: msg });
-
-    return res.json({
-      success: true,
-      message: "Kodi u dërgua.",
-      ...(OTP_DEBUG ? { dev_code: code } : {}),
-      phone: phoneNorm,
-    });
-  } catch (err) {
-    errorWithTime("SEND-OTP ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error (send-otp)" });
-  }
-});
-
-app.post("/auth/verify-otp", async (req, res) => {
-  try {
-    const phoneNorm = normalizePhone(req.body?.phone);
-    const code = String(req.body?.code || "").trim();
-
-    if (!phoneNorm || !/^\d{6}$/.test(code)) {
-      return res.status(400).json({ success: false, error: "Të dhëna jo valide." });
-    }
-
-    const doc = await PhoneOTP.findOne({ phone: phoneNorm }).sort({ createdAt: -1 });
-    if (!doc) return res.status(400).json({ success: false, error: "Kodi s’u gjet. Kërko kod të ri." });
-
-    if (doc.expires_at && doc.expires_at.getTime() < Date.now()) {
-      return res.status(400).json({ success: false, error: "Kodi ka skadu. Kërko kod të ri." });
-    }
-
-    const hash = crypto
-      .createHmac("sha256", OTP_SECRET)
-      .update(`${phoneNorm}|${code}`)
-      .digest("hex");
-
-    if (!safeEq(hash, doc.code_hash)) {
-      return res.status(400).json({ success: false, error: "Kodi gabim." });
-    }
-
-    const token = crypto.randomBytes(24).toString("hex");
-    const tokenExpiresAt = new Date(Date.now() + OTP_TOKEN_TTL_MINUTES * 60 * 1000);
-
-    doc.verified = true;
-    doc.token = token;
-    doc.used = false;
-    doc.expires_at = tokenExpiresAt; // zgjat TTL për token
-    await doc.save();
-
-    return res.json({ success: true, phone_verify_token: token, phone: phoneNorm });
-  } catch (err) {
-    errorWithTime("VERIFY-OTP ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error (verify-otp)" });
-  }
-});
-
 /* ================= REGISTER (multipart) ================= */
 app.post(
   "/register",
@@ -451,7 +274,7 @@ app.post(
   async (req, res) => {
     let createdId = null;
     try {
-      let { name, email, phone, address, category, plan, phone_verify_token } = req.body;
+      let { name, email, phone, address, category, plan } = req.body;
 
       email = normalizeEmail(email);
       const phoneNorm = normalizePhone(phone);
@@ -461,35 +284,6 @@ app.post(
       }
       if (!["basic", "standard", "premium"].includes(plan)) {
         return res.status(400).json({ success: false, error: "Invalid plan" });
-      }
-
-      if (REQUIRE_PHONE_VERIFICATION) {
-        if (!phone_verify_token) {
-          return res.status(400).json({
-            success: false,
-            error: "Verifiko numrin e telefonit (kodi SMS) para regjistrimit.",
-          });
-        }
-
-        // konsumim atomik (mos lejo reuse)
-        const tok = await PhoneOTP.findOneAndUpdate(
-          {
-            phone: phoneNorm,
-            token: String(phone_verify_token),
-            verified: true,
-            used: false,
-            expires_at: { $gt: new Date() },
-          },
-          { $set: { used: true } },
-          { new: true }
-        );
-
-        if (!tok) {
-          return res.status(400).json({
-            success: false,
-            error: "Verifikimi i telefonit s’është valid ose ka skadu. Provo prap.",
-          });
-        }
       }
 
       const exists = await Firma.findOne({ email });
@@ -524,8 +318,8 @@ app.post(
         name,
         email,
         phone: phoneNorm,
-        phone_verified: REQUIRE_PHONE_VERIFICATION ? true : false,
-        phone_verified_at: REQUIRE_PHONE_VERIFICATION ? new Date() : null,
+        phone_verified: false,
+        phone_verified_at: null,
         address,
         category,
         plan,

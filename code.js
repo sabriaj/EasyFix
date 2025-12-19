@@ -58,112 +58,6 @@ document.querySelectorAll(".plan-btn").forEach(btn => {
   });
 });
 
-/* ===================== PHONE OTP ===================== */
-const sendOtpBtn = $("#sendOtpBtn");
-const verifyOtpBtn = $("#verifyOtpBtn");
-const otpCode = $("#otpCode");
-const otpStatus = $("#otpStatus");
-const phoneInput = $("#telefoni");
-
-let phoneVerifyToken = "";
-let verifiedPhone = "";
-
-function setOtpStatus(text, ok = false) {
-  otpStatus.textContent = text;
-  otpStatus.style.color = ok ? "#16a34a" : "#374151";
-}
-
-function resetVerification() {
-  phoneVerifyToken = "";
-  verifiedPhone = "";
-  setOtpStatus("Numri nuk është verifikuar ende.", false);
-}
-
-phoneInput.addEventListener("input", () => {
-  // nëse user e ndryshon numrin, e prishim token-in
-  resetVerification();
-});
-
-sendOtpBtn.addEventListener("click", async () => {
-  const phone = phoneInput.value.trim();
-  if (!phone) {
-    setOtpStatus("Shkruaje numrin e telefonit.", false);
-    return;
-  }
-
-  setOtpStatus("Duke dërgu kodin...", false);
-
-  try {
-    const res = await fetch(`${BACKEND_URL}/auth/send-otp`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone })
-    });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok || !data.success) {
-      setOtpStatus(data?.error || "Gabim gjatë dërgimit të kodit.", false);
-      return;
-    }
-
-    setOtpStatus("Kodi u dërgua. Shkruaje kodin 6-shifror.", true);
-
-    // vetëm nëse e ke OTP_DEBUG=1 në server
-    if (data.dev_code) {
-      setOtpStatus(`Kodi (DEV): ${data.dev_code} — vendose në fushë.`, true);
-    }
-  } catch (e) {
-    console.error(e);
-    setOtpStatus("Gabim në komunikim me serverin.", false);
-  }
-});
-
-verifyOtpBtn.addEventListener("click", async () => {
-  const phone = phoneInput.value.trim();
-  const code = otpCode.value.trim();
-
-  if (!phone) {
-    setOtpStatus("Shkruaje numrin e telefonit.", false);
-    return;
-  }
-  if (!/^\d{6}$/.test(code)) {
-    setOtpStatus("Kodi duhet me qenë 6 shifra.", false);
-    return;
-  }
-
-  setOtpStatus("Duke verifiku...", false);
-
-  try {
-    const res = await fetch(`${BACKEND_URL}/auth/verify-otp`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, code })
-    });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok || !data.success) {
-      setOtpStatus(data?.error || "Verifikimi dështoi.", false);
-      return;
-    }
-
-    phoneVerifyToken = data.phone_verify_token;
-    verifiedPhone = data.phone;
-
-    setOtpStatus("Numri u verifikua me sukses ✅", true);
-
-    // opcional: blloko ndryshimin e telefonit pas verifikimit
-    // phoneInput.disabled = true;
-    // sendOtpBtn.disabled = true;
-    // verifyOtpBtn.disabled = true;
-
-  } catch (e) {
-    console.error(e);
-    setOtpStatus("Gabim në komunikim me serverin.", false);
-  }
-});
-
 /* ===================== SUBMIT ===================== */
 const form = $("#registerForm");
 form.addEventListener("submit", async (e) => {
@@ -185,12 +79,6 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
-  if (!phoneVerifyToken) {
-    showStatus("Duhet me verifiku numrin (SMS) para regjistrimit.", "error");
-    return;
-  }
-
-  // photo limits
   const maxPhotos = selectedPlan === "standard" ? 3 : selectedPlan === "premium" ? 8 : 0;
 
   const formData = new FormData();
@@ -200,9 +88,6 @@ form.addEventListener("submit", async (e) => {
   formData.append("address", address);
   formData.append("category", category);
   formData.append("plan", selectedPlan);
-
-  // token për verifikim
-  formData.append("phone_verify_token", phoneVerifyToken);
 
   if (selectedPlan === "standard" || selectedPlan === "premium") {
     const logoFile = $("#logoUpload").files[0];
@@ -229,7 +114,7 @@ form.addEventListener("submit", async (e) => {
       return;
     }
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
 
     if (!res.ok || !data.success) {
       showStatus(data?.error || "Gabim në regjistrim.", "error");
@@ -252,5 +137,4 @@ form.addEventListener("submit", async (e) => {
 window.addEventListener("DOMContentLoaded", () => {
   const basicBtn = $("#planBasic");
   if (basicBtn) basicBtn.click();
-  resetVerification();
 });

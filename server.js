@@ -96,26 +96,19 @@ function normalizePhone(raw) {
   return null;
 }
 
-/* ================= MONGO ================= */
-mongoose
-  .connect(process.env.MONGO_URI, { autoIndex: true })
-  .then(() => log("✅ MongoDB Connected"))
-  .catch((err) => errorWithTime("MongoDB Error:", err));
-
 /* ================= SCHEMA ================= */
 const firmaSchema = new mongoose.Schema(
   {
     name: String,
     email: { type: String, unique: true, required: true },
     phone: String, // E.164 +...
-    // i lëmë për të ardhmen:
     phone_verified: { type: Boolean, default: false },
     phone_verified_at: Date,
 
     address: String,
     category: String,
 
-    // ✅ Country for international use (ISO2)
+    // Country for international use (ISO2)
     country: { type: String, default: DEFAULT_COUNTRY, index: true },
 
     plan: { type: String, default: "basic" },
@@ -130,6 +123,9 @@ const firmaSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// ✅ Index për /firms dhe admin filters
+firmaSchema.index({ payment_status: 1, country: 1, plan: 1, createdAt: -1 });
 
 const Firma = mongoose.model("Firma", firmaSchema);
 
@@ -150,8 +146,6 @@ function planToVariant(plan) {
   return VARIANT_BASIC;
 }
 
-
-
 /* ================= ADMIN AUTH ================= */
 const ADMIN_KEY = String(process.env.ADMIN_KEY || "").trim();
 
@@ -160,27 +154,18 @@ function requireAdmin(req, res, next) {
     if (!ADMIN_KEY) {
       return res.status(500).json({ success: false, error: "ADMIN_KEY is not configured on server" });
     }
-
     const auth = String(req.headers.authorization || "");
     const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
-
     if (!token || token !== ADMIN_KEY) {
       return res.status(401).json({ success: false, error: "Unauthorized" });
     }
-
     next();
-  } catch (e) {
+  } catch {
     return res.status(500).json({ success: false, error: "Admin auth error" });
   }
 }
 
-/* ================= ADMIN: LIST FIRMS =================
-   Query params:
-   - status: paid|pending|expired|all
-   - plan: basic|standard|premium|all
-   - country: ISO2 (p.sh MK, DE, US) ose all
-   - search: kërko në name/email/phone/category
-*/
+/* ================= ADMIN: LIST FIRMS ================= */
 app.get("/admin/firms", requireAdmin, async (req, res) => {
   try {
     const status = String(req.query.status || "all").toLowerCase();
@@ -189,21 +174,17 @@ app.get("/admin/firms", requireAdmin, async (req, res) => {
     const search = String(req.query.search || "").trim().toLowerCase();
 
     const q = {};
-
     if (status !== "all") q.payment_status = status;
     if (plan !== "all") q.plan = plan;
-
-    // nëse e ke country në schema (unë e rekomandoj)
-    // nëse s’e ke ende, kjo s’prish punë — thjesht s’filtron
     if (country !== "ALL") q.country = country;
 
-    let firms = await Firma.find(q).select("-__v").sort({ createdAt: -1 });
+    let firms = await Firma.find(q).select("-__v").sort({ createdAt: -1 }).lean();
 
     if (search) {
       firms = firms.filter(f => {
         const hay = [
           f.name, f.email, f.phone, f.category, f.address,
-          f.country, f.city
+          f.country
         ].map(x => String(x || "").toLowerCase()).join(" | ");
         return hay.includes(search);
       });
@@ -216,33 +197,24 @@ app.get("/admin/firms", requireAdmin, async (req, res) => {
   }
 });
 
-/* ================= ADMIN: UPDATE FIRM =================
-   Lejon me ndrru: name, phone, address, category, plan, country, city, payment_status, expires_at
-*/
+/* ================= ADMIN: UPDATE FIRM ================= */
 app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
   try {
     const id = String(req.params.id || "").trim();
     if (!id) return res.status(400).json({ success: false, error: "Missing id" });
 
     const patch = {};
-    const allow = [
-      "name", "phone", "address", "category",
-      "plan", "country", "city",
-      "payment_status", "expires_at"
-    ];
-
+    const allow = ["name", "phone", "address", "category", "plan", "country", "payment_status", "expires_at"];
     for (const k of allow) {
       if (req.body?.[k] !== undefined) patch[k] = req.body[k];
     }
 
-    // normalizim telefoni nëse po e ndryshon
     if (patch.phone !== undefined) {
       const phoneNorm = normalizePhone(patch.phone);
       if (!phoneNorm) return res.status(400).json({ success: false, error: "Invalid phone" });
       patch.phone = phoneNorm;
     }
 
-    // plan validation
     if (patch.plan !== undefined) {
       const p = String(patch.plan || "").toLowerCase();
       if (!["basic", "standard", "premium"].includes(p)) {
@@ -251,7 +223,6 @@ app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
       patch.plan = p;
     }
 
-    // status validation
     if (patch.payment_status !== undefined) {
       const s = String(patch.payment_status || "").toLowerCase();
       if (!["pending", "paid", "expired"].includes(s)) {
@@ -260,21 +231,11 @@ app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
       patch.payment_status = s;
     }
 
-    // country validation (ISO2)
     if (patch.country !== undefined) {
-      const c = String(patch.country || "").toUpperCase();
-      if (c && c.length !== 2) {
-        return res.status(400).json({ success: false, error: "Country must be ISO2 (e.g. MK, DE, US)" });
-      }
-      patch.country = c;
+      patch.country = normalizeCountry(patch.country);
     }
 
-    const updated = await Firma.findByIdAndUpdate(
-      id,
-      { $set: patch },
-      { new: true }
-    ).select("-__v");
-
+    const updated = await Firma.findByIdAndUpdate(id, { $set: patch }, { new: true }).select("-__v").lean();
     if (!updated) return res.status(404).json({ success: false, error: "Not found" });
 
     return res.json({ success: true, firm: updated });
@@ -284,7 +245,7 @@ app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
   }
 });
 
-/* ================= ADMIN: MARK PAID (manual) ================= */
+/* ================= ADMIN: MARK PAID ================= */
 app.post("/admin/firms/:id/mark-paid", requireAdmin, async (req, res) => {
   try {
     const id = String(req.params.id || "").trim();
@@ -297,10 +258,9 @@ app.post("/admin/firms/:id/mark-paid", requireAdmin, async (req, res) => {
       id,
       { $set: { payment_status: "paid", paid_at: new Date(), expires_at: expires, deleted_at: null } },
       { new: true }
-    ).select("-__v");
+    ).select("-__v").lean();
 
     if (!updated) return res.status(404).json({ success: false, error: "Not found" });
-
     return res.json({ success: true, firm: updated });
   } catch (err) {
     errorWithTime("ADMIN MARK PAID ERROR:", err);
@@ -312,15 +272,13 @@ app.post("/admin/firms/:id/mark-paid", requireAdmin, async (req, res) => {
 app.post("/admin/firms/:id/expire", requireAdmin, async (req, res) => {
   try {
     const id = String(req.params.id || "").trim();
-
     const updated = await Firma.findByIdAndUpdate(
       id,
       { $set: { payment_status: "expired", expires_at: new Date() } },
       { new: true }
-    ).select("-__v");
+    ).select("-__v").lean();
 
     if (!updated) return res.status(404).json({ success: false, error: "Not found" });
-
     return res.json({ success: true, firm: updated });
   } catch (err) {
     errorWithTime("ADMIN EXPIRE ERROR:", err);
@@ -357,9 +315,6 @@ app.get("/admin/stats", requireAdmin, async (req, res) => {
   }
 });
 
-
-
-
 /* ================= CREATE CHECKOUT (LEMON API) ================= */
 async function createLemonCheckout({ variantId, email, firmId }) {
   if (!LEMON_API_KEY) throw new Error("Missing LEMON_API_KEY");
@@ -376,10 +331,7 @@ async function createLemonCheckout({ variantId, email, firmId }) {
         product_options: { redirect_url: redirectUrl },
         checkout_data: {
           email,
-          custom: {
-            email,
-            firmId: String(firmId || ""),
-          },
+          custom: { email, firmId: String(firmId || "") },
         },
       },
       relationships: {
@@ -400,9 +352,7 @@ async function createLemonCheckout({ variantId, email, firmId }) {
   });
 
   const json = await resp.json().catch(() => ({}));
-  if (!resp.ok) {
-    throw new Error(`Lemon API error: ${resp.status} ${JSON.stringify(json)}`);
-  }
+  if (!resp.ok) throw new Error(`Lemon API error: ${resp.status} ${JSON.stringify(json)}`);
 
   const url = json?.data?.attributes?.url;
   if (!url) throw new Error("Checkout URL missing from Lemon response");
@@ -452,7 +402,6 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
       null;
 
     const firmId = firmIdRaw ? String(firmIdRaw) : null;
-
     const detectedPlan = detectPlanFromVariant(variantId);
 
     log("🔔 Webhook", { event, email, variantId, detectedPlan, firmId });
@@ -469,31 +418,18 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
       if (detectedPlan) update.plan = detectedPlan;
 
       let updated = null;
-
       if (firmId) {
-        updated = await Firma.findByIdAndUpdate(
-          firmId,
-          { $set: update },
-          { new: true }
-        );
+        updated = await Firma.findByIdAndUpdate(firmId, { $set: update }, { new: true });
       } else if (email) {
-        updated = await Firma.findOneAndUpdate(
-          { email },
-          { $set: update },
-          { upsert: false, new: true }
-        );
+        updated = await Firma.findOneAndUpdate({ email }, { $set: update }, { upsert: false, new: true });
       }
 
-      if (!updated) {
-        log("⚠️ Paid webhook but firm not found", { firmId, email });
-      } else {
-        log("✅ Marked paid:", { id: updated._id, email: updated.email, plan: updated.plan });
-      }
+      if (!updated) log("⚠️ Paid webhook but firm not found", { firmId, email });
+      else log("✅ Marked paid:", { id: updated._id, email: updated.email, plan: updated.plan });
 
       return res.status(200).send("OK");
     }
 
-    // (opsionale) nëse i përdor këto evente:
     if (event === "subscription_cancelled" || event === "subscription_expired" || event === "order_refunded") {
       if (firmId) {
         await Firma.findByIdAndUpdate(firmId, { $set: { payment_status: "expired", expires_at: new Date() } });
@@ -514,7 +450,10 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 app.use(express.json());
 
 /* ================= HEALTH ================= */
-app.get("/health", (req, res) => res.json({ ok: true, time: now() }));
+app.get("/health", (req, res) => {
+  const rs = mongoose.connection.readyState; // 0=disc,1=conn,2=conning,3=disconning
+  res.json({ ok: true, time: now(), dbReadyState: rs });
+});
 
 /* ================= REGISTER (multipart) ================= */
 app.post(
@@ -539,7 +478,7 @@ app.post(
         return res.status(400).json({ success: false, error: "Invalid plan" });
       }
 
-      const exists = await Firma.findOne({ email });
+      const exists = await Firma.findOne({ email }).lean();
       if (exists) {
         return res.status(409).json({ success: false, error: "Ky email tashmë ekziston" });
       }
@@ -612,8 +551,9 @@ app.post(
 // ✅ /firms?country=MK -> kthen vetëm firmat e atij shteti
 app.get("/firms", async (req, res) => {
   try {
-    const qCountry = String(req.query.country || "").trim().toUpperCase();
+    res.setHeader("Cache-Control", "no-store");
 
+    const qCountry = String(req.query.country || "").trim().toUpperCase();
     const base = { payment_status: "paid" };
 
     // nëse kërkohet country:
@@ -628,21 +568,32 @@ app.get("/firms", async (req, res) => {
             { country: null },
             { country: "" },
           ],
-        }).select("-__v");
+        })
+          .select("-__v")
+          .sort({ createdAt: -1 })
+          .lean();
 
         return res.json(firms);
       }
 
-      const firms = await Firma.find({ ...base, country: qCountry }).select("-__v");
+      const firms = await Firma.find({ ...base, country: qCountry })
+        .select("-__v")
+        .sort({ createdAt: -1 })
+        .lean();
+
       return res.json(firms);
     }
 
     // default: krejt paid (nëse s’ka country param)
-    const firms = await Firma.find(base).select("-__v");
-    res.json(firms);
+    const firms = await Firma.find(base)
+      .select("-__v")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json(firms);
   } catch (err) {
     errorWithTime("FIRMS ERROR:", err);
-    res.status(500).send("Server error");
+    return res.status(500).send("Server error");
   }
 });
 
@@ -651,7 +602,7 @@ app.get("/check-status", async (req, res) => {
     const email = normalizeEmail(req.query.email);
     if (!email) return res.status(400).json({ success: false, error: "Missing email" });
 
-    const f = await Firma.findOne({ email }).select("-__v");
+    const f = await Firma.findOne({ email }).select("-__v").lean();
     if (!f) return res.status(404).json({ success: false, error: "Not found" });
 
     return res.json({ success: true, firma: f });
@@ -674,10 +625,38 @@ async function runCleanup() {
   await Firma.deleteMany({ payment_status: "expired", expires_at: { $lte: cutoff } });
 }
 
-setInterval(async () => {
-  try { await runCleanup(); }
-  catch (e) { errorWithTime("Cleanup error:", e); }
-}, CHECK_INTERVAL_MINUTES * 60 * 1000);
+/* ================= MONGO + START ================= */
+async function connectMongo() {
+  if (!process.env.MONGO_URI) throw new Error("Missing MONGO_URI");
 
-/* ================= START ================= */
-app.listen(PORT, () => log(`🚀 Server running on port ${PORT}`));
+  await mongoose.connect(process.env.MONGO_URI, {
+    autoIndex: true,
+    maxPoolSize: 10,
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 45000,
+  });
+
+  log("✅ MongoDB Connected");
+}
+
+async function start() {
+  try {
+    await connectMongo();
+
+    // warmup query (e zvogëlon “lag” në request-in e parë)
+    await Firma.findOne({}).select("_id").lean();
+
+    // start cleanup vetëm pasi DB u lidh
+    setInterval(async () => {
+      try { await runCleanup(); }
+      catch (e) { errorWithTime("Cleanup error:", e); }
+    }, CHECK_INTERVAL_MINUTES * 60 * 1000);
+
+    app.listen(PORT, () => log(`🚀 Server running on port ${PORT}`));
+  } catch (err) {
+    errorWithTime("❌ Failed to start server:", err);
+    process.exit(1);
+  }
+}
+
+start();

@@ -7,7 +7,7 @@ function showStatus(msg, type = "info") {
   if (!box) {
     box = document.createElement("div");
     box.id = "statusBox";
-    box.className = "mt-4 p-3 rounded text-white";
+    box.className = "mt-4 p-3 rounded text-white font-semibold";
     $("#registerForm").before(box);
   }
 
@@ -61,30 +61,68 @@ document.querySelectorAll(".plan-btn").forEach(btn => {
 /* ===================== PHONE (intl-tel-input) ===================== */
 let iti = null;
 
-async function detectUserCountryIso2() {
+function fetchWithTimeout(url, timeoutMs = 4500) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(t));
+}
+
+async function guessCountryIso2() {
   try {
-    const r = await fetch("https://ipapi.co/json/");
-    const j = await r.json();
-    const code = (j?.country_code || "MK").toLowerCase();
-    return /^[a-z]{2}$/.test(code) ? code : "mk";
+    const r = await fetchWithTimeout("https://ipapi.co/json/", 4500);
+    const j = await r.json().catch(() => ({}));
+    const c = String(j?.country_code || "mk").toLowerCase();
+    return (c && c.length === 2) ? c : "mk";
   } catch {
     return "mk";
   }
 }
 
-async function initPhoneInput() {
-  const phoneInput = $("#telefoni");
-  if (!phoneInput || !window.intlTelInput) return;
+function setPhoneHint(text, ok = true) {
+  const el = $("#phoneHint");
+  if (!el) return;
+  el.textContent = text || "";
+  el.className = ok
+    ? "text-xs mt-1 text-green-700"
+    : "text-xs mt-1 text-red-700";
+}
 
-  const iso2 = await detectUserCountryIso2();
+function initPhoneInput() {
+  const phoneInput = $("#telefoni");
+  if (!phoneInput || typeof window.intlTelInput !== "function") return;
 
   iti = window.intlTelInput(phoneInput, {
-    initialCountry: iso2 || "mk",
+    initialCountry: "auto",
     separateDialCode: true,
     nationalMode: true,
-    autoPlaceholder: "aggressive",
+    autoPlaceholder: "polite",
     formatOnDisplay: true,
-    utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/utils.js",
+    // utilsScript: (utils.js e ke të ngarkum me <script defer ...>)
+    geoIpLookup: async (cb) => {
+      const iso2 = await guessCountryIso2();
+      cb(iso2);
+    }
+  });
+
+  // kur ndrron shtetin
+  phoneInput.addEventListener("countrychange", () => {
+    setPhoneHint("", true);
+  });
+
+  // validim live (opsional, s’e bllokon typing)
+  phoneInput.addEventListener("input", () => {
+    if (!iti) return;
+    const v = phoneInput.value.trim();
+    if (!v) { setPhoneHint("", true); return; }
+
+    // në utils të ngarkume, ky validim është i saktë
+    const ok = iti.isValidNumber();
+    if (ok) {
+      const e164 = iti.getNumber(); // +...
+      setPhoneHint(`Numri duket valid: ${e164}`, true);
+    } else {
+      setPhoneHint("Numër telefoni jo valid për këtë shtet.", false);
+    }
   });
 }
 
@@ -96,7 +134,7 @@ form.addEventListener("submit", async (e) => {
   const name = $("#emri").value.trim();
   const address = $("#adresa").value.trim();
   const email = $("#emaili").value.trim();
-  const category = $("#kategoria").value;
+  const category = $("#kategoria").value.trim();
 
   if (!name || !address || !email || !category) {
     showStatus("Ju lutem plotësoni të gjitha fushat.", "error");
@@ -108,32 +146,43 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
-  if (!iti) {
-    showStatus("Telefon: nuk u inicializua sistemi i shteteve. Rifresko faqen.", "error");
+  // PHONE VALIDATION
+  const phoneInput = $("#telefoni");
+  if (!iti || !phoneInput) {
+    showStatus("Phone input nuk u inicializua. Provo refresh faqen.", "error");
     return;
   }
 
-  // ✅ validim real i numrit
+  const rawPhone = phoneInput.value.trim();
+  if (!rawPhone) {
+    showStatus("Ju lutem shkruani numrin e telefonit.", "error");
+    return;
+  }
+
+  // ky është validim real sipas shtetit
   if (!iti.isValidNumber()) {
-    showStatus("Numri i telefonit nuk është valid. Zgjidh shtetin dhe shkruaj numrin saktë.", "error");
+    showStatus("Numri i telefonit nuk është valid për shtetin e zgjedhur.", "error");
+    setPhoneHint("Numër telefoni jo valid për këtë shtet.", false);
     return;
   }
 
-  const phoneE164 = iti.getNumber(); // +49..., +389...
+  // E.164 (p.sh. +3897xxxxxxx) — kjo shkon te backend
+  const phoneE164 = iti.getNumber();
+
+  // ISO2 nga iti (p.sh. mk, de, us) -> uppercase (MK, DE, US)
   const countryIso2 = (iti.getSelectedCountryData()?.iso2 || "mk").toUpperCase();
 
+  // photo limits
   const maxPhotos = selectedPlan === "standard" ? 3 : selectedPlan === "premium" ? 8 : 0;
 
   const formData = new FormData();
   formData.append("name", name);
   formData.append("email", email);
-  formData.append("phone", phoneE164);
+  formData.append("phone", phoneE164);     // ✅ E.164
+  formData.append("country", countryIso2); // ✅ ISO2
   formData.append("address", address);
   formData.append("category", category);
   formData.append("plan", selectedPlan);
-
-  // ✅ kjo përdoret për filtrimin në index
-  formData.append("country", countryIso2);
 
   if (selectedPlan === "standard" || selectedPlan === "premium") {
     const logoFile = $("#logoUpload").files[0];
@@ -147,7 +196,7 @@ form.addEventListener("submit", async (e) => {
     photos.forEach(f => formData.append("photos", f));
   }
 
-  showStatus("Duke ruajtur regjistrimin...", "loading");
+  showStatus("Duke ruajtur regjistrimin...", "info");
 
   try {
     const res = await fetch(`${BACKEND_URL}/register`, {
@@ -180,8 +229,8 @@ form.addEventListener("submit", async (e) => {
 });
 
 // default plan basic + init phone
-window.addEventListener("DOMContentLoaded", async () => {
+window.addEventListener("DOMContentLoaded", () => {
   const basicBtn = $("#planBasic");
   if (basicBtn) basicBtn.click();
-  await initPhoneInput();
+  initPhoneInput();
 });

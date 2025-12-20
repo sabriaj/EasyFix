@@ -83,53 +83,40 @@
       box-shadow: 0 0 0 6px rgba(37,99,235,0.12);
     }
 
-    /* loading skeleton */
     .skeleton {
-      background: linear-gradient(90deg, rgba(0,0,0,.04), rgba(0,0,0,.08), rgba(0,0,0,.04));
+      background: linear-gradient(90deg, rgba(0,0,0,.03), rgba(0,0,0,.08), rgba(0,0,0,.03));
       background-size: 200% 100%;
       animation: shimmer 1.1s infinite;
       border-radius: 14px;
       height: 160px;
     }
     @keyframes shimmer {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
+      0% { background-position: 0% 0; }
+      100% { background-position: 200% 0; }
     }
   </style>
 </head>
 
 <body class="bg-gray-50 min-h-screen flex flex-col">
 
-  <!-- Header (responsive fix) -->
-  <header class="bg-blue-700 text-white py-5 shadow-md">
-    <div class="container mx-auto px-4">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-
-        <div class="flex items-center gap-3">
-          <h1 class="text-3xl font-extrabold tracking-tight">EasyFix</h1>
-          <span id="countryPill"
-                class="hidden text-xs font-bold bg-white/20 px-2 py-1 rounded-full whitespace-nowrap">
-          </span>
-        </div>
-
-        <nav>
-          <ul class="flex flex-wrap gap-3 sm:gap-6 text-base sm:text-lg">
-            <li>
-              <a href="register.html"
-                 class="inline-flex items-center justify-center px-3 py-2 rounded-lg bg-white/15 hover:bg-white/25 transition">
-                Regjistro Firmën
-              </a>
-            </li>
-            <li>
-              <a href="contact.html"
-                 class="inline-flex items-center justify-center px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition">
-                Kontakt
-              </a>
-            </li>
-          </ul>
-        </nav>
-
+  <!-- Header (responsive për mobile) -->
+  <header class="bg-blue-700 text-white shadow-md">
+    <div class="container mx-auto px-4 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex items-center gap-3">
+        <h1 class="text-3xl font-extrabold tracking-tight">EasyFix</h1>
+        <span id="countryPill" class="hidden text-xs font-bold bg-white/20 px-2 py-1 rounded-full"></span>
       </div>
+
+      <nav class="flex flex-wrap gap-2 sm:gap-4">
+        <a href="register.html"
+           class="bg-white/15 hover:bg-white/20 px-4 py-2 rounded-lg font-semibold text-sm sm:text-base">
+          Regjistro Firmën
+        </a>
+        <a href="contact.html"
+           class="bg-white/15 hover:bg-white/20 px-4 py-2 rounded-lg font-semibold text-sm sm:text-base">
+          Kontakt
+        </a>
+      </nav>
     </div>
   </header>
 
@@ -139,6 +126,10 @@
     </h2>
 
     <section class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6">
+
+      <!-- Status / errors -->
+      <div id="topStatus" class="hidden mb-5"></div>
+
       <div class="flex flex-col md:flex-row md:space-x-6 mb-6">
         <input
           id="searchInput"
@@ -155,26 +146,16 @@
         </select>
       </div>
 
-      <!-- Status / Loading / Error -->
-      <div id="topStatus" class="mb-4 hidden"></div>
-
-      <div id="firmsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
-
-      <div id="loadingGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6 hidden">
+      <!-- Loading skeleton -->
+      <div id="loadingGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="skeleton"></div>
         <div class="skeleton"></div>
         <div class="skeleton"></div>
         <div class="skeleton"></div>
       </div>
 
-      <div id="errorBox" class="hidden mt-4 p-4 border rounded-xl bg-red-50">
-        <p class="text-red-700 font-semibold">Nuk po mundemi me i ngarku firmat për momentin.</p>
-        <p class="text-sm text-red-700/80 mt-1">Provo prap pas pak sekondash.</p>
-        <button id="retryBtn"
-                class="mt-3 inline-flex items-center justify-center px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold">
-          Provo prap
-        </button>
-      </div>
+      <!-- Data -->
+      <div id="firmsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6 hidden"></div>
 
       <p id="noResults" class="text-center text-gray-500 mt-4 hidden">
         Nuk u gjetën firma për kriteret e kërkimit.
@@ -220,57 +201,20 @@ const searchInput = document.getElementById("searchInput");
 const firmsContainer = document.getElementById("firmsContainer");
 const noResults = document.getElementById("noResults");
 const countryPill = document.getElementById("countryPill");
-
-const loadingGrid = document.getElementById("loadingGrid");
-const errorBox = document.getElementById("errorBox");
-const retryBtn = document.getElementById("retryBtn");
 const topStatus = document.getElementById("topStatus");
+const loadingGrid = document.getElementById("loadingGrid");
 
-/* =================== UI helpers =================== */
-function showTopStatus(msg, type="info") {
-  topStatus.classList.remove("hidden");
-  topStatus.className = "mb-4 p-3 rounded-xl text-sm font-semibold";
-  topStatus.classList.add(
-    type === "error" ? "bg-red-50 text-red-700 border border-red-200" :
-    type === "success" ? "bg-green-50 text-green-700 border border-green-200" :
-    "bg-blue-50 text-blue-700 border border-blue-200"
-  );
-  topStatus.textContent = msg;
-}
-
-function hideTopStatus() {
-  topStatus.classList.add("hidden");
-}
-
-function setLoading(isLoading) {
-  if (isLoading) {
-    loadingGrid.classList.remove("hidden");
-    errorBox.classList.add("hidden");
-    noResults.classList.add("hidden");
-  } else {
-    loadingGrid.classList.add("hidden");
-  }
-}
-
-function showError(show) {
-  if (show) errorBox.classList.remove("hidden");
-  else errorBox.classList.add("hidden");
-}
-
-/* =================== helpers =================== */
+/* ===== helpers ===== */
 function sanitize(text) {
   return text ? text.toString().trim() : "";
 }
-
 function normalizeEmail(email) {
   return sanitize(email).toLowerCase();
 }
-
 function phoneToTelHref(phone) {
   const p = sanitize(phone).replace(/[^\d+]/g, "");
   return p || "";
 }
-
 function clampPhotos(firm) {
   const photos = Array.isArray(firm.photos) ? firm.photos : [];
   const plan = (firm.plan || "").toLowerCase();
@@ -279,18 +223,56 @@ function clampPhotos(firm) {
   return [];
 }
 
-function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), timeoutMs);
-  return fetch(url, { ...options, signal: controller.signal })
-    .finally(() => clearTimeout(t));
+function setLoading(isLoading) {
+  if (isLoading) {
+    loadingGrid.classList.remove("hidden");
+    firmsContainer.classList.add("hidden");
+  } else {
+    loadingGrid.classList.add("hidden");
+    firmsContainer.classList.remove("hidden");
+  }
+}
+
+function showTopStatus(kind, title, desc, withRetry=false) {
+  topStatus.classList.remove("hidden");
+
+  const base =
+    "rounded-xl border p-4 flex flex-col gap-2";
+  const styles =
+    kind === "error"
+      ? "bg-red-50 text-red-700 border-red-200"
+      : kind === "success"
+        ? "bg-green-50 text-green-700 border-green-200"
+        : "bg-blue-50 text-blue-700 border-blue-200";
+
+  // FIX: përdor className (jo classList.add me string me hapësira)
+  topStatus.className = `${base} ${styles}`;
+
+  topStatus.innerHTML = `
+    <div class="font-bold">${sanitize(title)}</div>
+    <div class="text-sm opacity-90">${sanitize(desc || "")}</div>
+    ${withRetry ? `<div class="pt-2">
+      <button id="retryBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg">
+        Provo prap
+      </button>
+    </div>` : ""}
+  `;
+
+  if (withRetry) {
+    const btn = document.getElementById("retryBtn");
+    if (btn) btn.onclick = () => loadFirms();
+  }
+}
+
+function clearTopStatus() {
+  topStatus.classList.add("hidden");
+  topStatus.innerHTML = "";
 }
 
 async function detectUserCountryCode() {
   try {
-    // timeout shkurt, mos me prit pafund
-    const r = await fetchWithTimeout("https://ipapi.co/json/", {}, 4500);
-    const j = await r.json().catch(() => ({}));
+    const r = await fetch("https://ipapi.co/json/");
+    const j = await r.json();
     const code = (j?.country_code || "MK").toUpperCase();
     return (code && code.length === 2) ? code : "MK";
   } catch {
@@ -298,7 +280,6 @@ async function detectUserCountryCode() {
   }
 }
 
-/* =================== categories =================== */
 function populateCategoryFilter(firms) {
   categorySelect.innerHTML = `<option value="">Të gjitha kategoritë</option>`;
   const categories = [...new Set(firms.map(f => sanitize(f.category)))].sort();
@@ -311,7 +292,7 @@ function populateCategoryFilter(firms) {
   });
 }
 
-/* =================== modal slider =================== */
+/* ===== modal slider ===== */
 const photoModal = document.getElementById("photoModal");
 const modalImage = document.getElementById("modalImage");
 const modalTitle = document.getElementById("modalTitle");
@@ -337,13 +318,11 @@ function openModalSlider({ photos, startIndex, firmName }) {
   photoModal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
 }
-
 function updateModalImage() {
   if (!modalPhotos.length) return;
   modalImage.src = modalPhotos[modalIndex];
   modalCounter.textContent = `(${modalIndex + 1}/${modalPhotos.length})`;
 }
-
 function closeModal() {
   photoModal.style.display = "none";
   photoModal.setAttribute("aria-hidden", "true");
@@ -351,13 +330,11 @@ function closeModal() {
   modalPhotos = [];
   modalIndex = 0;
 }
-
 function modalPrev() {
   if (!modalPhotos.length) return;
   modalIndex = (modalIndex - 1 + modalPhotos.length) % modalPhotos.length;
   updateModalImage();
 }
-
 function modalNext() {
   if (!modalPhotos.length) return;
   modalIndex = (modalIndex + 1) % modalPhotos.length;
@@ -370,12 +347,8 @@ modalNextBtn.addEventListener("click", modalNext);
 modalPrevBtn2.addEventListener("click", modalPrev);
 modalNextBtn2.addEventListener("click", modalNext);
 
-photoModal.addEventListener("click", (e) => {
-  if (e.target === photoModal) closeModal();
-});
-modalBackdrop.addEventListener("click", (e) => {
-  if (e.target === modalBackdrop) closeModal();
-});
+photoModal.addEventListener("click", (e) => { if (e.target === photoModal) closeModal(); });
+modalBackdrop.addEventListener("click", (e) => { if (e.target === modalBackdrop) closeModal(); });
 
 document.addEventListener("keydown", (e) => {
   if (photoModal.style.display !== "flex") return;
@@ -384,9 +357,8 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") modalNext();
 });
 
-/* =================== autoplay per premium =================== */
+/* ===== autoplay premium ===== */
 const autoplayTimers = new Map();
-
 function startAutoplay(containerEl, photos) {
   stopAutoplay(containerEl);
   if (!photos || photos.length <= 1) return;
@@ -399,23 +371,20 @@ function startAutoplay(containerEl, photos) {
     i = (i + 1) % photos.length;
     if (imgEl) imgEl.src = photos[i];
     dots.forEach((d, idx) => {
-      d.className = idx === i
-        ? "w-2 h-2 rounded-full bg-blue-600"
-        : "w-2 h-2 rounded-full bg-gray-300";
+      d.className = idx === i ? "w-2 h-2 rounded-full bg-blue-600" : "w-2 h-2 rounded-full bg-gray-300";
     });
   };
 
   const t = setInterval(tick, 5000);
   autoplayTimers.set(containerEl, t);
 }
-
 function stopAutoplay(containerEl) {
   const t = autoplayTimers.get(containerEl);
   if (t) clearInterval(t);
   autoplayTimers.delete(containerEl);
 }
 
-/* =================== render =================== */
+/* ===== render ===== */
 function renderFirms(firms) {
   autoplayTimers.forEach((t) => clearInterval(t));
   autoplayTimers.clear();
@@ -473,12 +442,7 @@ function renderFirms(firms) {
       photosHTML = `
         <div class="mt-4" data-slider="1">
           <div class="rounded-xl overflow-hidden border bg-gray-50">
-            <img
-              src="${photos[0]}"
-              data-main-photo="1"
-              class="w-full h-48 object-cover cursor-pointer"
-              alt="Foto e shërbimeve"
-            />
+            <img src="${photos[0]}" data-main-photo="1" class="w-full h-48 object-cover cursor-pointer" alt="Foto e shërbimeve" />
           </div>
 
           <div class="flex items-center justify-between mt-2">
@@ -492,12 +456,7 @@ function renderFirms(firms) {
 
           <div class="flex space-x-2 mt-3 overflow-x-auto pb-1">
             ${photos.map((p, i) => `
-              <img
-                src="${p}"
-                data-thumb-index="${i}"
-                class="w-20 h-20 object-cover rounded-lg cursor-pointer shadow-sm border"
-                alt="Foto ${i+1}"
-              />
+              <img src="${p}" data-thumb-index="${i}" class="w-20 h-20 object-cover rounded-lg cursor-pointer shadow-sm border" alt="Foto ${i+1}" />
             `).join("")}
           </div>
         </div>
@@ -507,9 +466,7 @@ function renderFirms(firms) {
     const phoneLine = hasTel
       ? `
         <p><strong>Telefoni:</strong>
-          <a href="tel:${tel}" class="text-blue-700 underline font-semibold">
-            ${sanitize(firm.phone)}
-          </a>
+          <a href="tel:${tel}" class="text-blue-700 underline font-semibold">${sanitize(firm.phone)}</a>
         </p>
       `
       : `<p><strong>Telefoni:</strong> <span class="text-gray-500">Nuk është vendosur</span></p>`;
@@ -517,31 +474,21 @@ function renderFirms(firms) {
     const callButtons = hasTel
       ? `
         <div class="mt-3 grid grid-cols-2 gap-2">
-          <a href="tel:${tel}"
-             class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold">
-            📞 Thirr
-          </a>
-          <a href="sms:${tel}"
-             class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold">
-            ✉️ SMS
-          </a>
+          <a href="tel:${tel}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold">📞 Thirr</a>
+          <a href="sms:${tel}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold">✉️ SMS</a>
         </div>
       `
       : "";
 
     div.innerHTML = `
       ${headerHTML}
-
       <p><strong>Adresa:</strong> ${sanitize(firm.address)}</p>
       ${phoneLine}
       <p><strong>Email:</strong>
-        <a href="mailto:${sanitize(firm.email)}" class="text-blue-600 underline">
-          ${sanitize(firm.email)}
-        </a>
+        <a href="mailto:${sanitize(firm.email)}" class="text-blue-600 underline">${sanitize(firm.email)}</a>
       </p>
       <p><strong>Kategoria:</strong> ${sanitize(firm.category)}</p>
       <p class="text-xs text-gray-500 mt-1"><strong>Shteti:</strong> ${sanitize(firm.country || "MK")}</p>
-
       ${callButtons}
       ${photosHTML}
     `;
@@ -558,15 +505,11 @@ function renderFirms(firms) {
         currentIndex = i;
         mainImg.src = photos[currentIndex];
         dots.forEach((d, idx) => {
-          d.className = idx === currentIndex
-            ? "w-2 h-2 rounded-full bg-blue-600"
-            : "w-2 h-2 rounded-full bg-gray-300";
+          d.className = idx === currentIndex ? "w-2 h-2 rounded-full bg-blue-600" : "w-2 h-2 rounded-full bg-gray-300";
         });
       }
 
-      mainImg.addEventListener("click", () => {
-        openModalSlider({ photos, startIndex: currentIndex, firmName: firm.name });
-      });
+      mainImg.addEventListener("click", () => openModalSlider({ photos, startIndex: currentIndex, firmName: firm.name }));
 
       thumbs.forEach(t => {
         t.addEventListener("click", () => {
@@ -583,7 +526,7 @@ function renderFirms(firms) {
   });
 }
 
-/* =================== filter =================== */
+/* ===== filter ===== */
 function filterFirms() {
   const txt = searchInput.value.toLowerCase();
   const cat = categorySelect.value;
@@ -597,7 +540,7 @@ function filterFirms() {
   renderFirms(filtered);
 }
 
-/* =================== focus from URL =================== */
+/* ===== focus from URL ===== */
 function focusFirmFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const focus = normalizeEmail(params.get("focus") || "");
@@ -608,81 +551,74 @@ function focusFirmFromUrl() {
 
   el.classList.add("focus-ring");
   el.scrollIntoView({ behavior: "smooth", block: "center" });
-
   setTimeout(() => el.classList.remove("focus-ring"), 6000);
 }
 
-/* =================== fetch firms (retry) =================== */
-async function fetchFirmsWithRetry(country, attempts = 5) {
+/* ===== fetch with retry (Render cold start) ===== */
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function fetchFirmsWithRetry(country, attempts = 4) {
   let lastErr = null;
 
   for (let i = 1; i <= attempts; i++) {
     try {
-      showError(false);
-      showTopStatus(`Duke i ngarku firmat për ${country}... (përpjekja ${i}/${attempts})`, "info");
-      const resp = await fetchWithTimeout(
-        `${API_URL}/firms?country=${encodeURIComponent(country)}`,
-        { cache: "no-store" },
-        12000
-      );
+      // cache-bust param
+      const url = `${API_URL}/firms?country=${encodeURIComponent(country)}&t=${Date.now()}`;
+      const resp = await fetch(url, { cache: "no-store" });
 
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json().catch(() => []);
-      return data || [];
+
+      const data = await resp.json();
+      if (!Array.isArray(data)) throw new Error("Invalid response");
+
+      return data;
     } catch (e) {
       lastErr = e;
-      // backoff: 0.6s, 1.2s, 2.4s, 4.8s...
-      const waitMs = Math.min(4800, 600 * Math.pow(2, i - 1));
-      await new Promise(r => setTimeout(r, waitMs));
+      // backoff: 0.7s, 1.4s, 2.1s, 2.8s...
+      await sleep(700 * i);
     }
   }
 
   throw lastErr || new Error("Fetch failed");
 }
 
-/* =================== load firms =================== */
 async function loadFirms() {
+  clearTopStatus();
   setLoading(true);
-  hideTopStatus();
-  showError(false);
 
   const params = new URLSearchParams(window.location.search);
   const urlCountry = (params.get("country") || "").toUpperCase();
-
-  const country = (/^[A-Z]{2}$/.test(urlCountry))
-    ? urlCountry
-    : await detectUserCountryCode();
+  const country = (/^[A-Z]{2}$/.test(urlCountry)) ? urlCountry : await detectUserCountryCode();
 
   countryPill.textContent = country;
   countryPill.classList.remove("hidden");
 
-  const data = await fetchFirmsWithRetry(country, 5);
+  try {
+    const data = await fetchFirmsWithRetry(country, 5);
 
-  allFirms = (data || []).sort((a, b) => {
-    const order = { premium: 1, standard: 2, basic: 3 };
-    return (order[(a.plan || "").toLowerCase()] || 9) - (order[(b.plan || "").toLowerCase()] || 9);
-  });
+    allFirms = (data || []).sort((a, b) => {
+      const order = { premium: 1, standard: 2, basic: 3 };
+      return (order[(a.plan || "").toLowerCase()] || 9) - (order[(b.plan || "").toLowerCase()] || 9);
+    });
 
-  populateCategoryFilter(allFirms);
-  renderFirms(allFirms);
-  focusFirmFromUrl();
+    populateCategoryFilter(allFirms);
+    renderFirms(allFirms);
+    focusFirmFromUrl();
 
-  showTopStatus(`U ngarkuan ${allFirms.length} firma për ${country}.`, "success");
-  setTimeout(() => hideTopStatus(), 2200);
-  setLoading(false);
+    setLoading(false);
+  } catch (err) {
+    console.error("Gabim:", err);
+    setLoading(false);
+    showTopStatus(
+      "error",
+      "Nuk po mundemi me i ngarku firmat për momentin.",
+      "Provo prap pas pak sekondash.",
+      true
+    );
+  }
 }
 
-retryBtn.addEventListener("click", () => {
-  loadFirms().catch(() => {});
-});
-
-loadFirms().catch(err => {
-  console.error("Gabim:", err);
-  setLoading(false);
-  showError(true);
-  showTopStatus("Serveri po vonohet ose është duke u ndez (cold start). Provo prap.", "error");
-  noResults.classList.add("hidden");
-});
+loadFirms();
 
 searchInput.addEventListener("input", filterFirms);
 categorySelect.addEventListener("change", filterFirms);

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EasyFix - Regjistrimi i Firmës</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- intl-tel-input (flags + dial code) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/css/intlTelInput.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/intlTelInput.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/utils.js"></script>
+
+  <!-- app script -->
+  <script defer src="code.js"></script>
+
+
+  <!-------logo per taps-->>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="favicon-16.png" sizes="16x16">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#1d4ed8">
+
+<!--logo per taps-->
+
+
+
+
+  <style>
+    .plan-btn.active { border: 3px solid #2563eb; background: #dbeafe; }
+    .iti { width: 100%; }
+    /* e bën inputin me u duk normal me Tailwind */
+    .iti__tel-input { width: 100%; }
+  </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+
+  <header class="bg-blue-700 text-white py-6 shadow-md">
+    <div class="container mx-auto px-4 flex justify-between items-center">
+      <h1 class="text-3xl font-extrabold">EasyFix</h1>
+      <nav>
+        <ul class="flex space-x-6 text-lg">
+          <li><a href="index.html" class="hover:underline"><i class="fas fa-arrow-left mr-2"></i>Kthehu mbrapa</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-xl mt-10">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Regjistrimi i Firmës</h1>
+
+    <h2 class="text-xl font-semibold mb-3">Zgjidh Planin</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <button data-plan="basic" id="planBasic" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
+        <h3 class="text-lg font-bold mb-1">Basic – 15€/muaj</h3>
+        <ul class="text-sm text-gray-600 space-y-1">
+          <li>• Listim bazë në EasyFix</li>
+          <li>• Të dhënat e kontaktit</li>
+          <li>• Shfaqje standard në kategori</li>
+        </ul>
+      </button>
+
+      <button data-plan="standard" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
+        <h3 class="text-lg font-bold mb-1">Standard – 20€/muaj</h3>
+        <ul class="text-sm text-gray-600 space-y-1">
+          <li>• Gjithë Basic +</li>
+          <li>• Logo e kompanisë</li>
+          <li>• Deri në 3 foto të shërbimeve</li>
+          <li>• Pozicion më i mirë në listë</li>
+        </ul>
+      </button>
+
+      <button data-plan="premium" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
+        <h3 class="text-lg font-bold mb-1">Premium – 30€/muaj</h3>
+        <ul class="text-sm text-gray-600 space-y-1">
+          <li>• Gjithë Standard +</li>
+          <li>• Brandim më i fortë</li>
+          <li>• Pozicion Top</li>
+          <li>• Deri 8 foto</li>
+        </ul>
+      </button>
+    </div>
+
+    <input type="hidden" id="selectedPlan">
+
+    <div id="uploadSection" class="hidden mt-6 p-4 border rounded-xl bg-gray-50">
+      <h3 class="font-semibold mb-3 text-gray-800">Ngarko Logo dhe Foto</h3>
+
+      <label class="block mb-2 font-medium">Logo e Kompanisë</label>
+      <input type="file" id="logoUpload" accept="image/*" class="mb-4 w-full">
+
+      <label class="block mb-2 font-medium" id="photosLabel">Foto të Shërbimeve</label>
+      <input type="file" id="photoUpload" accept="image/*" multiple class="w-full">
+      <p class="text-xs text-gray-500 mt-1" id="photosHint"></p>
+    </div>
+
+    <form id="registerForm" class="grid grid-cols-1 gap-4 mt-6">
+
+      <div>
+        <label class="font-semibold">Emri i Firmës</label>
+        <input id="emri" type="text" class="w-full border p-2 rounded" required>
+      </div>
+
+      <div>
+        <label class="font-semibold">Adresa</label>
+        <input id="adresa" type="text" class="w-full border p-2 rounded" required>
+      </div>
+
+      <div>
+        <label class="font-semibold">Telefoni (me shtet)</label>
+        <input id="telefoni" type="tel" class="w-full border p-2 rounded" inputmode="tel" placeholder="Numri i telefonit" required>
+        <p class="text-xs text-gray-500 mt-1">
+          Zgjidh shtetin (flamuri), pastaj shkruaj numrin. Prefiksi (+389, +49, +1…) vendoset vet.
+        </p>
+        <p id="phoneHint" class="text-xs mt-1 text-gray-600"></p>
+      </div>
+
+      <div>
+        <label class="font-semibold">Email</label>
+        <input id="emaili" type="email" class="w-full border p-2 rounded" required>
+      </div>
+
+      <div>
+        <label class="font-semibold">Kategoria e Shërbimit</label>
+        <select id="kategoria" class="w-full border p-2 rounded" required>
+          <option value="Elektricist">Elektricist</option>
+          <option value="Hidraulik">Hidraulik</option>
+          <option value="Murator">Murator</option>
+          <option value="Pastrime">Pastrime</option>
+          <option value="Klimë">Klimë</option>
+        </select>
+      </div>
+
+      <button id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-lg">
+        Vazhdo te Pagesa
+      </button>
+    </form>
+
+  </section>
+
+</body>
+</html>

@@ -2,6 +2,13 @@ const BACKEND_URL = "https://easyfix.onrender.com";
 
 function $(s) { return document.querySelector(s); }
 
+// i18n (NEW)
+const I18N = window.EASYFIX_I18N;
+const t = I18N ? I18N.t : (k) => k;
+const applyTranslations = I18N ? I18N.applyTranslations : () => {};
+const setLangButtonsUI = I18N ? I18N.setLangButtonsUI : () => {};
+const setLang = I18N ? I18N.setLang : () => {};
+
 function showStatus(msg, type = "info") {
   let box = $("#statusBox");
   if (!box) {
@@ -25,14 +32,16 @@ const photosHint = $("#photosHint");
 
 function updateUploadHints() {
   if (!photosLabel || !photosHint) return;
+
+  // keep your logic, only i18n texts:
   if (selectedPlan === "standard") {
-    photosLabel.textContent = "Foto të Shërbimeve (max 3)";
-    photosHint.textContent = "Maksimum 3 foto për Standard.";
+    photosLabel.textContent = `${t("service_photos")} (max 3)`;
+    photosHint.textContent = t("msg_max_photos", { n: 3, plan: "standard" });
   } else if (selectedPlan === "premium") {
-    photosLabel.textContent = "Foto të Shërbimeve (max 8)";
-    photosHint.textContent = "Maksimum 8 foto për Premium.";
+    photosLabel.textContent = `${t("service_photos")} (max 8)`;
+    photosHint.textContent = t("msg_max_photos", { n: 8, plan: "premium" });
   } else {
-    photosLabel.textContent = "Foto të Shërbimeve";
+    photosLabel.textContent = t("service_photos");
     photosHint.textContent = "";
   }
 }
@@ -63,8 +72,8 @@ let iti = null;
 
 function fetchWithTimeout(url, timeoutMs = 4500) {
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), timeoutMs);
-  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(t));
+  const tmr = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(tmr));
 }
 
 async function guessCountryIso2() {
@@ -97,31 +106,27 @@ function initPhoneInput() {
     nationalMode: true,
     autoPlaceholder: "polite",
     formatOnDisplay: true,
-    // utilsScript: (utils.js e ke të ngarkum me <script defer ...>)
     geoIpLookup: async (cb) => {
       const iso2 = await guessCountryIso2();
       cb(iso2);
     }
   });
 
-  // kur ndrron shtetin
   phoneInput.addEventListener("countrychange", () => {
     setPhoneHint("", true);
   });
 
-  // validim live (opsional, s’e bllokon typing)
   phoneInput.addEventListener("input", () => {
     if (!iti) return;
     const v = phoneInput.value.trim();
     if (!v) { setPhoneHint("", true); return; }
 
-    // në utils të ngarkume, ky validim është i saktë
     const ok = iti.isValidNumber();
     if (ok) {
-      const e164 = iti.getNumber(); // +...
-      setPhoneHint(`Numri duket valid: ${e164}`, true);
+      const e164 = iti.getNumber();
+      setPhoneHint(t("hint_valid_phone", { e164 }), true);
     } else {
-      setPhoneHint("Numër telefoni jo valid për këtë shtet.", false);
+      setPhoneHint(t("hint_invalid_phone"), false);
     }
   });
 }
@@ -134,52 +139,46 @@ form.addEventListener("submit", async (e) => {
   const name = $("#emri").value.trim();
   const address = $("#adresa").value.trim();
   const email = $("#emaili").value.trim();
-  const category = $("#kategoria").value.trim();
+  const category = $("#kategoria").value.trim(); // now this is a KEY
 
   if (!name || !address || !email || !category) {
-    showStatus("Ju lutem plotësoni të gjitha fushat.", "error");
+    showStatus(t("msg_fill_all"), "error");
     return;
   }
 
   if (!selectedPlan) {
-    showStatus("Ju lutem zgjidhni një plan.", "error");
+    showStatus(t("msg_choose_plan"), "error");
     return;
   }
 
-  // PHONE VALIDATION
   const phoneInput = $("#telefoni");
   if (!iti || !phoneInput) {
-    showStatus("Phone input nuk u inicializua. Provo refresh faqen.", "error");
+    showStatus(t("msg_phone_init_fail"), "error");
     return;
   }
 
   const rawPhone = phoneInput.value.trim();
   if (!rawPhone) {
-    showStatus("Ju lutem shkruani numrin e telefonit.", "error");
+    showStatus(t("msg_phone_required"), "error");
     return;
   }
 
-  // ky është validim real sipas shtetit
   if (!iti.isValidNumber()) {
-    showStatus("Numri i telefonit nuk është valid për shtetin e zgjedhur.", "error");
-    setPhoneHint("Numër telefoni jo valid për këtë shtet.", false);
+    showStatus(t("msg_phone_invalid"), "error");
+    setPhoneHint(t("hint_invalid_phone"), false);
     return;
   }
 
-  // E.164 (p.sh. +3897xxxxxxx) — kjo shkon te backend
   const phoneE164 = iti.getNumber();
-
-  // ISO2 nga iti (p.sh. mk, de, us) -> uppercase (MK, DE, US)
   const countryIso2 = (iti.getSelectedCountryData()?.iso2 || "mk").toUpperCase();
 
-  // photo limits
   const maxPhotos = selectedPlan === "standard" ? 3 : selectedPlan === "premium" ? 8 : 0;
 
   const formData = new FormData();
   formData.append("name", name);
   formData.append("email", email);
-  formData.append("phone", phoneE164);     // ✅ E.164
-  formData.append("country", countryIso2); // ✅ ISO2
+  formData.append("phone", phoneE164);
+  formData.append("country", countryIso2);
   formData.append("address", address);
   formData.append("category", category);
   formData.append("plan", selectedPlan);
@@ -190,13 +189,13 @@ form.addEventListener("submit", async (e) => {
 
     const photos = Array.from($("#photoUpload").files || []);
     if (photos.length > maxPhotos) {
-      showStatus(`Mund të ngarkoni maksimum ${maxPhotos} foto për planin ${selectedPlan}.`, "error");
+      showStatus(t("msg_max_photos", { n: maxPhotos, plan: selectedPlan }), "error");
       return;
     }
     photos.forEach(f => formData.append("photos", f));
   }
 
-  showStatus("Duke ruajtur regjistrimin...", "info");
+  showStatus(t("msg_saving"), "info");
 
   try {
     const res = await fetch(`${BACKEND_URL}/register`, {
@@ -205,18 +204,18 @@ form.addEventListener("submit", async (e) => {
     });
 
     if (res.status === 409) {
-      showStatus("Ky email tashmë është i regjistruar.", "error");
+      showStatus(t("msg_email_exists"), "error");
       return;
     }
 
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok || !data.success) {
-      showStatus(data?.error || "Gabim në regjistrim.", "error");
+      showStatus(data?.error || t("msg_reg_error"), "error");
       return;
     }
 
-    showStatus("Po ju dërgojmë te pagesa...", "success");
+    showStatus(t("msg_to_pay"), "success");
 
     setTimeout(() => {
       window.location.href = data.checkoutUrl;
@@ -224,12 +223,20 @@ form.addEventListener("submit", async (e) => {
 
   } catch (err) {
     console.error(err);
-    showStatus("Gabim gjatë komunikimit me serverin.", "error");
+    showStatus(t("msg_comm_error"), "error");
   }
 });
 
-// default plan basic + init phone
+// default plan basic + init phone + i18n init
 window.addEventListener("DOMContentLoaded", () => {
+  // i18n (NEW)
+  applyTranslations();
+  setLangButtonsUI();
+
+  document.getElementById("langSQ")?.addEventListener("click", () => { setLang("sq"); applyTranslations(); setLangButtonsUI(); updateUploadHints(); });
+  document.getElementById("langMK")?.addEventListener("click", () => { setLang("mk"); applyTranslations(); setLangButtonsUI(); updateUploadHints(); });
+  document.getElementById("langEN")?.addEventListener("click", () => { setLang("en"); applyTranslations(); setLangButtonsUI(); updateUploadHints(); });
+
   const basicBtn = $("#planBasic");
   if (basicBtn) basicBtn.click();
   initPhoneInput();

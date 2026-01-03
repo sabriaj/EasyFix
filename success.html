@@ -6,43 +6,55 @@
   <title>Pagesa u Krye - EasyFix</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 
-  <!-- logo per tabs -->
-<link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
-<link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-16.png" sizes="16x16">
-<link rel="apple-touch-icon" href="easyfix-icons-pack/apple-touch-icon.png">
-<meta name="theme-color" content="#1d4ed8">
-<!-- /logo per tabs -->
+  <!-- i18n (NEW) - non-defer se ke inline script poshtë -->
+  <script src="i18n.js"></script>
 
+  <!-- logo per tabs -->
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-16.png" sizes="16x16">
+  <link rel="apple-touch-icon" href="easyfix-icons-pack/apple-touch-icon.png">
+  <meta name="theme-color" content="#1d4ed8">
+  <!-- /logo per tabs -->
 </head>
 
 <body class="bg-gray-100 min-h-screen flex flex-col">
 
   <header class="bg-blue-700 text-white py-6 shadow-md">
     <div class="container mx-auto px-4 flex justify-between items-center">
-      <h1 class="text-3xl font-extrabold">EasyFix</h1>
-      <a href="index.html" class="text-white underline">Faqja Kryesore</a>
+      <div class="flex items-center gap-3">
+        <h1 class="text-3xl font-extrabold">EasyFix</h1>
+
+        <!-- Language Switch (NEW) -->
+        <div class="flex items-center gap-1">
+          <button id="langSQ" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">SQ</button>
+          <button id="langMK" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">MK</button>
+          <button id="langEN" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">EN</button>
+        </div>
+      </div>
+
+      <a href="index.html" class="text-white underline" data-i18n="home">Faqja Kryesore</a>
     </div>
   </header>
 
   <main class="container mx-auto px-4 py-10 flex-grow max-w-2xl">
-    <h2 class="text-3xl md:text-4xl font-bold text-blue-900 mb-4 text-center">Faleminderit!</h2>
+    <h2 class="text-3xl md:text-4xl font-bold text-blue-900 mb-4 text-center" data-i18n="thanks">Faleminderit!</h2>
 
-    <p id="subtitle" class="text-center text-gray-700">
+    <p id="subtitle" class="text-center text-gray-700" data-i18n="verifying_sub">
       Po verifikojmë pagesën dhe aktivizimin e firmës suaj…
     </p>
 
     <div id="card" class="bg-white rounded-xl shadow p-6 mt-6">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm text-gray-500">Statusi</p>
-          <p id="statusText" class="text-lg font-semibold text-blue-700">Duke verifikuar…</p>
+          <p class="text-sm text-gray-500">Status</p>
+          <p id="statusText" class="text-lg font-semibold text-blue-700" data-i18n="status_verifying">Duke verifikuar…</p>
         </div>
         <div id="spinner" class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-700"></div>
       </div>
 
       <div class="mt-4 text-sm text-gray-600">
-        <p id="hint">
+        <p id="hint" data-i18n="hint_activation">
           Nëse sapo e kryet pagesën, zakonisht aktivizimi vjen brenda pak sekondash.
         </p>
         <p id="emailLine" class="mt-2"></p>
@@ -53,6 +65,7 @@
           id="goBtn"
           class="w-full sm:w-auto bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
           disabled
+          data-i18n="go_firm"
         >
           Shko te firma jote
         </button>
@@ -60,6 +73,7 @@
         <button
           id="retryBtn"
           class="w-full sm:w-auto bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
+          data-i18n="refresh_status"
         >
           Rifresko statusin
         </button>
@@ -69,11 +83,20 @@
     </div>
   </main>
 
-  <footer class="bg-blue-700 text-white text-center py-6 mt-auto">
+  <footer class="bg-blue-700 text-white text-center py-6 mt-auto" data-i18n="footer">
     &copy; 2025 EasyFix.mk - Ndihma për çdo shtëpi
   </footer>
 
   <script>
+    const { t, setLang, applyTranslations, setLangButtonsUI } = window.EASYFIX_I18N;
+
+    // lang buttons
+    function wireLang() {
+      document.getElementById("langSQ")?.addEventListener("click", () => { setLang("sq"); applyTranslations(); setLangButtonsUI(); repaintDynamicTexts(); });
+      document.getElementById("langMK")?.addEventListener("click", () => { setLang("mk"); applyTranslations(); setLangButtonsUI(); repaintDynamicTexts(); });
+      document.getElementById("langEN")?.addEventListener("click", () => { setLang("en"); applyTranslations(); setLangButtonsUI(); repaintDynamicTexts(); });
+    }
+
     const API_URL = "https://easyfix.onrender.com";
     const params = new URLSearchParams(window.location.search);
     const email = params.get("email");
@@ -86,20 +109,24 @@
     const emailLine = document.getElementById("emailLine");
     const subtitle = document.getElementById("subtitle");
 
+    function repaintDynamicTexts() {
+      if (email) emailLine.textContent = t("email_line", { email });
+    }
+
     if (email) {
-      emailLine.textContent = "Email i regjistrimit: " + email;
+      emailLine.textContent = t("email_line", { email });
     } else {
-      subtitle.textContent = "Mungon email në link. Ju lutem kthehuni te faqja kryesore.";
-      statusText.textContent = "Gabim: email mungon";
+      subtitle.textContent = t("missing_email_sub");
+      statusText.textContent = t("missing_email_status");
       spinner.classList.add("hidden");
       errorBox.classList.remove("hidden");
-      errorBox.textContent = "Nuk u gjet parametri ?email=... në URL.";
-      retryBtn.textContent = "Kthehu te faqja kryesore";
+      errorBox.textContent = t("missing_email_err");
+      retryBtn.textContent = t("back_home_btn");
       retryBtn.addEventListener("click", () => window.location.href = "index.html");
     }
 
     let tries = 0;
-    const MAX_TRIES = 20;       // ~60 sekonda nëse intervali është 3s
+    const MAX_TRIES = 20;
     const INTERVAL_MS = 3000;
 
     async function checkStatus() {
@@ -107,44 +134,38 @@
 
       tries++;
       errorBox.classList.add("hidden");
-      statusText.textContent = "Duke verifikuar… (" + tries + "/" + MAX_TRIES + ")";
+      statusText.textContent = `${t("status_verifying")} (${tries}/${MAX_TRIES})`;
 
       try {
         const res = await fetch(`${API_URL}/check-status?email=${encodeURIComponent(email)}`);
-        if (!res.ok) {
-          throw new Error("HTTP " + res.status);
-        }
+        if (!res.ok) throw new Error("HTTP " + res.status);
 
         const data = await res.json();
         const firma = data?.firma;
 
-        if (!data?.success || !firma) {
-          throw new Error("Nuk u gjet firma");
-        }
+        if (!data?.success || !firma) throw new Error("Not found");
 
         if (firma.payment_status === "paid") {
           spinner.classList.add("hidden");
-          statusText.textContent = "Aktive (paid)";
-          subtitle.textContent = "Firma juaj është aktivizuar me sukses.";
+          statusText.textContent = t("active_paid");
+          subtitle.textContent = t("activated_ok");
 
           goBtn.disabled = false;
-          goBtn.addEventListener("click", () => {
-            // e çon te index.html dhe e fokuson kartën sipas email-it
+          goBtn.onclick = () => {
             window.location.href = `index.html?focus=${encodeURIComponent(email)}`;
-          });
+          };
 
           return true;
         }
 
-        // ende pending/expired
         spinner.classList.remove("hidden");
-        statusText.textContent = "Ende në proces: " + (firma.payment_status || "pending");
+        statusText.textContent = t("in_process", { status: (firma.payment_status || "pending") });
 
         return false;
 
       } catch (err) {
         errorBox.classList.remove("hidden");
-        errorBox.textContent = "Gabim gjatë verifikimit: " + err.message;
+        errorBox.textContent = "Error: " + err.message;
         return false;
       }
     }
@@ -152,7 +173,6 @@
     async function startPolling() {
       tries = 0;
 
-      // provo menjëherë njëherë
       let ok = await checkStatus();
       if (ok) return;
 
@@ -163,8 +183,8 @@
           spinner.classList.add("hidden");
 
           if (!done) {
-            statusText.textContent = "Nuk u konfirmua automatikisht (provoni përsëri).";
-            subtitle.textContent = "Nëse pagesa u krye, provoni butonin “Rifresko statusin”.";
+            statusText.textContent = t("not_confirmed");
+            subtitle.textContent = t("try_refresh");
           }
         }
       }, INTERVAL_MS);
@@ -174,6 +194,12 @@
       spinner.classList.remove("hidden");
       await startPolling();
     });
+
+    // init i18n
+    applyTranslations();
+    setLangButtonsUI();
+    wireLang();
+    repaintDynamicTexts();
 
     if (email) startPolling();
   </script>

@@ -6,95 +6,38 @@
   <title>EasyFix - Kërko Mjeshtra Profesionalë</title>
   <script src="https://cdn.tailwindcss.com"></script>
 
+  <!-- i18n (NEW) - duhet me qenë NON-defer se ke inline script poshtë -->
+  <script src="i18n.js"></script>
 
-<!-- logo per tabs -->
-<link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
-<link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-16.png" sizes="16x16">
-<link rel="apple-touch-icon" href="easyfix-icons-pack/apple-touch-icon.png">
-<meta name="theme-color" content="#1d4ed8">
-<!-- /logo per tabs -->
-
-
-
-
+  <!-- logo per tabs -->
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-16.png" sizes="16x16">
+  <link rel="apple-touch-icon" href="easyfix-icons-pack/apple-touch-icon.png">
+  <meta name="theme-color" content="#1d4ed8">
+  <!-- /logo per tabs -->
 
   <style>
     .badge-premium { background: linear-gradient(to right, #fbbf24, #f59e0b); color: black; }
     .badge-standard { background: #3b82f6; color: white; }
     .badge-basic { background: #6b7280; color: white; }
 
-    #photoModal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.88);
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      padding: 24px;
-    }
-
-    #photoModal .modal-card {
-      width: min(1100px, 95vw);
-      height: min(720px, 92vh);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    #photoModal .modal-img-wrap {
-      position: relative;
-      flex: 1;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      border-radius: 14px;
-      overflow: hidden;
-      background: rgba(255,255,255,0.06);
-      box-shadow: 0 0 24px rgba(0,0,0,0.35);
-    }
-
-    #photoModal img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-      user-select: none;
-      -webkit-user-drag: none;
-    }
-
-    #photoModal .modal-actions {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      color: white;
-      gap: 12px;
-    }
-
-    .modal-btn {
-      background: rgba(255,255,255,0.14);
-      border: 1px solid rgba(255,255,255,0.18);
-      padding: 10px 12px;
-      border-radius: 10px;
-      font-weight: 700;
-      transition: transform .08s ease, background .15s ease;
-    }
+    #photoModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+      justify-content: center; align-items: center; z-index: 9999; padding: 24px; }
+    #photoModal .modal-card { width: min(1100px, 95vw); height: min(720px, 92vh);
+      display: flex; flex-direction: column; gap: 12px; }
+    #photoModal .modal-img-wrap { position: relative; flex: 1; display: flex;
+      justify-content: center; align-items: center; border-radius: 14px; overflow: hidden;
+      background: rgba(255,255,255,0.06); box-shadow: 0 0 24px rgba(0,0,0,0.35); }
+    #photoModal img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; }
+    #photoModal .modal-actions { display: flex; justify-content: space-between; align-items: center; color: white; gap: 12px; }
+    .modal-btn { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.18);
+      padding: 10px 12px; border-radius: 10px; font-weight: 700; transition: transform .08s ease, background .15s ease; }
     .modal-btn:hover { background: rgba(255,255,255,0.20); }
     .modal-btn:active { transform: scale(0.98); }
-
-    .modal-close {
-      background: rgba(255,255,255,0.10);
-      border: 1px solid rgba(255,255,255,0.16);
-      padding: 8px 10px;
-      border-radius: 10px;
-      font-weight: 800;
-    }
-
-    .focus-ring {
-      outline: 3px solid rgba(37,99,235,0.9);
-      outline-offset: 2px;
-      box-shadow: 0 0 0 6px rgba(37,99,235,0.12);
-    }
+    .modal-close { background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.16);
+      padding: 8px 10px; border-radius: 10px; font-weight: 800; }
+    .focus-ring { outline: 3px solid rgba(37,99,235,0.9); outline-offset: 2px; box-shadow: 0 0 0 6px rgba(37,99,235,0.12); }
 
     .skeleton {
       background: linear-gradient(90deg, rgba(0,0,0,.03), rgba(0,0,0,.08), rgba(0,0,0,.03));
@@ -118,14 +61,23 @@
       <div class="flex items-center gap-3">
         <h1 class="text-3xl font-extrabold tracking-tight">EasyFix</h1>
         <span id="countryPill" class="hidden text-xs font-bold bg-white/20 px-2 py-1 rounded-full"></span>
+
+        <!-- Language Switch (NEW) -->
+        <div class="flex items-center gap-1 ml-1">
+          <button id="langSQ" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">SQ</button>
+          <button id="langMK" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">MK</button>
+          <button id="langEN" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">EN</button>
+        </div>
       </div>
 
       <nav class="flex flex-wrap gap-2 sm:gap-4">
         <a href="register.html"
+           data-i18n="nav_register"
            class="bg-white/15 hover:bg-white/20 px-4 py-2 rounded-lg font-semibold text-sm sm:text-base">
           Regjistro Firmën
         </a>
         <a href="contact.html"
+           data-i18n="nav_contact"
            class="bg-white/15 hover:bg-white/20 px-4 py-2 rounded-lg font-semibold text-sm sm:text-base">
           Kontakt
         </a>
@@ -134,7 +86,7 @@
   </header>
 
   <main class="container mx-auto px-4 py-10 flex-grow">
-    <h2 class="text-4xl font-bold text-blue-900 mb-8 text-center">
+    <h2 class="text-4xl font-bold text-blue-900 mb-8 text-center" data-i18n="hero">
       Gjej mjeshtrin që të duhet me shpejtësi
     </h2>
 
@@ -147,6 +99,7 @@
         <input
           id="searchInput"
           type="text"
+          data-i18n-placeholder="search_placeholder"
           placeholder="Kërko firmë ose shërbim..."
           class="flex-grow border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 md:mb-0"
         />
@@ -155,7 +108,7 @@
           id="categorySelect"
           class="border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">Të gjitha kategoritë</option>
+          <option value="" data-i18n="all_categories">Të gjitha kategoritë</option>
         </select>
       </div>
 
@@ -170,13 +123,13 @@
       <!-- Data -->
       <div id="firmsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6 hidden"></div>
 
-      <p id="noResults" class="text-center text-gray-500 mt-4 hidden">
+      <p id="noResults" class="text-center text-gray-500 mt-4 hidden" data-i18n="no_results">
         Nuk u gjetën firma për kriteret e kërkimit.
       </p>
     </section>
   </main>
 
-  <footer class="bg-blue-700 text-white text-center py-6 mt-auto">
+  <footer class="bg-blue-700 text-white text-center py-6 mt-auto" data-i18n="footer">
     &copy; 2025 EasyFix.mk - Ndihma për çdo shtëpi
   </footer>
 
@@ -188,7 +141,7 @@
           <span id="modalTitle" class="font-semibold"></span>
           <span id="modalCounter" class="ml-2 opacity-80"></span>
         </div>
-        <button class="modal-close" id="modalCloseBtn" type="button">Mbyll</button>
+        <button class="modal-close" id="modalCloseBtn" type="button" data-i18n="close">Mbyll</button>
       </div>
 
       <div class="modal-img-wrap" id="modalBackdrop">
@@ -198,9 +151,9 @@
       </div>
 
       <div class="modal-actions">
-        <button class="modal-btn" id="modalPrevBtn2" type="button">Prev</button>
-        <div class="text-xs opacity-80">Esc për me mbyll, shigjeta ← → për Next/Prev</div>
-        <button class="modal-btn" id="modalNextBtn2" type="button">Next</button>
+        <button class="modal-btn" id="modalPrevBtn2" type="button" data-i18n="prev">Prev</button>
+        <div class="text-xs opacity-80" data-i18n="modal_help">Esc për me mbyll, shigjeta ← → për Next/Prev</div>
+        <button class="modal-btn" id="modalNextBtn2" type="button" data-i18n="next">Next</button>
       </div>
     </div>
   </div>
@@ -217,17 +170,13 @@ const countryPill = document.getElementById("countryPill");
 const topStatus = document.getElementById("topStatus");
 const loadingGrid = document.getElementById("loadingGrid");
 
+// i18n (NEW)
+const { getLang, setLang, t, applyTranslations, normalizeCategoryKey, categoryLabel, setLangButtonsUI } = window.EASYFIX_I18N;
+
 /* ===== helpers ===== */
-function sanitize(text) {
-  return text ? text.toString().trim() : "";
-}
-function normalizeEmail(email) {
-  return sanitize(email).toLowerCase();
-}
-function phoneToTelHref(phone) {
-  const p = sanitize(phone).replace(/[^\d+]/g, "");
-  return p || "";
-}
+function sanitize(text) { return text ? text.toString().trim() : ""; }
+function normalizeEmail(email) { return sanitize(email).toLowerCase(); }
+function phoneToTelHref(phone) { const p = sanitize(phone).replace(/[^\d+]/g, ""); return p || ""; }
 function clampPhotos(firm) {
   const photos = Array.isArray(firm.photos) ? firm.photos : [];
   const plan = (firm.plan || "").toLowerCase();
@@ -249,16 +198,12 @@ function setLoading(isLoading) {
 function showTopStatus(kind, title, desc, withRetry=false) {
   topStatus.classList.remove("hidden");
 
-  const base =
-    "rounded-xl border p-4 flex flex-col gap-2";
+  const base = "rounded-xl border p-4 flex flex-col gap-2";
   const styles =
-    kind === "error"
-      ? "bg-red-50 text-red-700 border-red-200"
-      : kind === "success"
-        ? "bg-green-50 text-green-700 border-green-200"
-        : "bg-blue-50 text-blue-700 border-blue-200";
+    kind === "error" ? "bg-red-50 text-red-700 border-red-200"
+    : kind === "success" ? "bg-green-50 text-green-700 border-green-200"
+    : "bg-blue-50 text-blue-700 border-blue-200";
 
-  // FIX: përdor className (jo classList.add me string me hapësira)
   topStatus.className = `${base} ${styles}`;
 
   topStatus.innerHTML = `
@@ -266,7 +211,7 @@ function showTopStatus(kind, title, desc, withRetry=false) {
     <div class="text-sm opacity-90">${sanitize(desc || "")}</div>
     ${withRetry ? `<div class="pt-2">
       <button id="retryBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg">
-        Provo prap
+        ${t("retry")}
       </button>
     </div>` : ""}
   `;
@@ -288,19 +233,23 @@ async function detectUserCountryCode() {
     const j = await r.json();
     const code = (j?.country_code || "MK").toUpperCase();
     return (code && code.length === 2) ? code : "MK";
-  } catch {
-    return "MK";
-  }
+  } catch { return "MK"; }
 }
 
+/* ===== categories (NEW: works with keys + legacy strings) ===== */
 function populateCategoryFilter(firms) {
-  categorySelect.innerHTML = `<option value="">Të gjitha kategoritë</option>`;
-  const categories = [...new Set(firms.map(f => sanitize(f.category)))].sort();
-  categories.forEach(cat => {
-    if (!cat) return;
+  categorySelect.innerHTML = "";
+  const optAll = document.createElement("option");
+  optAll.value = "";
+  optAll.textContent = t("all_categories");
+  categorySelect.appendChild(optAll);
+
+  const keys = [...new Set(firms.map(f => f._catKey))].sort((a,b) => categoryLabel(a).localeCompare(categoryLabel(b)));
+  keys.forEach(k => {
+    if (!k) return;
     const opt = document.createElement("option");
-    opt.value = cat;
-    opt.textContent = cat;
+    opt.value = k;
+    opt.textContent = categoryLabel(k);
     categorySelect.appendChild(opt);
   });
 }
@@ -388,18 +337,18 @@ function startAutoplay(containerEl, photos) {
     });
   };
 
-  const t = setInterval(tick, 5000);
-  autoplayTimers.set(containerEl, t);
+  const tmr = setInterval(tick, 5000);
+  autoplayTimers.set(containerEl, tmr);
 }
 function stopAutoplay(containerEl) {
-  const t = autoplayTimers.get(containerEl);
-  if (t) clearInterval(t);
+  const tmr = autoplayTimers.get(containerEl);
+  if (tmr) clearInterval(tmr);
   autoplayTimers.delete(containerEl);
 }
 
 /* ===== render ===== */
 function renderFirms(firms) {
-  autoplayTimers.forEach((t) => clearInterval(t));
+  autoplayTimers.forEach((tmr) => clearInterval(tmr));
   autoplayTimers.clear();
 
   firmsContainer.innerHTML = "";
@@ -464,7 +413,7 @@ function renderFirms(firms) {
                 <span data-dot="${i}" class="${i === 0 ? "w-2 h-2 rounded-full bg-blue-600" : "w-2 h-2 rounded-full bg-gray-300"}"></span>
               `).join("")}
             </div>
-            <div class="text-xs text-gray-500">${photos.length} foto</div>
+            <div class="text-xs text-gray-500">${photos.length} ${t("photos")}</div>
           </div>
 
           <div class="flex space-x-2 mt-3 overflow-x-auto pb-1">
@@ -478,30 +427,30 @@ function renderFirms(firms) {
 
     const phoneLine = hasTel
       ? `
-        <p><strong>Telefoni:</strong>
+        <p><strong>${t("phone")}:</strong>
           <a href="tel:${tel}" class="text-blue-700 underline font-semibold">${sanitize(firm.phone)}</a>
         </p>
       `
-      : `<p><strong>Telefoni:</strong> <span class="text-gray-500">Nuk është vendosur</span></p>`;
+      : `<p><strong>${t("phone")}:</strong> <span class="text-gray-500">${t("not_set")}</span></p>`;
 
     const callButtons = hasTel
       ? `
         <div class="mt-3 grid grid-cols-2 gap-2">
-          <a href="tel:${tel}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold">📞 Thirr</a>
-          <a href="sms:${tel}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold">✉️ SMS</a>
+          <a href="tel:${tel}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold">${t("call")}</a>
+          <a href="sms:${tel}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold">${t("sms")}</a>
         </div>
       `
       : "";
 
     div.innerHTML = `
       ${headerHTML}
-      <p><strong>Adresa:</strong> ${sanitize(firm.address)}</p>
+      <p><strong>${t("address")}:</strong> ${sanitize(firm.address)}</p>
       ${phoneLine}
-      <p><strong>Email:</strong>
+      <p><strong>${t("email")}:</strong>
         <a href="mailto:${sanitize(firm.email)}" class="text-blue-600 underline">${sanitize(firm.email)}</a>
       </p>
-      <p><strong>Kategoria:</strong> ${sanitize(firm.category)}</p>
-      <p class="text-xs text-gray-500 mt-1"><strong>Shteti:</strong> ${sanitize(firm.country || "MK")}</p>
+      <p><strong>${t("category")}:</strong> ${categoryLabel(firm._catKey)}</p>
+      <p class="text-xs text-gray-500 mt-1"><strong>${t("country")}:</strong> ${sanitize(firm.country || "MK")}</p>
       ${callButtons}
       ${photosHTML}
     `;
@@ -546,7 +495,7 @@ function filterFirms() {
 
   const filtered = allFirms.filter(f => {
     const matchName = sanitize(f.name).toLowerCase().includes(txt);
-    const matchCat = !cat || sanitize(f.category) === cat;
+    const matchCat = !cat || String(f._catKey) === String(cat);
     return matchName && matchCat;
   });
 
@@ -572,26 +521,19 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function fetchFirmsWithRetry(country, attempts = 4) {
   let lastErr = null;
-
   for (let i = 1; i <= attempts; i++) {
     try {
-      // cache-bust param
       const url = `${API_URL}/firms?country=${encodeURIComponent(country)}&t=${Date.now()}`;
       const resp = await fetch(url, { cache: "no-store" });
-
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-
       const data = await resp.json();
       if (!Array.isArray(data)) throw new Error("Invalid response");
-
       return data;
     } catch (e) {
       lastErr = e;
-      // backoff: 0.7s, 1.4s, 2.1s, 2.8s...
       await sleep(700 * i);
     }
   }
-
   throw lastErr || new Error("Fetch failed");
 }
 
@@ -609,7 +551,11 @@ async function loadFirms() {
   try {
     const data = await fetchFirmsWithRetry(country, 5);
 
-    allFirms = (data || []).sort((a, b) => {
+    allFirms = (data || []).map(f => {
+      // NEW: normalize category key for filtering + translation
+      f._catKey = normalizeCategoryKey(f.category);
+      return f;
+    }).sort((a, b) => {
       const order = { premium: 1, standard: 2, basic: 3 };
       return (order[(a.plan || "").toLowerCase()] || 9) - (order[(b.plan || "").toLowerCase()] || 9);
     });
@@ -622,17 +568,31 @@ async function loadFirms() {
   } catch (err) {
     console.error("Gabim:", err);
     setLoading(false);
-    showTopStatus(
-      "error",
-      "Nuk po mundemi me i ngarku firmat për momentin.",
-      "Provo prap pas pak sekondash.",
-      true
-    );
+    showTopStatus("error", t("load_fail_title"), t("load_fail_hint"), true);
   }
 }
 
-loadFirms();
+/* ===== language switch (NEW) ===== */
+function wireLangButtons() {
+  document.getElementById("langSQ")?.addEventListener("click", () => {
+    setLang("sq"); applyTranslations(); setLangButtonsUI();
+    populateCategoryFilter(allFirms); filterFirms();
+  });
+  document.getElementById("langMK")?.addEventListener("click", () => {
+    setLang("mk"); applyTranslations(); setLangButtonsUI();
+    populateCategoryFilter(allFirms); filterFirms();
+  });
+  document.getElementById("langEN")?.addEventListener("click", () => {
+    setLang("en"); applyTranslations(); setLangButtonsUI();
+    populateCategoryFilter(allFirms); filterFirms();
+  });
+}
 
+applyTranslations();
+setLangButtonsUI();
+wireLangButtons();
+
+loadFirms();
 searchInput.addEventListener("input", filterFirms);
 categorySelect.addEventListener("change", filterFirms);
 </script>

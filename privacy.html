@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EasyFix - Privacy Policy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-16.png" sizes="16x16">
+  <link rel="apple-touch-icon" href="easyfix-icons-pack/apple-touch-icon.png">
+  <meta name="theme-color" content="#1d4ed8">
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+  <header class="bg-blue-700 text-white py-6 shadow-md">
+    <div class="container mx-auto px-4 flex items-center justify-between">
+      <h1 class="text-2xl font-extrabold">EasyFix</h1>
+      <a href="index.html" class="underline">Back to Home</a>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-10 max-w-3xl">
+    <h2 class="text-3xl font-bold text-blue-900 mb-2">Privacy Policy</h2>
+    <p class="text-sm text-gray-600 mb-8">Last updated: <span id="lastUpdated"></span></p>
+
+    <div class="bg-white rounded-xl shadow p-6 space-y-6 text-gray-800 leading-relaxed">
+      <p>
+        This Privacy Policy explains how EasyFix (“we”, “us”) collects, uses, and shares information when you use
+        the EasyFix website and mobile app (the “Service”).
+      </p>
+
+      <h3 class="text-xl font-bold text-blue-900">1) Information we collect</h3>
+      <ul class="list-disc pl-6 space-y-2">
+        <li><b>Business registration data</b>: company name, address, category, email, phone number.</li>
+        <li><b>Media uploads (optional)</b>: company logo and service photos (for Standard/Premium plans).</li>
+        <li><b>Payment-related metadata</b>: plan type, payment status, timestamps (paid_at, expires_at). Payments are processed by LemonSqueezy.</li>
+        <li><b>Basic technical data</b>: IP-based country detection (used for country filtering and defaults). This may be provided by third-party IP geolocation services.</li>
+      </ul>
+
+      <h3 class="text-xl font-bold text-blue-900">2) How we use information</h3>
+      <ul class="list-disc pl-6 space-y-2">
+        <li>To display registered businesses to users (filtered by country and category).</li>
+        <li>To process registrations and verify subscription/payment status.</li>
+        <li>To provide customer support and handle requests (including data deletion requests).</li>
+        <li>To prevent abuse and maintain the security and integrity of the Service.</li>
+      </ul>
+
+      <h3 class="text-xl font-bold text-blue-900">3) Where data is stored</h3>
+      <ul class="list-disc pl-6 space-y-2">
+        <li><b>Database</b>: Business records are stored in a MongoDB database.</li>
+        <li><b>Images</b>: Logos and photos are stored with Cloudinary (a media storage provider).</li>
+      </ul>
+
+      <h3 class="text-xl font-bold text-blue-900">4) Payments</h3>
+      <p>
+        Payments are handled by LemonSqueezy. We do not store full payment card details on our servers. LemonSqueezy may collect and process
+        payment information according to their policies.
+      </p>
+
+      <h3 class="text-xl font-bold text-blue-900">5) Sharing of information</h3>
+      <p>
+        We share information only as needed to operate the Service:
+      </p>
+      <ul class="list-disc pl-6 space-y-2">
+        <li>With service providers that host data and media (MongoDB hosting, Cloudinary).</li>
+        <li>With payment processors/platforms (LemonSqueezy) to complete transactions and verify payment status.</li>
+        <li>If required by law or to protect rights, safety, and security.</li>
+      </ul>
+
+      <h3 class="text-xl font-bold text-blue-900">6) Data retention</h3>
+      <p>
+        We keep business records as long as needed to provide the Service. Expired subscriptions may be removed after a retention period.
+        You can request deletion at any time (see “Data deletion” below).
+      </p>
+
+      <h3 class="text-xl font-bold text-blue-900">7) Your choices & rights</h3>
+      <ul class="list-disc pl-6 space-y-2">
+        <li>You can request deletion of your business listing and related media.</li>
+        <li>You can request correction of inaccurate information.</li>
+      </ul>
+
+      <h3 class="text-xl font-bold text-blue-900">8) Data deletion requests</h3>
+      <p>
+        To request deletion, use our Data Deletion page:
+        <a href="delete.html" class="text-blue-700 underline font-semibold">Delete data</a>.
+      </p>
+
+      <h3 class="text-xl font-bold text-blue-900">9) Contact</h3>
+      <p>
+        If you have questions, contact us via:
+        <a href="contact.html" class="text-blue-700 underline font-semibold">Contact page</a>.
+      </p>
+    </div>
+  </main>
+
+  <footer class="bg-blue-700 text-white text-center py-6 mt-10">
+    &copy; 2025 EasyFix
+  </footer>
+
+  <script>
+    // put a real date when you publish if you want
+    document.getElementById("lastUpdated").textContent = new Date().toISOString().slice(0, 10);
+  </script>
+</body>
+</html>

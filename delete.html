@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EasyFix - Data Deletion</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-16.png" sizes="16x16">
+  <link rel="apple-touch-icon" href="easyfix-icons-pack/apple-touch-icon.png">
+  <meta name="theme-color" content="#1d4ed8">
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+  <header class="bg-blue-700 text-white py-6 shadow-md">
+    <div class="container mx-auto px-4 flex items-center justify-between">
+      <h1 class="text-2xl font-extrabold">EasyFix</h1>
+      <a href="index.html" class="underline">Back to Home</a>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-10 max-w-2xl">
+    <h2 class="text-3xl font-bold text-blue-900 mb-2">Data Deletion Request</h2>
+    <p class="text-gray-700 mb-6">
+      If you want your business listing and related data removed from EasyFix, submit a deletion request below.
+    </p>
+
+    <div class="bg-white rounded-xl shadow p-6 space-y-4">
+      <div class="text-sm text-gray-600">
+        <p><b>What will be deleted:</b> business listing details and associated uploaded media (logo/photos) when applicable.</p>
+        <p><b>Processing time:</b> typically within 7 days.</p>
+      </div>
+
+      <form id="delForm" class="space-y-4">
+        <div>
+          <label class="font-semibold">Business email used for registration</label>
+          <input id="delEmail" type="email" required class="w-full border p-3 rounded-lg" placeholder="email@company.com" />
+        </div>
+
+        <div>
+          <label class="font-semibold">Reason (optional)</label>
+          <textarea id="delReason" rows="4" class="w-full border p-3 rounded-lg" placeholder="Optional..."></textarea>
+        </div>
+
+        <button class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold">
+          Submit deletion request
+        </button>
+      </form>
+
+      <div id="msg" class="hidden rounded-lg p-3 text-sm"></div>
+
+      <div class="text-xs text-gray-500 pt-2">
+        Note: This page registers a deletion request. If you need immediate action, contact us via
+        <a href="contact.html" class="underline text-blue-700">Contact</a>.
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-blue-700 text-white text-center py-6 mt-10">
+    &copy; 2025 EasyFix
+  </footer>
+
+  <script>
+    // Minimal: log request locally + mailto fallback.
+    // Later we will replace this with a real API endpoint (/delete-request).
+    const form = document.getElementById("delForm");
+    const msg = document.getElementById("msg");
+
+    function show(kind, text) {
+      msg.classList.remove("hidden");
+      msg.className = "rounded-lg p-3 text-sm " + (kind === "ok"
+        ? "bg-green-50 text-green-700 border border-green-200"
+        : "bg-red-50 text-red-700 border border-red-200");
+      msg.textContent = text;
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = document.getElementById("delEmail").value.trim();
+      const reason = document.getElementById("delReason").value.trim();
+
+      if (!email) {
+        show("err", "Please enter a valid email.");
+        return;
+      }
+
+      // Immediate fallback: open email client (works everywhere)
+      const subject = encodeURIComponent("EasyFix Data Deletion Request");
+      const body = encodeURIComponent(
+        `Please delete my EasyFix business listing.\n\nEmail: ${email}\nReason: ${reason || "-"}\n\nThanks.`
+      );
+
+      show("ok", "Request prepared. If your mail app doesn't open, please contact us manually via Contact page.");
+
+      // Change support email later if you want
+      window.location.href = `mailto:support@easyfix.mk?subject=${subject}&body=${body}`;
+    });
+  </script>
+</body>
+</html>

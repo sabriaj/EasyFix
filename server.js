@@ -5,11 +5,40 @@ import dotenv from "dotenv";
 import crypto from "crypto";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
+import { Resend } from "resend";
+
 
 dotenv.config();
 
 const app = express();
 app.use(cors());
+
+
+
+
+
+/* ================= resend email ================= */
+const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
+const RESEND_FROM = String(process.env.RESEND_FROM || "").trim(); // p.sh. EasyFix <no-reply@easyfix.services>
+const RESEND_REPLY_TO = String(process.env.RESEND_REPLY_TO || "").trim();
+const FRONTEND_BASE_URL = String(process.env.FRONTEND_BASE_URL || "http://easyfix.services").replace(/\/+$/, "");
+
+const resend = (RESEND_API_KEY && RESEND_FROM) ? new Resend(RESEND_API_KEY) : null;
+
+async function sendMail({ to, subject, html, text }) {
+  if (!resend) throw new Error("Resend not configured (missing RESEND_API_KEY or RESEND_FROM)");
+  await resend.emails.send({
+    from: RESEND_FROM,
+    to,
+    subject,
+    html,
+    text,
+    ...(RESEND_REPLY_TO ? { replyTo: RESEND_REPLY_TO } : {}),
+  });
+}
+
+
+
 
 /* ================= CONFIG ================= */
 const PORT = process.env.PORT || 5000;
@@ -64,6 +93,48 @@ function normalizeEmail(e) {
   return String(e || "").trim().toLowerCase();
 }
 
+  function sha256Hex(s) {
+  return crypto.createHash("sha256").update(String(s)).digest("hex");
+}
+
+function makeToken() {
+  return crypto.randomBytes(32).toString("hex"); // 64 chars
+}
+
+function cloudinaryPublicIdFromUrl(url) {
+  try {
+    const u = new URL(url);
+    const parts = u.pathname.split("/");
+
+    // find "upload"
+    const idx = parts.findIndex(p => p === "upload");
+    if (idx === -1) return null;
+
+    // everything after upload/ (skip version v123)
+    let rest = parts.slice(idx + 1).join("/");
+    rest = rest.replace(/^v\d+\//, ""); // remove v123/
+
+    // remove extension
+    rest = rest.replace(/\.[a-zA-Z0-9]+$/, "");
+
+    return rest || null; // includes folder path
+  } catch {
+    return null;
+  }
+}
+
+async function deleteCloudinaryByUrl(url) {
+  const pid = cloudinaryPublicIdFromUrl(url);
+  if (!pid) return;
+  try {
+    await cloudinary.uploader.destroy(pid, { resource_type: "image" });
+  } catch (e) {
+    // mos e ndal deletion komplet nëse cloudinary failon
+    errorWithTime("Cloudinary delete failed:", pid, e?.message || e);
+  }
+}
+
+
 function normalizeCountry(raw) {
   const c = String(raw || "").trim().toUpperCase();
   if (/^[A-Z]{2}$/.test(c)) return c;
@@ -99,6 +170,14 @@ function normalizePhone(raw) {
 /* ================= SCHEMA ================= */
 const firmaSchema = new mongoose.Schema(
   {
+
+        // === OWNER SELF-SERVICE TOKENS (magic links) ===
+    owner_token_hash: String,
+    owner_token_expires: Date,
+
+    delete_token_hash: String,
+    delete_token_expires: Date,
+
     name: String,
     email: { type: String, unique: true, required: true },
     phone: String, // E.164 +...
@@ -448,6 +527,214 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 
 /* ================= JSON (AFTER WEBHOOK) ================= */
 app.use(express.json());
+
+
+app.post("/delete-request", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const reason = String(req.body?.reason || "").slice(0, 500);
+
+    if (!email) {
+      return res.status(400).json({ success: false, error: "Missing email" });
+    }
+
+    // Mos e zbulo nëse ekziston ose jo (anti-abuse)
+    const firm = await Firma.findOne({ email });
+
+    if (!firm) {
+      return res.json({ success: true, message: "If this email exists, we sent a confirmation link." });
+    }
+
+    const token = makeToken();
+    const tokenHash = sha256Hex(token);
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 orë
+
+    await Firma.updateOne(
+      { _id: firm._id },
+      { $set: { delete_token_hash: tokenHash, delete_token_expires: expires } }
+    );
+
+    const confirmUrl = `${FRONTEND_BASE_URL}/delete-confirm.html?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+
+    const subject = "EasyFix – Confirm data deletion";
+    const html = `
+      <div style="font-family:Arial,sans-serif;line-height:1.5">
+        <h2>Confirm deletion request</h2>
+        <p>We received a request to delete the EasyFix business listing for:</p>
+        <p><b>${email}</b></p>
+        ${reason ? `<p><b>Reason:</b> ${reason.replace(/</g,"&lt;")}</p>` : ""}
+        <p>This link expires in 1 hour.</p>
+        <p><a href="${confirmUrl}" style="display:inline-block;padding:10px 14px;background:#1d4ed8;color:#fff;border-radius:8px;text-decoration:none;font-weight:700">Confirm deletion</a></p>
+        <p>If you did not request this, ignore this email.</p>
+      </div>
+    `;
+    const text = `Confirm deletion: ${confirmUrl}\nEmail: ${email}\nExpires: 1 hour`;
+
+    await sendMail({ to: email, subject, html, text });
+
+    return res.json({ success: true, message: "Confirmation link sent to email." });
+  } catch (err) {
+    errorWithTime("DELETE-REQUEST ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+
+
+app.post("/delete-confirm", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const token = String(req.body?.token || "").trim();
+
+    if (!email || !token) {
+      return res.status(400).json({ success: false, error: "Missing email/token" });
+    }
+
+    const tokenHash = sha256Hex(token);
+
+    const firm = await Firma.findOne({
+      email,
+      delete_token_hash: tokenHash,
+      delete_token_expires: { $gt: new Date() },
+    });
+
+    if (!firm) {
+      return res.status(400).json({ success: false, error: "Invalid or expired token" });
+    }
+
+    // fshi media në cloudinary (best-effort)
+    const urls = [];
+    if (firm.logoUrl) urls.push(firm.logoUrl);
+    if (Array.isArray(firm.photos)) urls.push(...firm.photos);
+
+    for (const u of urls) {
+      await deleteCloudinaryByUrl(u);
+    }
+
+    // fshi firmën
+    await Firma.deleteOne({ _id: firm._id });
+
+    return res.json({ success: true, message: "Deleted." });
+  } catch (err) {
+    errorWithTime("DELETE-CONFIRM ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+
+app.post("/owner/request-link", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    if (!email) return res.status(400).json({ success: false, error: "Missing email" });
+
+    const firm = await Firma.findOne({ email });
+    if (!firm) {
+      return res.json({ success: true, message: "If this email exists, we sent a link." });
+    }
+
+    const token = makeToken();
+    const tokenHash = sha256Hex(token);
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 orë
+
+    await Firma.updateOne(
+      { _id: firm._id },
+      { $set: { owner_token_hash: tokenHash, owner_token_expires: expires } }
+    );
+
+    const manageUrl = `${FRONTEND_BASE_URL}/manage.html?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+
+    await sendMail({
+      to: email,
+      subject: "EasyFix – Manage your business listing",
+      html: `<div style="font-family:Arial,sans-serif;line-height:1.5">
+        <h2>Manage your listing</h2>
+        <p>Open this link to update your business info. Expires in 1 hour.</p>
+        <p><a href="${manageUrl}" style="display:inline-block;padding:10px 14px;background:#1d4ed8;color:#fff;border-radius:8px;text-decoration:none;font-weight:700">Open manage page</a></p>
+      </div>`,
+      text: `Manage link: ${manageUrl}`,
+    });
+
+    return res.json({ success: true, message: "Manage link sent." });
+  } catch (err) {
+    errorWithTime("OWNER REQUEST LINK ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+
+
+app.get("/owner/me", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.query.email);
+    const token = String(req.query.token || "").trim();
+    if (!email || !token) return res.status(400).json({ success: false, error: "Missing email/token" });
+
+    const tokenHash = sha256Hex(token);
+
+    const firm = await Firma.findOne({
+      email,
+      owner_token_hash: tokenHash,
+      owner_token_expires: { $gt: new Date() },
+    }).select("-__v").lean();
+
+    if (!firm) return res.status(400).json({ success: false, error: "Invalid or expired token" });
+
+    return res.json({ success: true, firm });
+  } catch (err) {
+    errorWithTime("OWNER ME ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+
+app.put("/owner/update", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const token = String(req.body?.token || "").trim();
+    if (!email || !token) return res.status(400).json({ success: false, error: "Missing email/token" });
+
+    const tokenHash = sha256Hex(token);
+
+    const firm = await Firma.findOne({
+      email,
+      owner_token_hash: tokenHash,
+      owner_token_expires: { $gt: new Date() },
+    });
+
+    if (!firm) return res.status(400).json({ success: false, error: "Invalid or expired token" });
+
+    // allow vetëm këto (text-only për tani)
+const patch = {};
+const allow = ["name", "phone", "address", "category", "country"];
+for (const k of allow) {
+  if (req.body?.[k] !== undefined) patch[k] = String(req.body[k]).trim();
+}
+
+if (patch.phone !== undefined) {
+  const phoneNorm = normalizePhone(patch.phone);
+  if (!phoneNorm) return res.status(400).json({ success: false, error: "Invalid phone" });
+  patch.phone = phoneNorm;
+}
+
+if (patch.country !== undefined) {
+  patch.country = normalizeCountry(patch.country);
+}
+
+
+    // update
+    const updated = await Firma.findByIdAndUpdate(
+      firm._id,
+      { $set: patch },
+      { new: true }
+    ).select("-__v").lean();
+
+    return res.json({ success: true, firm: updated });
+  } catch (err) {
+    errorWithTime("OWNER UPDATE ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
 
 /* ================= HEALTH ================= */
 app.get("/health", (req, res) => {

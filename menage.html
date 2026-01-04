@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EasyFix - Manage Listing</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+  <meta name="theme-color" content="#1d4ed8">
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+  <header class="bg-blue-700 text-white py-6 shadow-md">
+    <div class="container mx-auto px-4 flex items-center justify-between">
+      <h1 class="text-2xl font-extrabold">EasyFix</h1>
+      <div class="text-sm opacity-95 flex gap-4">
+        <a href="privacy.html" class="underline">Privacy Policy</a>
+        <a href="index.html" class="underline">Back to Home</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-10 max-w-2xl">
+    <h2 class="text-3xl font-bold text-blue-900 mb-2">Manage your listing</h2>
+    <p class="text-gray-700 mb-6">
+      Request a secure management link to update your business details.
+    </p>
+
+    <div id="msg" class="hidden rounded-lg p-3 text-sm mb-4"></div>
+
+    <!-- REQUEST LINK -->
+    <div class="bg-white rounded-xl shadow p-6 space-y-4" id="requestCard">
+      <h3 class="text-xl font-bold text-blue-900">Request management link</h3>
+      <div>
+        <label class="font-semibold">Business email</label>
+        <input id="reqEmail" type="email" class="w-full border p-3 rounded-lg" placeholder="email@company.com" />
+      </div>
+      <button id="reqBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold">
+        Send link to my email
+      </button>
+      <p class="text-xs text-gray-500">
+        If this email exists in our system, we will send a link that expires in 1 hour.
+      </p>
+      <div class="text-xs text-gray-500 pt-2">
+        Want to delete your listing? Use <a class="underline text-blue-700" href="delete.html">Data Deletion</a>.
+      </div>
+    </div>
+
+    <!-- EDIT FORM -->
+    <div class="bg-white rounded-xl shadow p-6 space-y-4 hidden" id="editCard">
+      <h3 class="text-xl font-bold text-blue-900">Update details</h3>
+
+      <div class="border rounded-lg p-4 bg-gray-50">
+        <div class="text-sm text-gray-600">Verified listing</div>
+        <div class="font-bold text-lg" id="firmName">—</div>
+        <div class="text-sm text-gray-700" id="firmEmail">—</div>
+        <div class="text-sm text-gray-700" id="firmPlan">—</div>
+        <div class="text-sm text-gray-700" id="firmStatus">—</div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3">
+        <input id="uName" class="w-full border p-3 rounded-lg" placeholder="Company name">
+        <input id="uPhone" class="w-full border p-3 rounded-lg" placeholder="Phone (E.164, e.g. +389...)">
+        <input id="uAddress" class="w-full border p-3 rounded-lg" placeholder="Address">
+        <input id="uCategory" class="w-full border p-3 rounded-lg" placeholder="Category key (e.g. electrician)">
+        <input id="uCountry" class="w-full border p-3 rounded-lg" placeholder="Country ISO2 (e.g. MK)">
+
+        <button id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold">
+          Save updates
+        </button>
+      </div>
+
+      <button id="logoutBtn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-900 py-3 rounded-xl font-bold">
+        Log out
+      </button>
+
+      <div class="text-xs text-gray-500 pt-2">
+        Deletion is done via email confirmation: <a class="underline text-blue-700" href="delete.html">Data Deletion</a>.
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-blue-700 text-white text-center py-6 mt-10">
+    &copy; 2025 EasyFix
+  </footer>
+
+  <script>
+    const API_URL = "https://easyfix.onrender.com";
+
+    const msg = document.getElementById("msg");
+    const requestCard = document.getElementById("requestCard");
+    const editCard = document.getElementById("editCard");
+
+    const reqEmail = document.getElementById("reqEmail");
+    const reqBtn = document.getElementById("reqBtn");
+
+    const firmName = document.getElementById("firmName");
+    const firmEmail = document.getElementById("firmEmail");
+    const firmPlan = document.getElementById("firmPlan");
+    const firmStatus = document.getElementById("firmStatus");
+
+    const uName = document.getElementById("uName");
+    const uPhone = document.getElementById("uPhone");
+    const uAddress = document.getElementById("uAddress");
+    const uCategory = document.getElementById("uCategory");
+    const uCountry = document.getElementById("uCountry");
+
+    const saveBtn = document.getElementById("saveBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    function show(kind, text) {
+      msg.classList.remove("hidden");
+      msg.className = "rounded-lg p-3 text-sm mb-4 " + (kind === "ok"
+        ? "bg-green-50 text-green-700 border border-green-200"
+        : "bg-red-50 text-red-700 border border-red-200");
+      msg.textContent = text;
+    }
+
+    function clearMsg() {
+      msg.classList.add("hidden");
+      msg.textContent = "";
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    let email = (params.get("email") || "").trim();
+    let token = (params.get("token") || "").trim();
+
+    async function requestLink() {
+      clearMsg();
+      const em = reqEmail.value.trim();
+      if (!em) return show("err", "Please enter a valid email.");
+
+      reqBtn.disabled = true;
+      reqBtn.classList.add("opacity-70");
+      show("ok", "Sending link...");
+
+      try {
+        const r = await fetch(`${API_URL}/owner/request-link`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: em })
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.success) {
+          show("err", j?.error || "Request failed.");
+          return;
+        }
+        show("ok", "If this email exists, we sent a management link. Check your inbox (and spam).");
+      } catch (e) {
+        show("err", "Network error. Please try again.");
+      } finally {
+        reqBtn.disabled = false;
+        reqBtn.classList.remove("opacity-70");
+      }
+    }
+
+    reqBtn.addEventListener("click", requestLink);
+
+    async function loadMe() {
+      clearMsg();
+      show("ok", "Verifying link...");
+
+      try {
+        const url = `${API_URL}/owner/me?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+        const r = await fetch(url);
+        const j = await r.json().catch(() => ({}));
+
+        if (!r.ok || !j.success || !j.firm) {
+          show("err", j?.error || "Invalid or expired link. Request a new one.");
+          requestCard.classList.remove("hidden");
+          editCard.classList.add("hidden");
+          return;
+        }
+
+        const f = j.firm;
+
+        firmName.textContent = f.name || "—";
+        firmEmail.textContent = f.email || "—";
+        firmPlan.textContent = `Plan: ${(f.plan || "basic")}`;
+        firmStatus.textContent = `Status: ${(f.payment_status || "pending")}`;
+
+        uName.value = f.name || "";
+        uPhone.value = f.phone || "";
+        uAddress.value = f.address || "";
+        uCategory.value = f.category || "";
+        uCountry.value = f.country || "";
+
+        requestCard.classList.add("hidden");
+        editCard.classList.remove("hidden");
+        show("ok", "Verified. You can update your data.");
+      } catch (e) {
+        show("err", "Network error. Please try again.");
+        requestCard.classList.remove("hidden");
+        editCard.classList.add("hidden");
+      }
+    }
+
+    async function saveUpdates() {
+      clearMsg();
+
+      saveBtn.disabled = true;
+      saveBtn.classList.add("opacity-70");
+      show("ok", "Saving...");
+
+      const payload = {
+        email,
+        token,
+        name: uName.value.trim(),
+        phone: uPhone.value.trim(),
+        address: uAddress.value.trim(),
+        category: uCategory.value.trim(),
+        country: uCountry.value.trim(),
+      };
+
+      try {
+        const r = await fetch(`${API_URL}/owner/update`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.success) {
+          show("err", j?.error || "Update failed.");
+          return;
+        }
+
+        const f = j.firm || {};
+        firmName.textContent = f.name || firmName.textContent;
+        show("ok", "Updated successfully.");
+      } catch (e) {
+        show("err", "Network error. Please try again.");
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.classList.remove("opacity-70");
+      }
+    }
+
+    saveBtn.addEventListener("click", saveUpdates);
+
+    logoutBtn.addEventListener("click", () => {
+      // “logout” = hiq query params
+      window.location.href = "manage.html";
+    });
+
+    // Auto mode: if opened from email with token
+    if (email && token) {
+      requestCard.classList.add("hidden");
+      editCard.classList.remove("hidden");
+      loadMe();
+    } else {
+      requestCard.classList.remove("hidden");
+      editCard.classList.add("hidden");
+    }
+  </script>
+</body>
+</html>

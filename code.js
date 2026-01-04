@@ -131,6 +131,16 @@ function initPhoneInput() {
   });
 }
 
+
+
+const agree = document.getElementById("agreePrivacy");
+if (agree && !agree.checked) {
+  showStatus("Please accept the Privacy Policy.", "error");
+  return;
+}
+
+ 
+
 /* ===================== SUBMIT ===================== */
 const form = $("#registerForm");
 form.addEventListener("submit", async (e) => {

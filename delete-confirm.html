@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EasyFix - Confirm Deletion</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+  <meta name="theme-color" content="#1d4ed8">
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <header class="bg-blue-700 text-white py-6 shadow-md">
+    <div class="container mx-auto px-4 flex items-center justify-between">
+      <h1 class="text-2xl font-extrabold">EasyFix</h1>
+      <a href="index.html" class="underline">Back to Home</a>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-10 max-w-2xl">
+    <h2 class="text-3xl font-bold text-blue-900 mb-2">Confirm deletion</h2>
+    <p class="text-gray-700 mb-6">
+      This will permanently delete your listing. If you did not request this, close this page.
+    </p>
+
+    <div id="msg" class="hidden rounded-lg p-3 text-sm mb-4"></div>
+
+    <div class="bg-white rounded-xl shadow p-6 space-y-4">
+      <div class="text-sm text-gray-700">
+        <div><b>Email:</b> <span id="emailLabel">—</span></div>
+        <div class="text-xs text-gray-500 mt-2">If the link is expired, request a new one from <a class="underline text-blue-700" href="delete.html">Data Deletion</a>.</div>
+      </div>
+
+      <button id="confirmBtn" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold">
+        Confirm and delete my listing
+      </button>
+
+      <a href="index.html" class="block text-center text-sm underline text-blue-700">Cancel</a>
+    </div>
+  </main>
+
+  <footer class="bg-blue-700 text-white text-center py-6 mt-10">
+    &copy; 2025 EasyFix
+  </footer>
+
+  <script>
+    const API_URL = "https://easyfix.onrender.com";
+    const msg = document.getElementById("msg");
+    const emailLabel = document.getElementById("emailLabel");
+    const confirmBtn = document.getElementById("confirmBtn");
+
+    function show(kind, text) {
+      msg.classList.remove("hidden");
+      msg.className = "rounded-lg p-3 text-sm mb-4 " + (kind === "ok"
+        ? "bg-green-50 text-green-700 border border-green-200"
+        : "bg-red-50 text-red-700 border border-red-200");
+      msg.textContent = text;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const email = (params.get("email") || "").trim();
+    const token = (params.get("token") || "").trim();
+    emailLabel.textContent = email || "—";
+
+    if (!email || !token) {
+      confirmBtn.disabled = true;
+      confirmBtn.classList.add("opacity-60");
+      show("err", "Missing email or token. Please request a new deletion link.");
+    }
+
+    confirmBtn.addEventListener("click", async () => {
+      if (!email || !token) return;
+
+      confirmBtn.disabled = true;
+      confirmBtn.classList.add("opacity-70");
+      show("ok", "Deleting...");
+
+      try {
+        const r = await fetch(`${API_URL}/delete-confirm`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, token })
+        });
+
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.success) {
+          show("err", j?.error || "Deletion failed.");
+          confirmBtn.disabled = false;
+          confirmBtn.classList.remove("opacity-70");
+          return;
+        }
+
+        show("ok", "Deleted successfully. You can close this page.");
+        confirmBtn.textContent = "Deleted";
+      } catch (e) {
+        show("err", "Network error. Please try again.");
+        confirmBtn.disabled = false;
+        confirmBtn.classList.remove("opacity-70");
+      }
+    });
+  </script>
+</body>
+</html>

@@ -72,7 +72,9 @@
             aria-expanded="false"
             title="Language"
           >
-            <span id="langFlag" class="text-base leading-none">🇦🇱</span>
+            <span id="langFlag" class="inline-flex items-center">
+              <img id="langFlagImg" alt="" class="w-5 h-5 rounded-sm shadow-sm" />
+            </span>
             <span id="langLabel" class="hidden sm:inline">Shqip</span>
             <svg class="w-4 h-4 opacity-90" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.24 4.5a.75.75 0 0 1-1.08 0l-4.24-4.5a.75.75 0 0 1 .02-1.06z" clip-rule="evenodd"/>
@@ -86,15 +88,15 @@
             aria-label="Language menu"
           >
             <button type="button" data-lang="sq" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left" role="menuitem">
-              <span class="text-lg">🇦🇱</span>
+              <img data-flag="sq" alt="" class="w-5 h-5 rounded-sm shadow-sm" />
               <span class="font-semibold">Shqip</span>
             </button>
             <button type="button" data-lang="mk" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left" role="menuitem">
-              <span class="text-lg">🇲🇰</span>
+              <img data-flag="mk" alt="" class="w-5 h-5 rounded-sm shadow-sm" />
               <span class="font-semibold">Македонски</span>
             </button>
             <button type="button" data-lang="en" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left" role="menuitem">
-              <span class="text-lg">🇬🇧</span>
+              <img data-flag="en" alt="" class="w-5 h-5 rounded-sm shadow-sm" />
               <span class="font-semibold">English</span>
             </button>
           </div>
@@ -217,19 +219,34 @@ const { getLang, setLang, t, applyTranslations, normalizeCategoryKey, categoryLa
 /* ===== language dropdown (ONLY index) ===== */
 const langBtn = document.getElementById("langBtn");
 const langMenu = document.getElementById("langMenu");
-const langFlag = document.getElementById("langFlag");
 const langLabel = document.getElementById("langLabel");
+const langFlagImg = document.getElementById("langFlagImg");
 
 const LANG_META = {
-  sq: { flag: "🇦🇱", label: "Shqip" },
-  mk: { flag: "🇲🇰", label: "Македонски" },
-  en: { flag: "🇬🇧", label: "English" },
+  sq: { flagUrl: "https://flagcdn.com/w40/al.png", label: "Shqip" },
+  mk: { flagUrl: "https://flagcdn.com/w40/mk.png", label: "Македонски" },
+  en: { flagUrl: "https://flagcdn.com/w40/gb.png", label: "English" },
 };
 
 function renderLangUI() {
   const current = (getLang && getLang()) ? getLang() : "sq";
   const meta = LANG_META[current] || LANG_META.sq;
-  if (langFlag) langFlag.textContent = meta.flag;
+
+  if (langFlagImg) {
+    langFlagImg.src = meta.flagUrl;
+    langFlagImg.alt = current.toUpperCase();
+    langFlagImg.referrerPolicy = "no-referrer";
+  }
+
+  document.querySelectorAll("#langMenu img[data-flag]").forEach(img => {
+    const code = img.getAttribute("data-flag");
+    const m = LANG_META[code];
+    if (!m) return;
+    img.src = m.flagUrl;
+    img.alt = code.toUpperCase();
+    img.referrerPolicy = "no-referrer";
+  });
+
   if (langLabel) langLabel.textContent = meta.label;
 }
 

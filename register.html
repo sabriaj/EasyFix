@@ -40,13 +40,6 @@
     <div class="container mx-auto px-4 flex justify-between items-center">
       <div class="flex items-center gap-3">
         <h1 class="text-3xl font-extrabold">EasyFix</h1>
-
-        <!-- Language Switch (NEW) -->
-        <div class="flex items-center gap-1">
-          <button id="langSQ" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">SQ</button>
-          <button id="langMK" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">MK</button>
-          <button id="langEN" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">EN</button>
-        </div>
       </div>
 
       <nav>
@@ -160,34 +153,22 @@
       </button>
     </form>
 
-    
-
     <div class="text-sm text-gray-600 mt-3">
-  <label class="flex items-start gap-2">
-    <input id="agreePrivacy" type="checkbox" class="mt-1" required>
-    <span>
-      I agree to the <a href="privacy.html" class="text-blue-700 underline font-semibold">Privacy Policy</a>.
-    </span>
-  </label>
-</div>
-
+      <label class="flex items-start gap-2">
+        <input id="agreePrivacy" type="checkbox" class="mt-1" required>
+        <span>
+          I agree to the <a href="privacy.html" class="text-blue-700 underline font-semibold">Privacy Policy</a>.
+        </span>
+      </label>
+    </div>
 
   </section>
 
-  <!-- Small i18n init for this page -->
+  <!-- i18n init (auto language from localStorage) -->
   <script>
     window.addEventListener("DOMContentLoaded", () => {
-      const { applyTranslations, setLang, setLangButtonsUI } = window.EASYFIX_I18N;
-
-      function wire() {
-        document.getElementById("langSQ")?.addEventListener("click", () => { setLang("sq"); applyTranslations(); setLangButtonsUI(); });
-        document.getElementById("langMK")?.addEventListener("click", () => { setLang("mk"); applyTranslations(); setLangButtonsUI(); });
-        document.getElementById("langEN")?.addEventListener("click", () => { setLang("en"); applyTranslations(); setLangButtonsUI(); });
-      }
-
+      const { applyTranslations } = window.EASYFIX_I18N;
       applyTranslations();
-      setLangButtonsUI();
-      wire();
     });
   </script>
 

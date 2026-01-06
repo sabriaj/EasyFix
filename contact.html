@@ -29,13 +29,6 @@
     <span data-i18n="back">Kthehu mbrapa</span>
   </a>
 
-  <!-- Language Switch (NEW) -->
-  <div class="fixed top-4 left-4 flex gap-1">
-    <button id="langSQ" type="button" class="text-xs font-bold bg-blue-700/80 text-white px-2 py-1 rounded hover:bg-blue-700">SQ</button>
-    <button id="langMK" type="button" class="text-xs font-bold bg-blue-700/80 text-white px-2 py-1 rounded hover:bg-blue-700">MK</button>
-    <button id="langEN" type="button" class="text-xs font-bold bg-blue-700/80 text-white px-2 py-1 rounded hover:bg-blue-700">EN</button>
-  </div>
-
   <section class="w-full max-w-lg p-6 bg-white/30 backdrop-blur-md rounded-xl shadow-lg">
     <h2 class="text-3xl font-bold mb-6 text-center text-blue-800" data-i18n="contact_title">Kontakto EasyFix</h2>
 
@@ -72,17 +65,11 @@
   </section>
 
   <script>
-    const { t, setLang, applyTranslations, setLangButtonsUI } = window.EASYFIX_I18N;
+    const { t, applyTranslations } = window.EASYFIX_I18N;
 
     (function(){
       emailjs.init("Uims-s6JtgzeiZc-G");
     })();
-
-    function wireLang() {
-      document.getElementById("langSQ")?.addEventListener("click", () => { setLang("sq"); applyTranslations(); setLangButtonsUI(); });
-      document.getElementById("langMK")?.addEventListener("click", () => { setLang("mk"); applyTranslations(); setLangButtonsUI(); });
-      document.getElementById("langEN")?.addEventListener("click", () => { setLang("en"); applyTranslations(); setLangButtonsUI(); });
-    }
 
     document.getElementById('contactForm').addEventListener('submit', function(event){
       event.preventDefault();
@@ -92,9 +79,8 @@
         .catch(err => alert(t("sent_err", { err: JSON.stringify(err) })));
     });
 
+    // auto language from localStorage
     applyTranslations();
-    setLangButtonsUI();
-    wireLang();
   </script>
 
 </body>

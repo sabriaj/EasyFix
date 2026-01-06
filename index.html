@@ -55,15 +55,6 @@
 
 <body class="bg-gray-50 min-h-screen flex flex-col">
 
-
-  
-  <div class="text-sm opacity-90">
-  <a class="underline" href="privacy.html">Privacy Policy</a>
-  <span class="mx-2">•</span>
-  <a class="underline" href="delete.html">Data Deletion</a>
-</div>
-
-
   <!-- Header (responsive për mobile) -->
   <header class="bg-blue-700 text-white shadow-md">
     <div class="container mx-auto px-4 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -71,11 +62,42 @@
         <h1 class="text-3xl font-extrabold tracking-tight">EasyFix</h1>
         <span id="countryPill" class="hidden text-xs font-bold bg-white/20 px-2 py-1 rounded-full"></span>
 
-        <!-- Language Switch (NEW) -->
-        <div class="flex items-center gap-1 ml-1">
-          <button id="langSQ" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">SQ</button>
-          <button id="langMK" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">MK</button>
-          <button id="langEN" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">EN</button>
+        <!-- Language Dropdown (ONLY here) -->
+        <div class="relative ml-1" id="langDropdown">
+          <button
+            id="langBtn"
+            type="button"
+            class="flex items-center gap-2 text-xs sm:text-sm font-bold bg-white/15 hover:bg-white/25 px-3 py-2 rounded-lg"
+            aria-haspopup="true"
+            aria-expanded="false"
+            title="Language"
+          >
+            <span id="langFlag" class="text-base leading-none">🇦🇱</span>
+            <span id="langLabel" class="hidden sm:inline">Shqip</span>
+            <svg class="w-4 h-4 opacity-90" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.24 4.5a.75.75 0 0 1-1.08 0l-4.24-4.5a.75.75 0 0 1 .02-1.06z" clip-rule="evenodd"/>
+            </svg>
+          </button>
+
+          <div
+            id="langMenu"
+            class="hidden absolute left-0 mt-2 w-48 rounded-xl bg-white text-gray-900 shadow-lg ring-1 ring-black/10 overflow-hidden z-50"
+            role="menu"
+            aria-label="Language menu"
+          >
+            <button type="button" data-lang="sq" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left" role="menuitem">
+              <span class="text-lg">🇦🇱</span>
+              <span class="font-semibold">Shqip</span>
+            </button>
+            <button type="button" data-lang="mk" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left" role="menuitem">
+              <span class="text-lg">🇲🇰</span>
+              <span class="font-semibold">Македонски</span>
+            </button>
+            <button type="button" data-lang="en" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left" role="menuitem">
+              <span class="text-lg">🇬🇧</span>
+              <span class="font-semibold">English</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -138,8 +160,18 @@
     </section>
   </main>
 
-  <footer class="bg-blue-700 text-white text-center py-6 mt-auto" data-i18n="footer">
-    &copy; 2025 EasyFix.services - Ndihma për çdo shtëpi
+  <!-- Footer -->
+  <footer class="bg-blue-700 text-white text-center py-6 mt-auto">
+    <!-- Links moved to bottom -->
+    <div class="text-sm opacity-95 mb-2 flex items-center justify-center gap-2 flex-wrap">
+      <a class="underline hover:opacity-90" href="privacy.html">Privacy Policy</a>
+      <span class="opacity-80">•</span>
+      <a class="underline hover:opacity-90" href="delete.html">Data Deletion</a>
+    </div>
+
+    <div data-i18n="footer">
+      &copy; 2025 EasyFix.services - Ndihma për çdo shtëpi
+    </div>
   </footer>
 
   <!-- MODAL -->
@@ -180,7 +212,71 @@ const topStatus = document.getElementById("topStatus");
 const loadingGrid = document.getElementById("loadingGrid");
 
 // i18n (NEW)
-const { getLang, setLang, t, applyTranslations, normalizeCategoryKey, categoryLabel, setLangButtonsUI } = window.EASYFIX_I18N;
+const { getLang, setLang, t, applyTranslations, normalizeCategoryKey, categoryLabel } = window.EASYFIX_I18N;
+
+/* ===== language dropdown (ONLY index) ===== */
+const langBtn = document.getElementById("langBtn");
+const langMenu = document.getElementById("langMenu");
+const langFlag = document.getElementById("langFlag");
+const langLabel = document.getElementById("langLabel");
+
+const LANG_META = {
+  sq: { flag: "🇦🇱", label: "Shqip" },
+  mk: { flag: "🇲🇰", label: "Македонски" },
+  en: { flag: "🇬🇧", label: "English" },
+};
+
+function renderLangUI() {
+  const current = (getLang && getLang()) ? getLang() : "sq";
+  const meta = LANG_META[current] || LANG_META.sq;
+  if (langFlag) langFlag.textContent = meta.flag;
+  if (langLabel) langLabel.textContent = meta.label;
+}
+
+function openLangMenu() {
+  if (!langMenu) return;
+  langMenu.classList.remove("hidden");
+  langBtn?.setAttribute("aria-expanded", "true");
+}
+
+function closeLangMenu() {
+  if (!langMenu) return;
+  langMenu.classList.add("hidden");
+  langBtn?.setAttribute("aria-expanded", "false");
+}
+
+function toggleLangMenu() {
+  if (!langMenu) return;
+  const isOpen = !langMenu.classList.contains("hidden");
+  if (isOpen) closeLangMenu();
+  else openLangMenu();
+}
+
+langBtn?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  toggleLangMenu();
+});
+
+langMenu?.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-lang]");
+  if (!btn) return;
+  const lang = btn.getAttribute("data-lang") || "sq";
+
+  setLang(lang);
+  applyTranslations();
+  renderLangUI();
+
+  // rifresko kategoritë + filtrat sipas gjuhës
+  populateCategoryFilter(allFirms);
+  filterFirms();
+
+  closeLangMenu();
+});
+
+document.addEventListener("click", () => closeLangMenu());
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeLangMenu();
+});
 
 /* ===== helpers ===== */
 function sanitize(text) { return text ? text.toString().trim() : ""; }
@@ -581,25 +677,10 @@ async function loadFirms() {
   }
 }
 
-/* ===== language switch (NEW) ===== */
-function wireLangButtons() {
-  document.getElementById("langSQ")?.addEventListener("click", () => {
-    setLang("sq"); applyTranslations(); setLangButtonsUI();
-    populateCategoryFilter(allFirms); filterFirms();
-  });
-  document.getElementById("langMK")?.addEventListener("click", () => {
-    setLang("mk"); applyTranslations(); setLangButtonsUI();
-    populateCategoryFilter(allFirms); filterFirms();
-  });
-  document.getElementById("langEN")?.addEventListener("click", () => {
-    setLang("en"); applyTranslations(); setLangButtonsUI();
-    populateCategoryFilter(allFirms); filterFirms();
-  });
-}
-
+/* ===== init ===== */
 applyTranslations();
-setLangButtonsUI();
-wireLangButtons();
+renderLangUI();
+closeLangMenu();
 
 loadFirms();
 searchInput.addEventListener("input", filterFirms);

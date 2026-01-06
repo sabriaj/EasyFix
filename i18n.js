@@ -458,22 +458,11 @@
   }
 
   function setLangButtonsUI() {
-    const lang = getLang();
-    const sq = document.getElementById("langSQ");
-    const mk = document.getElementById("langMK");
-    const en = document.getElementById("langEN");
+  // Deprecated: language UI exists only on index page (dropdown).
+  // Keep as no-op for backward compatibility.
+  return;
+}
 
-    function setBtn(btn, active) {
-      if (!btn) return;
-      btn.className =
-        "text-xs font-bold px-2 py-1 rounded " +
-        (active ? "bg-white/30" : "bg-white/15 hover:bg-white/25");
-    }
-
-    setBtn(sq, lang === "sq");
-    setBtn(mk, lang === "mk");
-    setBtn(en, lang === "en");
-  }
 
   window.EASYFIX_I18N = {
     getLang, setLang, t, applyTranslations,

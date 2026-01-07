@@ -283,7 +283,6 @@ langMenu?.addEventListener("click", (e) => {
   applyTranslations();
   renderLangUI();
 
-  // rifresko kategoritë + filtrat sipas gjuhës
   populateCategoryFilter(allFirms);
   filterFirms();
 
@@ -358,7 +357,7 @@ async function detectUserCountryCode() {
   } catch { return "MK"; }
 }
 
-/* ===== categories (NEW: works with keys + legacy strings) ===== */
+/* ===== categories ===== */
 function populateCategoryFilter(firms) {
   categorySelect.innerHTML = "";
   const optAll = document.createElement("option");
@@ -638,7 +637,7 @@ function focusFirmFromUrl() {
   setTimeout(() => el.classList.remove("focus-ring"), 6000);
 }
 
-/* ===== fetch with retry (Render cold start) ===== */
+/* ===== fetch with retry ===== */
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function fetchFirmsWithRetry(country, attempts = 4) {
@@ -674,7 +673,6 @@ async function loadFirms() {
     const data = await fetchFirmsWithRetry(country, 5);
 
     allFirms = (data || []).map(f => {
-      // NEW: normalize category key for filtering + translation
       f._catKey = normalizeCategoryKey(f.category);
       return f;
     }).sort((a, b) => {
@@ -684,9 +682,14 @@ async function loadFirms() {
 
     populateCategoryFilter(allFirms);
     renderFirms(allFirms);
-    focusFirmFromUrl();
 
     setLoading(false);
+
+    // ✅ FIX: focus after content is visible (mobile safe)
+    requestAnimationFrame(() => {
+      setTimeout(() => focusFirmFromUrl(), 60);
+    });
+
   } catch (err) {
     console.error("Gabim:", err);
     setLoading(false);

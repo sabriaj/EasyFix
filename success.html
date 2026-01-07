@@ -152,8 +152,10 @@
 
           goBtn.disabled = false;
           goBtn.onclick = () => {
-            window.location.href = `index.html?focus=${encodeURIComponent(email)}`;
-          };
+  const cc = String((firma?.country || "MK")).toUpperCase();
+  window.location.href = `index.html?country=${encodeURIComponent(cc)}&focus=${encodeURIComponent(email)}`;
+};
+
 
           return true;
         }

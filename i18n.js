@@ -11,6 +11,8 @@
       footer: "© 2025 EasyFix.services - Ndihma për çdo shtëpi",
       country: "Shteti",
       address: "Adresa",
+      city: "Qyteti",
+      city_placeholder: "p.sh. Shkup",
       phone: "Telefoni",
       email: "Email",
       category: "Kategoria",
@@ -31,6 +33,21 @@
       retry: "Provo prap",
       photos: "foto",
       not_set: "Nuk është vendosur",
+
+      // near me (NEW)
+      near_me: "Afer meje (25 km)",
+      near_me_off: "Trego te gjitha",
+      near_me_active: "Duke shfaqur vetëm firmat brenda {km} km.",
+      near_me_title: "Po kërkojmë firmat afër teje…",
+      near_me_fetching: "Kërkojmë lokacionin dhe po i ngarkojmë firmat brenda 25 km.",
+      near_me_on_title: "U aktivizua “Near me”",
+      near_me_on_desc: "Po shfaqen firmat brenda {km} km nga lokacioni yt.",
+      near_me_denied_title: "Lokacioni u refuzua",
+      near_me_denied_desc: "Lejo Location në browser/telefon, pastaj provo prap.",
+      near_me_unsupported_title: "Lokacioni s’përkrahet",
+      near_me_unsupported_desc: "Ky browser nuk e përkrah Geolocation.",
+      near_me_error_title: "Gabim te “Near me”",
+      near_me_error_desc: "S’u arrit me i ngarku firmat afër. Provo prap.",
 
       // register
       reg_title: "Regjistrimi i Firmës",
@@ -89,6 +106,7 @@
       msg_max_photos: "Mund të ngarkoni maksimum {n} foto për planin {plan}.",
       hint_valid_phone: "Numri duket valid: {e164}",
       hint_invalid_phone: "Numër telefoni jo valid për këtë shtet.",
+      msg_city_required: "Ju lutem shkruani qytetin.",
 
       // success
       thanks: "Faleminderit!",
@@ -131,6 +149,8 @@
       footer: "© 2025 EasyFix.services - Помош за секој дом",
       country: "Држава",
       address: "Адреса",
+      city: "Град",
+      city_placeholder: "пр. Скопје",
       phone: "Телефон",
       email: "Е-пошта",
       category: "Категорија",
@@ -150,6 +170,21 @@
       retry: "Пробај повторно",
       photos: "фотографии",
       not_set: "Не е поставено",
+
+      // near me (NEW)
+      near_me: "Близу мене (25 km)",
+      near_me_off: "Прикажи ги сите",
+      near_me_active: "Прикажуваме само фирми во {km} km.",
+      near_me_title: "Бараме фирми во близина…",
+      near_me_fetching: "Го земаме твојот локалитет и вчитуваме фирми во 25 km.",
+      near_me_on_title: "Активирано “Near me”",
+      near_me_on_desc: "Прикажани се фирми во {km} km од твојата локација.",
+      near_me_denied_title: "Локацијата е одбиена",
+      near_me_denied_desc: "Дозволи Location во прелистувач/телефон и пробај пак.",
+      near_me_unsupported_title: "Локацијата не е поддржана",
+      near_me_unsupported_desc: "Овој прелистувач не поддржува Geolocation.",
+      near_me_error_title: "Грешка со “Near me”",
+      near_me_error_desc: "Не успеавме да ги вчитаме блиските фирми. Пробај пак.",
 
       reg_title: "Регистрација на фирма",
       choose_plan: "Избери план",
@@ -205,6 +240,7 @@
       msg_max_photos: "Може да прикачите максимум {n} фотографии за планот {plan}.",
       hint_valid_phone: "Бројот изгледа валиден: {e164}",
       hint_invalid_phone: "Невалиден телефонски број за оваа држава.",
+      msg_city_required: "Ве молиме внесете град.",
 
       thanks: "Ви благодариме!",
       verifying_sub: "Ја проверуваме уплатата и активирањето…",
@@ -242,6 +278,8 @@
       footer: "© 2025 EasyFix.services - Help for every home",
       country: "Country",
       address: "Address",
+      city: "City",
+      city_placeholder: "e.g. Skopje",
       phone: "Phone",
       email: "Email",
       category: "Category",
@@ -261,6 +299,21 @@
       retry: "Try again",
       photos: "photos",
       not_set: "Not set",
+
+      // near me (NEW)
+      near_me: "Near me (25 km)",
+      near_me_off: "Show all",
+      near_me_active: "Showing only businesses within {km} km.",
+      near_me_title: "Finding nearby businesses…",
+      near_me_fetching: "Getting your location and loading businesses within 25 km.",
+      near_me_on_title: "“Near me” enabled",
+      near_me_on_desc: "Showing businesses within {km} km of your location.",
+      near_me_denied_title: "Location denied",
+      near_me_denied_desc: "Allow Location in your browser/phone, then try again.",
+      near_me_unsupported_title: "Location unsupported",
+      near_me_unsupported_desc: "This browser does not support Geolocation.",
+      near_me_error_title: "“Near me” error",
+      near_me_error_desc: "Could not load nearby businesses. Please try again.",
 
       reg_title: "Business Registration",
       choose_plan: "Choose a Plan",
@@ -316,6 +369,7 @@
       msg_max_photos: "You can upload up to {n} photos for the {plan} plan.",
       hint_valid_phone: "Looks valid: {e164}",
       hint_invalid_phone: "Invalid phone number for this country.",
+      msg_city_required: "Please enter the city.",
 
       thanks: "Thank you!",
       verifying_sub: "We are verifying your payment and activation…",
@@ -458,11 +512,10 @@
   }
 
   function setLangButtonsUI() {
-  // Deprecated: language UI exists only on index page (dropdown).
-  // Keep as no-op for backward compatibility.
-  return;
-}
-
+    // Deprecated: language UI exists only on index page (dropdown).
+    // Keep as no-op for backward compatibility.
+    return;
+  }
 
   window.EASYFIX_I18N = {
     getLang, setLang, t, applyTranslations,

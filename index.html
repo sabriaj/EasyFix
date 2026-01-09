@@ -8,11 +8,8 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-
   gtag('config', 'G-CWDYCJ09D8');
 </script>
-
-
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -141,7 +138,7 @@
       <!-- Status / errors -->
       <div id="topStatus" class="hidden mb-5"></div>
 
-      <div class="flex flex-col md:flex-row md:space-x-6 mb-6">
+      <div class="flex flex-col md:flex-row md:space-x-6 mb-4">
         <input
           id="searchInput"
           type="text"
@@ -156,6 +153,19 @@
         >
           <option value="" data-i18n="all_categories">Të gjitha kategoritë</option>
         </select>
+      </div>
+
+      <!-- ✅ Near Me row (NEW) -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
+        <button
+          id="nearMeBtn"
+          type="button"
+          class="inline-flex items-center justify-center px-4 py-2 rounded-lg border font-bold bg-white hover:bg-gray-50 text-blue-700 border-blue-200"
+          data-i18n="near_me"
+        >
+          Afer meje (25 km)
+        </button>
+        <div id="nearMeStatus" class="text-xs text-gray-500"></div>
       </div>
 
       <!-- Loading skeleton -->
@@ -226,6 +236,13 @@ const countryPill = document.getElementById("countryPill");
 const topStatus = document.getElementById("topStatus");
 const loadingGrid = document.getElementById("loadingGrid");
 
+// ✅ Near me UI
+const nearMeBtn = document.getElementById("nearMeBtn");
+const nearMeStatus = document.getElementById("nearMeStatus");
+const NEAR_RADIUS_KM = 25;
+let nearMode = false;
+let currentCountry = "MK";
+
 // i18n (NEW)
 const { getLang, setLang, t, applyTranslations, normalizeCategoryKey, categoryLabel } = window.EASYFIX_I18N;
 
@@ -261,6 +278,9 @@ function renderLangUI() {
   });
 
   if (langLabel) langLabel.textContent = meta.label;
+
+  // near-me button label refresh (important when language changes)
+  updateNearMeUI();
 }
 
 function openLangMenu() {
@@ -369,6 +389,111 @@ async function detectUserCountryCode() {
     return (code && code.length === 2) ? code : "MK";
   } catch { return "MK"; }
 }
+
+/* ===== Near Me (NEW) ===== */
+function updateNearMeUI() {
+  if (!nearMeBtn) return;
+  if (nearMode) {
+    nearMeBtn.textContent = t("near_me_off");
+    nearMeBtn.className = "inline-flex items-center justify-center px-4 py-2 rounded-lg border font-bold bg-blue-600 hover:bg-blue-700 text-white border-blue-600";
+    if (nearMeStatus) nearMeStatus.textContent = t("near_me_active", { km: NEAR_RADIUS_KM });
+  } else {
+    nearMeBtn.textContent = t("near_me");
+    nearMeBtn.className = "inline-flex items-center justify-center px-4 py-2 rounded-lg border font-bold bg-white hover:bg-gray-50 text-blue-700 border-blue-200";
+    if (nearMeStatus) nearMeStatus.textContent = "";
+  }
+}
+
+function getBrowserLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error("GEO_UNSUPPORTED"));
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (err) => reject(err || new Error("GEO_DENIED")),
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+    );
+  });
+}
+
+async function fetchNearFirmsWithRetry(country, lat, lng, radiusKm, attempts = 4) {
+  let lastErr = null;
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      const url = `${API_URL}/firms/near?country=${encodeURIComponent(country)}&lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}&radius_km=${encodeURIComponent(radiusKm)}&t=${Date.now()}`;
+      const resp = await fetch(url, { cache: "no-store" });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      if (!Array.isArray(data)) throw new Error("Invalid response");
+      return data;
+    } catch (e) {
+      lastErr = e;
+      await sleep(700 * i);
+    }
+  }
+  throw lastErr || new Error("Fetch failed");
+}
+
+async function enableNearMe() {
+  try {
+    clearTopStatus();
+    setLoading(true);
+    showTopStatus("info", t("near_me_title"), t("near_me_fetching"));
+
+    const loc = await getBrowserLocation();
+
+    const data = await fetchNearFirmsWithRetry(currentCountry, loc.lat, loc.lng, NEAR_RADIUS_KM, 5);
+
+    allFirms = (data || []).map(f => {
+      f._catKey = normalizeCategoryKey(f.category);
+      return f;
+    }).sort((a, b) => {
+      const order = { premium: 1, standard: 2, basic: 3 };
+      return (order[(a.plan || "").toLowerCase()] || 9) - (order[(b.plan || "").toLowerCase()] || 9);
+    });
+
+    populateCategoryFilter(allFirms);
+    renderFirms(allFirms);
+    setLoading(false);
+
+    nearMode = true;
+    updateNearMeUI();
+
+    clearTopStatus();
+    showTopStatus("success", t("near_me_on_title"), t("near_me_on_desc", { km: NEAR_RADIUS_KM }));
+
+    // focus param still works
+    requestAnimationFrame(() => {
+      setTimeout(() => focusFirmFromUrl(), 60);
+    });
+
+  } catch (err) {
+    console.error("Near me error:", err);
+    setLoading(false);
+    nearMode = false;
+    updateNearMeUI();
+
+    // better message depending on error
+    const code = String(err?.code || err?.message || "");
+    if (code.includes("PERMISSION_DENIED") || code.includes("GEO_DENIED") || err?.code === 1) {
+      showTopStatus("error", t("near_me_denied_title"), t("near_me_denied_desc"), false);
+    } else if (code.includes("GEO_UNSUPPORTED")) {
+      showTopStatus("error", t("near_me_unsupported_title"), t("near_me_unsupported_desc"), false);
+    } else {
+      showTopStatus("error", t("near_me_error_title"), t("near_me_error_desc"), false);
+    }
+  }
+}
+
+function disableNearMe() {
+  nearMode = false;
+  updateNearMeUI();
+  loadFirms(); // back to normal list
+}
+
+nearMeBtn?.addEventListener("click", () => {
+  if (nearMode) disableNearMe();
+  else enableNearMe();
+});
 
 /* ===== categories ===== */
 function populateCategoryFilter(firms) {
@@ -579,6 +704,7 @@ function renderFirms(firms) {
     div.innerHTML = `
       ${headerHTML}
       <p><strong>${t("address")}:</strong> ${sanitize(firm.address)}</p>
+      ${firm.city ? `<p><strong>${t("city")}:</strong> ${sanitize(firm.city)}</p>` : ""}
       ${phoneLine}
       <p><strong>${t("email")}:</strong>
         <a href="mailto:${sanitize(firm.email)}" class="text-blue-600 underline">${sanitize(firm.email)}</a>
@@ -678,6 +804,7 @@ async function loadFirms() {
   const params = new URLSearchParams(window.location.search);
   const urlCountry = (params.get("country") || "").toUpperCase();
   const country = (/^[A-Z]{2}$/.test(urlCountry)) ? urlCountry : await detectUserCountryCode();
+  currentCountry = country;
 
   countryPill.textContent = country;
   countryPill.classList.remove("hidden");
@@ -698,7 +825,7 @@ async function loadFirms() {
 
     setLoading(false);
 
-    // ✅ FIX: focus after content is visible (mobile safe)
+    // ✅ focus after content is visible (mobile safe)
     requestAnimationFrame(() => {
       setTimeout(() => focusFirmFromUrl(), 60);
     });
@@ -714,6 +841,7 @@ async function loadFirms() {
 applyTranslations();
 renderLangUI();
 closeLangMenu();
+updateNearMeUI();
 
 loadFirms();
 searchInput.addEventListener("input", filterFirms);

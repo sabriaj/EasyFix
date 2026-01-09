@@ -45,6 +45,22 @@ async function guessCountryIso2() {
   }
 }
 
+async function prefillCityFromIp() {
+  try {
+    const cityInput = $("#qyteti");
+    if (!cityInput) return;
+
+    if (String(cityInput.value || "").trim()) return;
+
+    const r = await fetchWithTimeout("https://ipapi.co/json/", 4500);
+    const j = await r.json().catch(() => ({}));
+    const city = String(j?.city || "").trim();
+    if (city) cityInput.value = city;
+  } catch {
+    // no-op
+  }
+}
+
 function setPhoneHint(text, ok = true) {
   const el = $("#phoneHint");
   if (!el) return;
@@ -57,7 +73,6 @@ async function initPhoneInput() {
   if (!phoneInput) return false;
 
   if (typeof window.intlTelInput !== "function") {
-    // kjo tregon qartë pse s’po del country flag
     console.error("intlTelInput not loaded");
     return false;
   }
@@ -113,6 +128,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   if (!okPhone) {
     showStatus("Phone input failed to initialize (country selector not loaded). Check console.", "error");
   }
+
+  // ✅ Prefill city (best-effort)
+  await prefillCityFromIp();
 
   // submit wire
   wireSubmit();
@@ -176,11 +194,17 @@ function wireSubmit() {
 
     const name = $("#emri").value.trim();
     const address = $("#adresa").value.trim();
+    const city = $("#qyteti")?.value?.trim() || "";
     const email = $("#emaili").value.trim();
     const category = $("#kategoria").value.trim();
 
     if (!name || !address || !email || !category) {
       showStatus(t("msg_fill_all"), "error");
+      return;
+    }
+
+    if (!city) {
+      showStatus(t("msg_city_required"), "error");
       return;
     }
 
@@ -225,6 +249,7 @@ function wireSubmit() {
     formData.append("phone", phoneE164);
     formData.append("country", countryIso2);
     formData.append("address", address);
+    formData.append("city", city);
     formData.append("category", category);
     formData.append("plan", selectedPlan);
 

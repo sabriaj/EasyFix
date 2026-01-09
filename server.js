@@ -7,19 +7,14 @@ import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { Resend } from "resend";
 
-
 dotenv.config();
 
 const app = express();
 app.use(cors());
 
-
-
-
-
 /* ================= resend email ================= */
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
-const RESEND_FROM = String(process.env.RESEND_FROM || "").trim(); // p.sh. EasyFix <no-reply@easyfix.services>
+const RESEND_FROM = String(process.env.RESEND_FROM || "").trim();
 const RESEND_REPLY_TO = String(process.env.RESEND_REPLY_TO || "").trim();
 const FRONTEND_BASE_URL = String(process.env.FRONTEND_BASE_URL || "http://easyfix.services").replace(/\/+$/, "");
 
@@ -36,9 +31,6 @@ async function sendMail({ to, subject, html, text }) {
     ...(RESEND_REPLY_TO ? { replyTo: RESEND_REPLY_TO } : {}),
   });
 }
-
-
-
 
 /* ================= CONFIG ================= */
 const PORT = process.env.PORT || 5000;
@@ -93,47 +85,13 @@ function normalizeEmail(e) {
   return String(e || "").trim().toLowerCase();
 }
 
-  function sha256Hex(s) {
+function sha256Hex(s) {
   return crypto.createHash("sha256").update(String(s)).digest("hex");
 }
 
 function makeToken() {
-  return crypto.randomBytes(32).toString("hex"); // 64 chars
+  return crypto.randomBytes(32).toString("hex");
 }
-
-function cloudinaryPublicIdFromUrl(url) {
-  try {
-    const u = new URL(url);
-    const parts = u.pathname.split("/");
-
-    // find "upload"
-    const idx = parts.findIndex(p => p === "upload");
-    if (idx === -1) return null;
-
-    // everything after upload/ (skip version v123)
-    let rest = parts.slice(idx + 1).join("/");
-    rest = rest.replace(/^v\d+\//, ""); // remove v123/
-
-    // remove extension
-    rest = rest.replace(/\.[a-zA-Z0-9]+$/, "");
-
-    return rest || null; // includes folder path
-  } catch {
-    return null;
-  }
-}
-
-async function deleteCloudinaryByUrl(url) {
-  const pid = cloudinaryPublicIdFromUrl(url);
-  if (!pid) return;
-  try {
-    await cloudinary.uploader.destroy(pid, { resource_type: "image" });
-  } catch (e) {
-    // mos e ndal deletion komplet nëse cloudinary failon
-    errorWithTime("Cloudinary delete failed:", pid, e?.message || e);
-  }
-}
-
 
 function normalizeCountry(raw) {
   const c = String(raw || "").trim().toUpperCase();
@@ -167,11 +125,46 @@ function normalizePhone(raw) {
   return null;
 }
 
+/* ================= GEO (NEW) ================= */
+function fetchWithTimeout(url, timeoutMs = 8000, options = {}) {
+  const controller = new AbortController();
+  const tmr = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(tmr));
+}
+
+async function geocodeNominatim({ address, city, countryIso2 }) {
+  const q = [address, city].filter(Boolean).join(", ").trim();
+  if (!q) return null;
+
+  const cc = String(countryIso2 || "").toLowerCase(); // e.g. mk
+  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=0&countrycodes=${encodeURIComponent(cc)}&q=${encodeURIComponent(q)}`;
+
+  try {
+    const resp = await fetchWithTimeout(url, 9000, {
+      headers: {
+        // Nominatim kërkon UA/Referer të arsyeshëm
+        "User-Agent": "EasyFix/1.0 (support@easyfix.services)",
+        "Accept": "application/json",
+      },
+    });
+    if (!resp.ok) return null;
+    const arr = await resp.json().catch(() => null);
+    if (!Array.isArray(arr) || !arr[0]) return null;
+
+    const lat = Number(arr[0].lat);
+    const lon = Number(arr[0].lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+    return { lat, lng: lon };
+  } catch {
+    return null;
+  }
+}
+
 /* ================= SCHEMA ================= */
 const firmaSchema = new mongoose.Schema(
   {
-
-        // === OWNER SELF-SERVICE TOKENS (magic links) ===
+    // === OWNER SELF-SERVICE TOKENS (magic links) ===
     owner_token_hash: String,
     owner_token_expires: Date,
 
@@ -185,10 +178,24 @@ const firmaSchema = new mongoose.Schema(
     phone_verified_at: Date,
 
     address: String,
+    city: String, // ✅ NEW
     category: String,
 
     // Country for international use (ISO2)
     country: { type: String, default: DEFAULT_COUNTRY, index: true },
+
+    // ✅ NEW: Geo location (GeoJSON)
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number], // [lng, lat]
+        default: undefined,
+      },
+    },
 
     plan: { type: String, default: "basic" },
     payment_status: { type: String, default: "pending", index: true },
@@ -205,6 +212,9 @@ const firmaSchema = new mongoose.Schema(
 
 // ✅ Index për /firms dhe admin filters
 firmaSchema.index({ payment_status: 1, country: 1, plan: 1, createdAt: -1 });
+
+// ✅ NEW: 2dsphere index për near me
+firmaSchema.index({ location: "2dsphere", payment_status: 1, country: 1 });
 
 const Firma = mongoose.model("Firma", firmaSchema);
 
@@ -262,7 +272,7 @@ app.get("/admin/firms", requireAdmin, async (req, res) => {
     if (search) {
       firms = firms.filter(f => {
         const hay = [
-          f.name, f.email, f.phone, f.category, f.address,
+          f.name, f.email, f.phone, f.category, f.address, f.city,
           f.country
         ].map(x => String(x || "").toLowerCase()).join(" | ");
         return hay.includes(search);
@@ -283,7 +293,7 @@ app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
     if (!id) return res.status(400).json({ success: false, error: "Missing id" });
 
     const patch = {};
-    const allow = ["name", "phone", "address", "category", "plan", "country", "payment_status", "expires_at"];
+    const allow = ["name", "phone", "address", "city", "category", "plan", "country", "payment_status", "expires_at"];
     for (const k of allow) {
       if (req.body?.[k] !== undefined) patch[k] = req.body[k];
     }
@@ -320,76 +330,6 @@ app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
     return res.json({ success: true, firm: updated });
   } catch (err) {
     errorWithTime("ADMIN UPDATE ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-/* ================= ADMIN: MARK PAID ================= */
-app.post("/admin/firms/:id/mark-paid", requireAdmin, async (req, res) => {
-  try {
-    const id = String(req.params.id || "").trim();
-    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
-
-    const days = Number(req.body?.days || 30);
-    const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-
-    const updated = await Firma.findByIdAndUpdate(
-      id,
-      { $set: { payment_status: "paid", paid_at: new Date(), expires_at: expires, deleted_at: null } },
-      { new: true }
-    ).select("-__v").lean();
-
-    if (!updated) return res.status(404).json({ success: false, error: "Not found" });
-    return res.json({ success: true, firm: updated });
-  } catch (err) {
-    errorWithTime("ADMIN MARK PAID ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-/* ================= ADMIN: EXPIRE ================= */
-app.post("/admin/firms/:id/expire", requireAdmin, async (req, res) => {
-  try {
-    const id = String(req.params.id || "").trim();
-    const updated = await Firma.findByIdAndUpdate(
-      id,
-      { $set: { payment_status: "expired", expires_at: new Date() } },
-      { new: true }
-    ).select("-__v").lean();
-
-    if (!updated) return res.status(404).json({ success: false, error: "Not found" });
-    return res.json({ success: true, firm: updated });
-  } catch (err) {
-    errorWithTime("ADMIN EXPIRE ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-/* ================= ADMIN: DELETE ================= */
-app.delete("/admin/firms/:id", requireAdmin, async (req, res) => {
-  try {
-    const id = String(req.params.id || "").trim();
-    const r = await Firma.deleteOne({ _id: id });
-    return res.json({ success: true, deleted: r.deletedCount === 1 });
-  } catch (err) {
-    errorWithTime("ADMIN DELETE ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-/* ================= ADMIN: STATS ================= */
-app.get("/admin/stats", requireAdmin, async (req, res) => {
-  try {
-    const [pending, paid, expired, total] = await Promise.all([
-      Firma.countDocuments({ payment_status: "pending" }),
-      Firma.countDocuments({ payment_status: "paid" }),
-      Firma.countDocuments({ payment_status: "expired" }),
-      Firma.countDocuments({}),
-    ]);
-
-    return res.json({ success: true, stats: { total, pending, paid, expired } });
-  } catch (err) {
-    errorWithTime("ADMIN STATS ERROR:", err);
     return res.status(500).json({ success: false, error: "Server error" });
   }
 });
@@ -528,217 +468,9 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 /* ================= JSON (AFTER WEBHOOK) ================= */
 app.use(express.json());
 
-
-app.post("/delete-request", async (req, res) => {
-  try {
-    const email = normalizeEmail(req.body?.email);
-    const reason = String(req.body?.reason || "").slice(0, 500);
-
-    if (!email) {
-      return res.status(400).json({ success: false, error: "Missing email" });
-    }
-
-    // Mos e zbulo nëse ekziston ose jo (anti-abuse)
-    const firm = await Firma.findOne({ email });
-
-    if (!firm) {
-      return res.json({ success: true, message: "If this email exists, we sent a confirmation link." });
-    }
-
-    const token = makeToken();
-    const tokenHash = sha256Hex(token);
-    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 orë
-
-    await Firma.updateOne(
-      { _id: firm._id },
-      { $set: { delete_token_hash: tokenHash, delete_token_expires: expires } }
-    );
-
-    const confirmUrl = `${FRONTEND_BASE_URL}/delete-confirm.html?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
-
-    const subject = "EasyFix – Confirm data deletion";
-    const html = `
-      <div style="font-family:Arial,sans-serif;line-height:1.5">
-        <h2>Confirm deletion request</h2>
-        <p>We received a request to delete the EasyFix business listing for:</p>
-        <p><b>${email}</b></p>
-        ${reason ? `<p><b>Reason:</b> ${reason.replace(/</g,"&lt;")}</p>` : ""}
-        <p>This link expires in 1 hour.</p>
-        <p><a href="${confirmUrl}" style="display:inline-block;padding:10px 14px;background:#1d4ed8;color:#fff;border-radius:8px;text-decoration:none;font-weight:700">Confirm deletion</a></p>
-        <p>If you did not request this, ignore this email.</p>
-      </div>
-    `;
-    const text = `Confirm deletion: ${confirmUrl}\nEmail: ${email}\nExpires: 1 hour`;
-
-    await sendMail({ to: email, subject, html, text });
-
-    return res.json({ success: true, message: "Confirmation link sent to email." });
-  } catch (err) {
-    errorWithTime("DELETE-REQUEST ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-
-
-app.post("/delete-confirm", async (req, res) => {
-  try {
-    const email = normalizeEmail(req.body?.email);
-    const token = String(req.body?.token || "").trim();
-
-    if (!email || !token) {
-      return res.status(400).json({ success: false, error: "Missing email/token" });
-    }
-
-    const tokenHash = sha256Hex(token);
-
-    const firm = await Firma.findOne({
-      email,
-      delete_token_hash: tokenHash,
-      delete_token_expires: { $gt: new Date() },
-    });
-
-    if (!firm) {
-      return res.status(400).json({ success: false, error: "Invalid or expired token" });
-    }
-
-    // fshi media në cloudinary (best-effort)
-    const urls = [];
-    if (firm.logoUrl) urls.push(firm.logoUrl);
-    if (Array.isArray(firm.photos)) urls.push(...firm.photos);
-
-    for (const u of urls) {
-      await deleteCloudinaryByUrl(u);
-    }
-
-    // fshi firmën
-    await Firma.deleteOne({ _id: firm._id });
-
-    return res.json({ success: true, message: "Deleted." });
-  } catch (err) {
-    errorWithTime("DELETE-CONFIRM ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-
-app.post("/owner/request-link", async (req, res) => {
-  try {
-    const email = normalizeEmail(req.body?.email);
-    if (!email) return res.status(400).json({ success: false, error: "Missing email" });
-
-    const firm = await Firma.findOne({ email });
-    if (!firm) {
-      return res.json({ success: true, message: "If this email exists, we sent a link." });
-    }
-
-    const token = makeToken();
-    const tokenHash = sha256Hex(token);
-    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 orë
-
-    await Firma.updateOne(
-      { _id: firm._id },
-      { $set: { owner_token_hash: tokenHash, owner_token_expires: expires } }
-    );
-
-    const manageUrl = `${FRONTEND_BASE_URL}/manage.html?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
-
-    await sendMail({
-      to: email,
-      subject: "EasyFix – Manage your business listing",
-      html: `<div style="font-family:Arial,sans-serif;line-height:1.5">
-        <h2>Manage your listing</h2>
-        <p>Open this link to update your business info. Expires in 1 hour.</p>
-        <p><a href="${manageUrl}" style="display:inline-block;padding:10px 14px;background:#1d4ed8;color:#fff;border-radius:8px;text-decoration:none;font-weight:700">Open manage page</a></p>
-      </div>`,
-      text: `Manage link: ${manageUrl}`,
-    });
-
-    return res.json({ success: true, message: "Manage link sent." });
-  } catch (err) {
-    errorWithTime("OWNER REQUEST LINK ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-
-
-app.get("/owner/me", async (req, res) => {
-  try {
-    const email = normalizeEmail(req.query.email);
-    const token = String(req.query.token || "").trim();
-    if (!email || !token) return res.status(400).json({ success: false, error: "Missing email/token" });
-
-    const tokenHash = sha256Hex(token);
-
-    const firm = await Firma.findOne({
-      email,
-      owner_token_hash: tokenHash,
-      owner_token_expires: { $gt: new Date() },
-    }).select("-__v").lean();
-
-    if (!firm) return res.status(400).json({ success: false, error: "Invalid or expired token" });
-
-    return res.json({ success: true, firm });
-  } catch (err) {
-    errorWithTime("OWNER ME ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-
-app.put("/owner/update", async (req, res) => {
-  try {
-    const email = normalizeEmail(req.body?.email);
-    const token = String(req.body?.token || "").trim();
-    if (!email || !token) return res.status(400).json({ success: false, error: "Missing email/token" });
-
-    const tokenHash = sha256Hex(token);
-
-    const firm = await Firma.findOne({
-      email,
-      owner_token_hash: tokenHash,
-      owner_token_expires: { $gt: new Date() },
-    });
-
-    if (!firm) return res.status(400).json({ success: false, error: "Invalid or expired token" });
-
-    // allow vetëm këto (text-only për tani)
-const patch = {};
-const allow = ["name", "phone", "address", "category", "country"];
-for (const k of allow) {
-  if (req.body?.[k] !== undefined) patch[k] = String(req.body[k]).trim();
-}
-
-if (patch.phone !== undefined) {
-  const phoneNorm = normalizePhone(patch.phone);
-  if (!phoneNorm) return res.status(400).json({ success: false, error: "Invalid phone" });
-  patch.phone = phoneNorm;
-}
-
-if (patch.country !== undefined) {
-  patch.country = normalizeCountry(patch.country);
-}
-
-
-    // update
-    const updated = await Firma.findByIdAndUpdate(
-      firm._id,
-      { $set: patch },
-      { new: true }
-    ).select("-__v").lean();
-
-    return res.json({ success: true, firm: updated });
-  } catch (err) {
-    errorWithTime("OWNER UPDATE ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-
 /* ================= HEALTH ================= */
 app.get("/health", (req, res) => {
-  const rs = mongoose.connection.readyState; // 0=disc,1=conn,2=conning,3=disconning
+  const rs = mongoose.connection.readyState;
   res.json({ ok: true, time: now(), dbReadyState: rs });
 });
 
@@ -752,13 +484,14 @@ app.post(
   async (req, res) => {
     let createdId = null;
     try {
-      let { name, email, phone, address, category, plan, country } = req.body;
+      let { name, email, phone, address, city, category, plan, country } = req.body;
 
       email = normalizeEmail(email);
       const phoneNorm = normalizePhone(phone);
       const countryNorm = normalizeCountry(country);
+      const cityNorm = String(city || "").trim();
 
-      if (!name || !email || !phoneNorm || !address || !category || !plan) {
+      if (!name || !email || !phoneNorm || !address || !cityNorm || !category || !plan) {
         return res.status(400).json({ success: false, error: "Missing fields" });
       }
       if (!["basic", "standard", "premium"].includes(plan)) {
@@ -768,6 +501,20 @@ app.post(
       const exists = await Firma.findOne({ email }).lean();
       if (exists) {
         return res.status(409).json({ success: false, error: "Ky email tashmë ekziston" });
+      }
+
+      // ✅ NEW: geocode address+city -> location
+      const geo = await geocodeNominatim({
+        address: String(address || "").trim(),
+        city: cityNorm,
+        countryIso2: countryNorm
+      });
+
+      if (!geo) {
+        return res.status(400).json({
+          success: false,
+          error: "Nuk u gjet lokacioni për këtë adresë/qytet. Ju lutem shkruani adresë më të saktë."
+        });
       }
 
       let logoUrl = null;
@@ -800,8 +547,15 @@ app.post(
         phone_verified: false,
         phone_verified_at: null,
         address,
+        city: cityNorm,
         category,
         country: countryNorm,
+
+        location: {
+          type: "Point",
+          coordinates: [geo.lng, geo.lat],
+        },
+
         plan,
         payment_status: "pending",
         logoUrl,
@@ -843,9 +597,7 @@ app.get("/firms", async (req, res) => {
     const qCountry = String(req.query.country || "").trim().toUpperCase();
     const base = { payment_status: "paid" };
 
-    // nëse kërkohet country:
     if (/^[A-Z]{2}$/.test(qCountry)) {
-      // për MK, përfshi edhe firmat e vjetra pa field country (i trajtojmë si MK)
       if (qCountry === "MK") {
         const firms = await Firma.find({
           ...base,
@@ -871,7 +623,6 @@ app.get("/firms", async (req, res) => {
       return res.json(firms);
     }
 
-    // default: krejt paid (nëse s’ka country param)
     const firms = await Firma.find(base)
       .select("-__v")
       .sort({ createdAt: -1 })
@@ -881,6 +632,75 @@ app.get("/firms", async (req, res) => {
   } catch (err) {
     errorWithTime("FIRMS ERROR:", err);
     return res.status(500).send("Server error");
+  }
+});
+
+/* ================= NEAR ME (NEW) ================= */
+// GET /firms/near?country=MK&lat=41.99&lng=21.43&radius_km=25
+app.get("/firms/near", async (req, res) => {
+  try {
+    res.setHeader("Cache-Control", "no-store");
+
+    const qCountry = String(req.query.country || "").trim().toUpperCase();
+    const lat = Number(req.query.lat);
+    const lng = Number(req.query.lng);
+
+    let radiusKm = Number(req.query.radius_km || 25);
+    if (!Number.isFinite(radiusKm)) radiusKm = 25;
+
+    // hard bounds (anti-abuse)
+    radiusKm = Math.max(1, Math.min(radiusKm, 200));
+    const radiusM = radiusKm * 1000;
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return res.status(400).json({ success: false, error: "Missing lat/lng" });
+    }
+
+    const geoClause = {
+      location: {
+        $nearSphere: {
+          $geometry: { type: "Point", coordinates: [lng, lat] },
+          $maxDistance: radiusM,
+        },
+      },
+    };
+
+    const basePaid = { payment_status: "paid" };
+
+    // country filter + legacy MK support
+    let query = null;
+
+    if (/^[A-Z]{2}$/.test(qCountry)) {
+      if (qCountry === "MK") {
+        query = {
+          $and: [
+            basePaid,
+            geoClause,
+            {
+              $or: [
+                { country: "MK" },
+                { country: { $exists: false } },
+                { country: null },
+                { country: "" },
+              ],
+            },
+          ],
+        };
+      } else {
+        query = { $and: [basePaid, geoClause, { country: qCountry }] };
+      }
+    } else {
+      query = { $and: [basePaid, geoClause] };
+    }
+
+    const firms = await Firma.find(query)
+      .select("-__v")
+      .lean();
+
+    return res.json(firms);
+  } catch (err) {
+    errorWithTime("FIRMS NEAR ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
   }
 });
 
@@ -930,10 +750,8 @@ async function start() {
   try {
     await connectMongo();
 
-    // warmup query (e zvogëlon “lag” në request-in e parë)
     await Firma.findOne({}).select("_id").lean();
 
-    // start cleanup vetëm pasi DB u lidh
     setInterval(async () => {
       try { await runCleanup(); }
       catch (e) { errorWithTime("Cleanup error:", e); }

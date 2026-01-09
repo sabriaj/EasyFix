@@ -8,11 +8,8 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-
   gtag('config', 'G-CWDYCJ09D8');
 </script>
-
-
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -126,6 +123,19 @@
       <div>
         <label class="font-semibold" data-i18n="address">Adresa</label>
         <input id="adresa" type="text" class="w-full border p-2 rounded" required>
+      </div>
+
+      <!-- ✅ NEW: City -->
+      <div>
+        <label class="font-semibold" data-i18n="city">Qyteti</label>
+        <input
+          id="qyteti"
+          type="text"
+          class="w-full border p-2 rounded"
+          required
+          data-i18n-placeholder="city_placeholder"
+          placeholder="p.sh. Shkup"
+        >
       </div>
 
       <div>

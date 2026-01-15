@@ -1,0 +1,192 @@
+<!-- pay.html (NEW FILE - add to your frontend) -->
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EasyFix - Pay now</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-16.png" sizes="16x16">
+  <link rel="apple-touch-icon" href="easyfix-icons-pack/apple-touch-icon.png">
+  <meta name="theme-color" content="#1d4ed8">
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+  <header class="bg-blue-700 text-white py-6 shadow-md">
+    <div class="container mx-auto px-4 flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <h1 class="text-3xl font-extrabold">EasyFix</h1>
+      </div>
+      <a href="index.html" class="text-white underline">Faqja Kryesore</a>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-10 flex-grow max-w-2xl">
+    <h2 class="text-3xl font-bold text-blue-900 mb-3 text-center">Ri-aktivizo listimin</h2>
+    <p class="text-center text-gray-700 mb-6">
+      Nëse lista jote ka skadu, këtu mundesh me e pagu dhe me u shfaq prap në EasyFix.
+    </p>
+
+    <div class="bg-white rounded-xl shadow p-6">
+      <div id="stepEmail" class="space-y-4">
+        <div class="text-sm text-gray-600">
+          Shkruaje email-in me të cilin e ke regjistru firmën. Do të të vijë një link magjik në email.
+        </div>
+
+        <input id="emailInput" type="email"
+               class="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+               placeholder="email@firma.com" />
+
+        <button id="sendBtn"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold">
+          Dërgo linkun në email
+        </button>
+
+        <p id="emailMsg" class="text-sm text-gray-700 hidden"></p>
+      </div>
+
+      <div id="stepToken" class="space-y-4 hidden">
+        <div class="text-sm text-gray-600">
+          Zgjidh planin dhe vazhdo te pagesa.
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <button data-plan="basic" class="planBtn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
+            <div class="font-bold">Basic</div>
+            <div class="text-sm text-gray-600">15€/muaj</div>
+          </button>
+          <button data-plan="standard" class="planBtn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
+            <div class="font-bold">Standard</div>
+            <div class="text-sm text-gray-600">20€/muaj</div>
+          </button>
+          <button data-plan="premium" class="planBtn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
+            <div class="font-bold">Premium</div>
+            <div class="text-sm text-gray-600">30€/muaj</div>
+          </button>
+        </div>
+
+        <button id="payBtn"
+                class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled>
+          Vazhdo te pagesa
+        </button>
+
+        <p id="tokenMsg" class="text-sm text-red-600 hidden"></p>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="bg-blue-700 text-white text-center py-6 mt-auto">
+    © 2025 EasyFix.services - Ndihma për çdo shtëpi
+  </footer>
+
+<script>
+  const API_URL = "https://easyfix.onrender.com";
+
+  const params = new URLSearchParams(window.location.search);
+  const token = (params.get("token") || "").trim();
+
+  const stepEmail = document.getElementById("stepEmail");
+  const stepToken = document.getElementById("stepToken");
+
+  const emailInput = document.getElementById("emailInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const emailMsg = document.getElementById("emailMsg");
+
+  const payBtn = document.getElementById("payBtn");
+  const tokenMsg = document.getElementById("tokenMsg");
+  const planBtns = Array.from(document.querySelectorAll(".planBtn"));
+
+  let selectedPlan = "";
+
+  function showEmailMsg(text) {
+    emailMsg.classList.remove("hidden");
+    emailMsg.textContent = text;
+  }
+  function showTokenErr(text) {
+    tokenMsg.classList.remove("hidden");
+    tokenMsg.textContent = text;
+  }
+  function setActivePlan(btn) {
+    planBtns.forEach(b => b.classList.remove("ring-2", "ring-blue-600", "border-blue-600"));
+    btn.classList.add("ring-2", "ring-blue-600", "border-blue-600");
+  }
+
+  if (token) {
+    stepEmail.classList.add("hidden");
+    stepToken.classList.remove("hidden");
+  }
+
+  sendBtn.addEventListener("click", async () => {
+    const email = (emailInput.value || "").trim();
+    if (!email) return showEmailMsg("Shkruaje email-in.");
+
+    sendBtn.disabled = true;
+    sendBtn.textContent = "Duke dërguar...";
+
+    try {
+      const res = await fetch(`${API_URL}/pay-now/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        showEmailMsg(data?.error || "Gabim. Provo prap.");
+      } else {
+        showEmailMsg("Nëse email-i ekziston, u dërgua linku. Kontrollo Inbox/Spam.");
+      }
+    } catch (e) {
+      showEmailMsg("Gabim gjatë komunikimit me serverin.");
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.textContent = "Dërgo linkun në email";
+    }
+  });
+
+  planBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      selectedPlan = btn.getAttribute("data-plan") || "";
+      setActivePlan(btn);
+      payBtn.disabled = !selectedPlan;
+      tokenMsg.classList.add("hidden");
+    });
+  });
+
+  payBtn.addEventListener("click", async () => {
+    if (!token) return showTokenErr("Mungon token. Kërko link të ri.");
+    if (!selectedPlan) return showTokenErr("Zgjidh planin.");
+
+    payBtn.disabled = true;
+    payBtn.textContent = "Duke të dërguar te pagesa...";
+
+    try {
+      const url = `${API_URL}/pay-now/checkout?token=${encodeURIComponent(token)}&plan=${encodeURIComponent(selectedPlan)}`;
+      const res = await fetch(url);
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.success || !data.checkoutUrl) {
+        showTokenErr(data?.error || "Link jo valid ose ka skadu. Kërko link të ri.");
+        payBtn.disabled = false;
+        payBtn.textContent = "Vazhdo te pagesa";
+        return;
+      }
+
+      window.location.href = data.checkoutUrl;
+
+    } catch (e) {
+      showTokenErr("Gabim gjatë komunikimit me serverin.");
+      payBtn.disabled = false;
+      payBtn.textContent = "Vazhdo te pagesa";
+    }
+  });
+</script>
+
+</body>
+</html>

@@ -1,3 +1,4 @@
+<!-- success.html (MODIFIED - treats TRIAL as active too) -->
 <!DOCTYPE html>
 <html lang="sq">
 <head>
@@ -8,6 +9,7 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
+
   gtag('config', 'G-CWDYCJ09D8');
 </script>
 
@@ -16,13 +18,16 @@
   <title>Pagesa u Krye - EasyFix</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 
+  <!-- i18n (NEW) - non-defer se ke inline script poshtë -->
   <script src="i18n.js"></script>
 
+  <!-- logo per tabs -->
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
   <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-16.png" sizes="16x16">
   <link rel="apple-touch-icon" href="easyfix-icons-pack/apple-touch-icon.png">
   <meta name="theme-color" content="#1d4ed8">
+  <!-- /logo per tabs -->
 </head>
 
 <body class="bg-gray-100 min-h-screen flex flex-col">
@@ -32,6 +37,7 @@
       <div class="flex items-center gap-3">
         <h1 class="text-3xl font-extrabold">EasyFix</h1>
 
+        <!-- Language Switch (NEW) -->
         <div class="flex items-center gap-1">
           <button id="langSQ" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">SQ</button>
           <button id="langMK" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">MK</button>
@@ -96,6 +102,7 @@
   <script>
     const { t, setLang, applyTranslations, setLangButtonsUI } = window.EASYFIX_I18N;
 
+    // lang buttons
     function wireLang() {
       document.getElementById("langSQ")?.addEventListener("click", () => { setLang("sq"); applyTranslations(); setLangButtonsUI(); repaintDynamicTexts(); });
       document.getElementById("langMK")?.addEventListener("click", () => { setLang("mk"); applyTranslations(); setLangButtonsUI(); repaintDynamicTexts(); });
@@ -152,8 +159,14 @@
 
         if (firma.payment_status === "paid" || firma.payment_status === "trial") {
           spinner.classList.add("hidden");
-          statusText.textContent = (firma.payment_status === "paid") ? t("active_paid") : "Aktive (trial)";
-          subtitle.textContent = (firma.payment_status === "paid") ? t("activated_ok") : "Firma u aktivizua në trial falas.";
+
+          if (firma.payment_status === "paid") {
+            statusText.textContent = t("active_paid");
+            subtitle.textContent = t("activated_ok");
+          } else {
+            statusText.textContent = "Aktive (trial)";
+            subtitle.textContent = "Trial-i yt është aktiv. Pas 4 muajsh duhet me pagu për me vazhdu me u shfaq.";
+          }
 
           goBtn.disabled = false;
           goBtn.onclick = () => {
@@ -201,6 +214,7 @@
       await startPolling();
     });
 
+    // init i18n
     applyTranslations();
     setLangButtonsUI();
     wireLang();

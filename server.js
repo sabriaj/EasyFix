@@ -1,3 +1,4 @@
+// server.js (MODIFIED - 4 months free trial + reminder emails + pay-now flow + delete after 180 days)
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -16,7 +17,7 @@ app.use(cors());
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
 const RESEND_FROM = String(process.env.RESEND_FROM || "").trim();
 const RESEND_REPLY_TO = String(process.env.RESEND_REPLY_TO || "").trim();
-const FRONTEND_BASE_URL = String(process.env.FRONTEND_BASE_URL || "http://easyfix.services").replace(/\/+$/, "");
+const FRONTEND_BASE_URL = String(process.env.FRONTEND_BASE_URL || "https://easyfix.services").replace(/\/+$/, "");
 
 const resend = (RESEND_API_KEY && RESEND_FROM) ? new Resend(RESEND_API_KEY) : null;
 
@@ -45,19 +46,14 @@ const VARIANT_PREMIUM = String(process.env.VARIANT_PREMIUM || "");
 
 const FRONTEND_SUCCESS_URL =
   process.env.FRONTEND_SUCCESS_URL ||
-  "https://sabriaj.github.io/EasyFix/success.html";
+  "https://easyfix.services/success.html";
 
-// Trial config
-const TRIAL_MONTHS = Number(process.env.TRIAL_MONTHS || 4);
-
-// Cleanup config
-const DELETE_AFTER_DAYS = Number(process.env.DELETE_AFTER_DAYS || 2);
+const DELETE_AFTER_DAYS = Number(process.env.DELETE_AFTER_DAYS || 180);
 const CHECK_INTERVAL_MINUTES = Number(process.env.CHECK_INTERVAL_MINUTES || 60);
 
-// Fshi expired plotesisht pas 180 diteve (siç e kërkove)
-const DELETE_EXPIRED_AFTER_DAYS = Number(process.env.DELETE_EXPIRED_AFTER_DAYS || 180);
-
 const DEFAULT_COUNTRY = String(process.env.DEFAULT_COUNTRY || "MK").toUpperCase();
+
+const PAY_TOKEN_MINUTES = Number(process.env.PAY_TOKEN_MINUTES || 30);
 
 /* ================= LOG HELPERS ================= */
 function now() { return new Date().toISOString(); }
@@ -132,17 +128,6 @@ function normalizePhone(raw) {
   return null;
 }
 
-// ✅ Active clause: paid OR trial (ende aktiv)
-function activeClause() {
-  const nowDate = new Date();
-  return {
-    $or: [
-      { payment_status: "paid" },
-      { payment_status: "trial", trial_ends_at: { $gt: nowDate } },
-    ],
-  };
-}
-
 /* ================= GEO (NEW) ================= */
 function fetchWithTimeout(url, timeoutMs = 8000, options = {}) {
   const controller = new AbortController();
@@ -160,6 +145,7 @@ async function geocodeNominatim({ address, city, countryIso2 }) {
   try {
     const resp = await fetchWithTimeout(url, 9000, {
       headers: {
+        // Nominatim kërkon UA/Referer të arsyeshëm
         "User-Agent": "EasyFix/1.0 (support@easyfix.services)",
         "Accept": "application/json",
       },
@@ -181,11 +167,23 @@ async function geocodeNominatim({ address, city, countryIso2 }) {
 /* ================= SCHEMA ================= */
 const firmaSchema = new mongoose.Schema(
   {
+    // === OWNER SELF-SERVICE TOKENS (magic links) ===
     owner_token_hash: String,
     owner_token_expires: Date,
 
     delete_token_hash: String,
     delete_token_expires: Date,
+
+    // === TRIAL ===
+    trial_started_at: Date,
+    trial_ends_at: Date,
+    trial_reminder_7d_sent_at: Date,
+    trial_reminder_1d_sent_at: Date,
+    trial_expired_email_sent_at: Date,
+
+    // === PAY NOW (magic link) ===
+    pay_token_hash: String,
+    pay_token_expires: Date,
 
     name: String,
     email: { type: String, unique: true, required: true },
@@ -194,11 +192,13 @@ const firmaSchema = new mongoose.Schema(
     phone_verified_at: Date,
 
     address: String,
-    city: String,
+    city: String, // ✅ NEW
     category: String,
 
+    // Country for international use (ISO2)
     country: { type: String, default: DEFAULT_COUNTRY, index: true },
 
+    // ✅ NEW: Geo location (GeoJSON)
     location: {
       type: {
         type: String,
@@ -212,11 +212,7 @@ const firmaSchema = new mongoose.Schema(
     },
 
     plan: { type: String, default: "basic" },
-
-    // ✅ trial + payment status
-    payment_status: { type: String, default: "pending", index: true }, // pending | trial | paid | expired
-    trial_started_at: Date,
-    trial_ends_at: { type: Date, index: true },
+    payment_status: { type: String, default: "pending", index: true },
 
     logoUrl: String,
     photos: [String],
@@ -228,7 +224,10 @@ const firmaSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// ✅ Index për /firms dhe admin filters
 firmaSchema.index({ payment_status: 1, country: 1, plan: 1, createdAt: -1 });
+
+// ✅ NEW: 2dsphere index për near me
 firmaSchema.index({ location: "2dsphere", payment_status: 1, country: 1 });
 
 const Firma = mongoose.model("Firma", firmaSchema);
@@ -302,14 +301,13 @@ app.get("/admin/firms", requireAdmin, async (req, res) => {
 });
 
 /* ================= ADMIN: UPDATE FIRM ================= */
-// ✅ express.json vetëm për këtë route (pa prish webhook raw)
-app.put("/admin/firms/:id", requireAdmin, express.json(), async (req, res) => {
+app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
   try {
     const id = String(req.params.id || "").trim();
     if (!id) return res.status(400).json({ success: false, error: "Missing id" });
 
     const patch = {};
-    const allow = ["name", "phone", "address", "city", "category", "plan", "country", "payment_status", "expires_at", "trial_ends_at"];
+    const allow = ["name", "phone", "address", "city", "category", "plan", "country", "payment_status", "expires_at"];
     for (const k of allow) {
       if (req.body?.[k] !== undefined) patch[k] = req.body[k];
     }
@@ -330,7 +328,7 @@ app.put("/admin/firms/:id", requireAdmin, express.json(), async (req, res) => {
 
     if (patch.payment_status !== undefined) {
       const s = String(patch.payment_status || "").toLowerCase();
-      if (!["pending", "trial", "paid", "expired"].includes(s)) {
+      if (!["pending", "paid", "expired", "trial"].includes(s)) {
         return res.status(400).json({ success: false, error: "Invalid payment_status" });
       }
       patch.payment_status = s;
@@ -449,8 +447,6 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
         paid_at: new Date(),
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         deleted_at: null,
-        trial_started_at: null,
-        trial_ends_at: null,
       };
       if (detectedPlan) update.plan = detectedPlan;
 
@@ -486,6 +482,170 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 /* ================= JSON (AFTER WEBHOOK) ================= */
 app.use(express.json());
 
+/* ================= PAY NOW (MAGIC LINK) ================= */
+app.post("/pay-now/request", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    if (!email) return res.status(400).json({ success: false, error: "Missing email" });
+
+    const firm = await Firma.findOne({ email }).select("_id email").lean();
+
+    // privacy: always return success
+    if (!firm) return res.json({ success: true, message: "If the email exists, we sent a link." });
+
+    if (!resend) return res.status(500).json({ success: false, error: "Email service not configured" });
+
+    const token = makeToken();
+    const tokenHash = sha256Hex(token);
+    const expires = new Date(Date.now() + PAY_TOKEN_MINUTES * 60 * 1000);
+
+    await Firma.updateOne(
+      { _id: firm._id },
+      { $set: { pay_token_hash: tokenHash, pay_token_expires: expires } }
+    );
+
+    const payUrl = `${FRONTEND_BASE_URL}/pay.html?token=${encodeURIComponent(token)}`;
+
+    await sendMail({
+      to: email,
+      subject: "EasyFix - Pay now link",
+      text: `Për me vazhdu me u shfaq në EasyFix, përdor këtë link: ${payUrl}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.5">
+          <h2>EasyFix - Pay now</h2>
+          <p>Për me vazhdu me u shfaq në EasyFix, kliko linkun:</p>
+          <p><a href="${payUrl}">${payUrl}</a></p>
+          <p style="color:#666">Ky link skadon për ${PAY_TOKEN_MINUTES} minuta.</p>
+        </div>
+      `,
+    });
+
+    return res.json({ success: true, message: "If the email exists, we sent a link." });
+  } catch (err) {
+    errorWithTime("PAY-NOW REQUEST ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+app.get("/pay-now/checkout", async (req, res) => {
+  try {
+    const token = String(req.query.token || "").trim();
+    const plan = String(req.query.plan || "").trim().toLowerCase();
+
+    if (!token) return res.status(400).json({ success: false, error: "Missing token" });
+    if (!["basic", "standard", "premium"].includes(plan)) {
+      return res.status(400).json({ success: false, error: "Invalid plan" });
+    }
+
+    const tokenHash = sha256Hex(token);
+
+    const firm = await Firma.findOne({
+      pay_token_hash: tokenHash,
+      pay_token_expires: { $gt: new Date() },
+    }).lean();
+
+    if (!firm) return res.status(400).json({ success: false, error: "Invalid or expired link" });
+
+    await Firma.updateOne(
+      { _id: firm._id },
+      {
+        $set: { payment_status: "pending", plan },
+        $unset: { pay_token_hash: "", pay_token_expires: "" },
+      }
+    );
+
+    const variantId = planToVariant(plan);
+    const checkoutUrl = await createLemonCheckout({
+      variantId,
+      email: firm.email,
+      firmId: String(firm._id),
+    });
+
+    return res.json({ success: true, checkoutUrl });
+  } catch (err) {
+    errorWithTime("PAY-NOW CHECKOUT ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+/* ================= TRIAL NOTIFICATIONS ================= */
+async function runTrialNotifications() {
+  if (!resend) return;
+
+  const nowD = new Date();
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  // windows with buffer
+  const w7_from = new Date(nowD.getTime() + (6.5 * dayMs));
+  const w7_to = new Date(nowD.getTime() + (7.5 * dayMs));
+
+  const w1_from = new Date(nowD.getTime() + (0.5 * dayMs));
+  const w1_to = new Date(nowD.getTime() + (1.5 * dayMs));
+
+  const list7 = await Firma.find({
+    payment_status: "trial",
+    trial_ends_at: { $gte: w7_from, $lte: w7_to },
+    trial_reminder_7d_sent_at: { $exists: false },
+  }).select("_id email name trial_ends_at").lean();
+
+  for (const f of list7) {
+    try {
+      await sendMail({
+        to: f.email,
+        subject: "EasyFix - Trial po mbaron (7 ditë)",
+        text:
+          `Trial-i yt po mbaron më ${new Date(f.trial_ends_at).toLocaleString("sq-AL")}. ` +
+          `Nëse do me vazhdu me u shfaq në EasyFix, shko te: ${FRONTEND_BASE_URL}/pay.html`,
+        html: `
+          <div style="font-family:Arial;line-height:1.5">
+            <h2>Trial po mbaron</h2>
+            <p>Trial-i yt mbaron më <b>${new Date(f.trial_ends_at).toLocaleString("sq-AL")}</b>.</p>
+            <p>Nëse do me vazhdu me u shfaq në EasyFix, duhet me pagu.</p>
+            <p><a href="${FRONTEND_BASE_URL}/pay.html">Pay now</a></p>
+          </div>`,
+      });
+
+      await Firma.updateOne(
+        { _id: f._id },
+        { $set: { trial_reminder_7d_sent_at: new Date() } }
+      );
+    } catch (e) {
+      errorWithTime("TRIAL 7D EMAIL ERROR:", e);
+    }
+  }
+
+  const list1 = await Firma.find({
+    payment_status: "trial",
+    trial_ends_at: { $gte: w1_from, $lte: w1_to },
+    trial_reminder_1d_sent_at: { $exists: false },
+  }).select("_id email name trial_ends_at").lean();
+
+  for (const f of list1) {
+    try {
+      await sendMail({
+        to: f.email,
+        subject: "EasyFix - Trial po mbaron nesër",
+        text:
+          `Trial-i yt mbaron nesër (${new Date(f.trial_ends_at).toLocaleString("sq-AL")}). ` +
+          `Nëse do me vazhdu me u shfaq, shko te: ${FRONTEND_BASE_URL}/pay.html`,
+        html: `
+          <div style="font-family:Arial;line-height:1.5">
+            <h2>Trial po mbaron nesër</h2>
+            <p>Mbaron më <b>${new Date(f.trial_ends_at).toLocaleString("sq-AL")}</b>.</p>
+            <p><a href="${FRONTEND_BASE_URL}/pay.html">Pay now</a></p>
+          </div>`,
+      });
+
+      await Firma.updateOne(
+        { _id: f._id },
+        { $set: { trial_reminder_1d_sent_at: new Date() } }
+      );
+    } catch (e) {
+      errorWithTime("TRIAL 1D EMAIL ERROR:", e);
+    }
+  }
+}
+
 /* ================= HEALTH ================= */
 app.get("/health", (req, res) => {
   const rs = mongoose.connection.readyState;
@@ -500,6 +660,7 @@ app.post(
     { name: "photos", maxCount: 10 },
   ]),
   async (req, res) => {
+    let createdId = null;
     try {
       let { name, email, phone, address, city, category, plan, country } = req.body;
 
@@ -511,13 +672,16 @@ app.post(
       if (!name || !email || !phoneNorm || !address || !cityNorm || !category || !plan) {
         return res.status(400).json({ success: false, error: "Missing fields" });
       }
-
-      plan = String(plan || "").toLowerCase();
       if (!["basic", "standard", "premium"].includes(plan)) {
         return res.status(400).json({ success: false, error: "Invalid plan" });
       }
 
-      // ✅ geocode
+      const exists = await Firma.findOne({ email }).lean();
+      if (exists) {
+        return res.status(409).json({ success: false, error: "Ky email tashmë ekziston" });
+      }
+
+      // ✅ NEW: geocode address+city -> location
       const geo = await geocodeNominatim({
         address: String(address || "").trim(),
         city: cityNorm,
@@ -531,7 +695,6 @@ app.post(
         });
       }
 
-      // uploads (same rules)
       let logoUrl = null;
       let photos = [];
 
@@ -555,72 +718,10 @@ app.post(
         photos = [];
       }
 
-      // ===== If exists: if active -> block; if expired/pending -> send to checkout =====
-      const existing = await Firma.findOne({ email });
-
-      if (existing) {
-        const nowDate = new Date();
-
-        // paid active
-        if (existing.payment_status === "paid" && existing.expires_at && new Date(existing.expires_at) > nowDate) {
-          return res.status(409).json({ success: false, error: "Ky email tashmë është aktiv (paid)." });
-        }
-
-        // trial active
-        if (existing.payment_status === "trial" && existing.trial_ends_at && new Date(existing.trial_ends_at) > nowDate) {
-          return res.status(409).json({
-            success: false,
-            error: "Ky email është tashmë aktiv në trial.",
-            trialEndsAt: existing.trial_ends_at
-          });
-        }
-
-        // update info + set pending then send checkout
-        existing.name = name;
-        existing.phone = phoneNorm;
-        existing.address = address;
-        existing.city = cityNorm;
-        existing.category = category;
-        existing.country = countryNorm;
-        existing.plan = plan;
-        existing.location = { type: "Point", coordinates: [geo.lng, geo.lat] };
-
-        if (plan === "standard" || plan === "premium") {
-          if (logoUrl) existing.logoUrl = logoUrl;
-          if (photos.length) existing.photos = photos;
-        } else {
-          existing.logoUrl = null;
-          existing.photos = [];
-        }
-
-        existing.payment_status = "pending";
-        existing.deleted_at = null;
-        existing.paid_at = null;
-        existing.expires_at = null;
-        existing.trial_started_at = null;
-        existing.trial_ends_at = null;
-
-        await existing.save();
-
-        const variantId = planToVariant(plan);
-        const checkoutUrl = await createLemonCheckout({
-          variantId,
-          email,
-          firmId: String(existing._id),
-        });
-
-        return res.json({
-          success: true,
-          mode: "checkout",
-          message: "Vazhdo me pagesën për me u riaktivizu.",
-          checkoutUrl,
-        });
-      }
-
-      // ===== New: start trial (4 months) without checkout =====
-      const trialStarted = new Date();
-      const trialEnds = new Date(trialStarted);
-      trialEnds.setMonth(trialEnds.getMonth() + TRIAL_MONTHS);
+      // ✅ 4 months trial
+      const nowD = new Date();
+      const trialEnds = new Date(nowD);
+      trialEnds.setMonth(trialEnds.getMonth() + 4);
 
       const firma = await Firma.create({
         name,
@@ -632,56 +733,70 @@ app.post(
         city: cityNorm,
         category,
         country: countryNorm,
-        location: { type: "Point", coordinates: [geo.lng, geo.lat] },
+
+        location: {
+          type: "Point",
+          coordinates: [geo.lng, geo.lat],
+        },
 
         plan,
-
         payment_status: "trial",
-        trial_started_at: trialStarted,
+        trial_started_at: nowD,
         trial_ends_at: trialEnds,
-
-        // kompatibilitet (expired cleanup, etj.)
         expires_at: trialEnds,
+        deleted_at: null,
 
         logoUrl,
         photos,
       });
 
+      createdId = firma._id;
+
+      // ✅ Redirect to success (no payment during trial)
+      const successUrl = `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}&trial=1`;
+
       return res.json({
         success: true,
-        mode: "trial",
-        message: `U aktivizua trial ${TRIAL_MONTHS} muaj falas.`,
-        nextUrl: `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}&firmId=${encodeURIComponent(String(firma._id))}`,
+        message: "Regjistrimi u ruajt. Trial-i u aktivizua.",
+        checkoutUrl: successUrl,
       });
-
     } catch (err) {
       errorWithTime("REGISTER ERROR:", err);
+
+      if (createdId) {
+        try { await Firma.deleteOne({ _id: createdId }); } catch {}
+      }
+
       return res.status(500).json({ success: false, error: "Server error" });
     }
   }
 );
 
 /* ================= PUBLIC ================= */
+// ✅ /firms?country=MK -> kthen vetëm firmat e atij shteti
 app.get("/firms", async (req, res) => {
   try {
     res.setHeader("Cache-Control", "no-store");
 
     const qCountry = String(req.query.country || "").trim().toUpperCase();
-    const base = activeClause();
+    const nowD = new Date();
+
+    const base = {
+      $or: [
+        { payment_status: "paid" },
+        { payment_status: "trial", trial_ends_at: { $gt: nowD } },
+      ],
+    };
 
     if (/^[A-Z]{2}$/.test(qCountry)) {
       if (qCountry === "MK") {
         const firms = await Firma.find({
-          $and: [
-            base,
-            {
-              $or: [
-                { country: "MK" },
-                { country: { $exists: false } },
-                { country: null },
-                { country: "" },
-              ],
-            },
+          ...base,
+          $or: [
+            { country: "MK" },
+            { country: { $exists: false } },
+            { country: null },
+            { country: "" },
           ],
         })
           .select("-__v")
@@ -691,7 +806,7 @@ app.get("/firms", async (req, res) => {
         return res.json(firms);
       }
 
-      const firms = await Firma.find({ $and: [base, { country: qCountry }] })
+      const firms = await Firma.find({ ...base, country: qCountry })
         .select("-__v")
         .sort({ createdAt: -1 })
         .lean();
@@ -711,7 +826,8 @@ app.get("/firms", async (req, res) => {
   }
 });
 
-/* ================= NEAR ME ================= */
+/* ================= NEAR ME (NEW) ================= */
+// GET /firms/near?country=MK&lat=41.99&lng=21.43&radius_km=25
 app.get("/firms/near", async (req, res) => {
   try {
     res.setHeader("Cache-Control", "no-store");
@@ -723,6 +839,7 @@ app.get("/firms/near", async (req, res) => {
     let radiusKm = Number(req.query.radius_km || 25);
     if (!Number.isFinite(radiusKm)) radiusKm = 25;
 
+    // hard bounds (anti-abuse)
     radiusKm = Math.max(1, Math.min(radiusKm, 200));
     const radiusM = radiusKm * 1000;
 
@@ -739,15 +856,22 @@ app.get("/firms/near", async (req, res) => {
       },
     };
 
-    const baseActive = activeClause();
+    const nowD = new Date();
+    const basePaid = {
+      $or: [
+        { payment_status: "paid" },
+        { payment_status: "trial", trial_ends_at: { $gt: nowD } },
+      ],
+    };
 
+    // country filter + legacy MK support
     let query = null;
 
     if (/^[A-Z]{2}$/.test(qCountry)) {
       if (qCountry === "MK") {
         query = {
           $and: [
-            baseActive,
+            basePaid,
             geoClause,
             {
               $or: [
@@ -760,10 +884,10 @@ app.get("/firms/near", async (req, res) => {
           ],
         };
       } else {
-        query = { $and: [baseActive, geoClause, { country: qCountry }] };
+        query = { $and: [basePaid, geoClause, { country: qCountry }] };
       }
     } else {
-      query = { $and: [baseActive, geoClause] };
+      query = { $and: [basePaid, geoClause] };
     }
 
     const firms = await Firma.find(query)
@@ -796,21 +920,52 @@ app.get("/check-status", async (req, res) => {
 async function runCleanup() {
   const nowDate = new Date();
 
-  // skado paid kur mbaron
-  await Firma.updateMany(
-    { payment_status: "paid", expires_at: { $lte: nowDate } },
-    { $set: { payment_status: "expired" } }
-  );
+  // 1) Expire trials that ended + send email once
+  const expiredTrials = await Firma.find({
+    payment_status: "trial",
+    trial_ends_at: { $lte: nowDate },
+  }).select("_id email trial_expired_email_sent_at").lean();
 
-  // skado trial kur mbaron
   await Firma.updateMany(
     { payment_status: "trial", trial_ends_at: { $lte: nowDate } },
     { $set: { payment_status: "expired", expires_at: nowDate } }
   );
 
-  // mos i fshij expired shpejt; fshiji plotesisht pas 180 diteve
-  const cutoffExpired = new Date(Date.now() - DELETE_EXPIRED_AFTER_DAYS * 24 * 60 * 60 * 1000);
-  await Firma.deleteMany({ payment_status: "expired", expires_at: { $lte: cutoffExpired } });
+  if (resend) {
+    for (const f of expiredTrials) {
+      if (f.trial_expired_email_sent_at) continue;
+      try {
+        await sendMail({
+          to: f.email,
+          subject: "EasyFix - Trial mbaroi, lista u çaktivizua",
+          text: `Trial-i yt mbaroi dhe lista u çaktivizua. Për me vazhdu me u shfaq: ${FRONTEND_BASE_URL}/pay.html`,
+          html: `
+            <div style="font-family:Arial;line-height:1.5">
+              <h2>Lista u çaktivizua</h2>
+              <p>Trial-i yt mbaroi dhe lista u çaktivizua.</p>
+              <p>Për me u shfaq prap: <a href="${FRONTEND_BASE_URL}/pay.html">Pay now</a></p>
+            </div>`,
+        });
+
+        await Firma.updateOne(
+          { _id: f._id },
+          { $set: { trial_expired_email_sent_at: new Date() } }
+        );
+      } catch (e) {
+        errorWithTime("TRIAL EXPIRED EMAIL ERROR:", e);
+      }
+    }
+  }
+
+  // 2) Expire paid subscriptions that ended
+  await Firma.updateMany(
+    { payment_status: "paid", expires_at: { $lte: nowDate } },
+    { $set: { payment_status: "expired" } }
+  );
+
+  // 3) Delete expired after DELETE_AFTER_DAYS
+  const cutoff = new Date(Date.now() - DELETE_AFTER_DAYS * 24 * 60 * 60 * 1000);
+  await Firma.deleteMany({ payment_status: "expired", expires_at: { $lte: cutoff } });
 }
 
 /* ================= MONGO + START ================= */
@@ -834,8 +989,12 @@ async function start() {
     await Firma.findOne({}).select("_id").lean();
 
     setInterval(async () => {
-      try { await runCleanup(); }
-      catch (e) { errorWithTime("Cleanup error:", e); }
+      try {
+        await runTrialNotifications();
+        await runCleanup();
+      } catch (e) {
+        errorWithTime("Scheduler error:", e);
+      }
     }, CHECK_INTERVAL_MINUTES * 60 * 1000);
 
     app.listen(PORT, () => log(`🚀 Server running on port ${PORT}`));

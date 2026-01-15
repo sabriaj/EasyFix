@@ -47,8 +47,15 @@ const FRONTEND_SUCCESS_URL =
   process.env.FRONTEND_SUCCESS_URL ||
   "https://sabriaj.github.io/EasyFix/success.html";
 
+// Trial config
+const TRIAL_MONTHS = Number(process.env.TRIAL_MONTHS || 4);
+
+// Cleanup config
 const DELETE_AFTER_DAYS = Number(process.env.DELETE_AFTER_DAYS || 2);
 const CHECK_INTERVAL_MINUTES = Number(process.env.CHECK_INTERVAL_MINUTES || 60);
+
+// Fshi expired plotesisht pas 180 diteve (siç e kërkove)
+const DELETE_EXPIRED_AFTER_DAYS = Number(process.env.DELETE_EXPIRED_AFTER_DAYS || 180);
 
 const DEFAULT_COUNTRY = String(process.env.DEFAULT_COUNTRY || "MK").toUpperCase();
 
@@ -125,6 +132,17 @@ function normalizePhone(raw) {
   return null;
 }
 
+// ✅ Active clause: paid OR trial (ende aktiv)
+function activeClause() {
+  const nowDate = new Date();
+  return {
+    $or: [
+      { payment_status: "paid" },
+      { payment_status: "trial", trial_ends_at: { $gt: nowDate } },
+    ],
+  };
+}
+
 /* ================= GEO (NEW) ================= */
 function fetchWithTimeout(url, timeoutMs = 8000, options = {}) {
   const controller = new AbortController();
@@ -142,7 +160,6 @@ async function geocodeNominatim({ address, city, countryIso2 }) {
   try {
     const resp = await fetchWithTimeout(url, 9000, {
       headers: {
-        // Nominatim kërkon UA/Referer të arsyeshëm
         "User-Agent": "EasyFix/1.0 (support@easyfix.services)",
         "Accept": "application/json",
       },
@@ -164,7 +181,6 @@ async function geocodeNominatim({ address, city, countryIso2 }) {
 /* ================= SCHEMA ================= */
 const firmaSchema = new mongoose.Schema(
   {
-    // === OWNER SELF-SERVICE TOKENS (magic links) ===
     owner_token_hash: String,
     owner_token_expires: Date,
 
@@ -178,13 +194,11 @@ const firmaSchema = new mongoose.Schema(
     phone_verified_at: Date,
 
     address: String,
-    city: String, // ✅ NEW
+    city: String,
     category: String,
 
-    // Country for international use (ISO2)
     country: { type: String, default: DEFAULT_COUNTRY, index: true },
 
-    // ✅ NEW: Geo location (GeoJSON)
     location: {
       type: {
         type: String,
@@ -198,7 +212,11 @@ const firmaSchema = new mongoose.Schema(
     },
 
     plan: { type: String, default: "basic" },
-    payment_status: { type: String, default: "pending", index: true },
+
+    // ✅ trial + payment status
+    payment_status: { type: String, default: "pending", index: true }, // pending | trial | paid | expired
+    trial_started_at: Date,
+    trial_ends_at: { type: Date, index: true },
 
     logoUrl: String,
     photos: [String],
@@ -210,10 +228,7 @@ const firmaSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ Index për /firms dhe admin filters
 firmaSchema.index({ payment_status: 1, country: 1, plan: 1, createdAt: -1 });
-
-// ✅ NEW: 2dsphere index për near me
 firmaSchema.index({ location: "2dsphere", payment_status: 1, country: 1 });
 
 const Firma = mongoose.model("Firma", firmaSchema);
@@ -287,13 +302,14 @@ app.get("/admin/firms", requireAdmin, async (req, res) => {
 });
 
 /* ================= ADMIN: UPDATE FIRM ================= */
-app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
+// ✅ express.json vetëm për këtë route (pa prish webhook raw)
+app.put("/admin/firms/:id", requireAdmin, express.json(), async (req, res) => {
   try {
     const id = String(req.params.id || "").trim();
     if (!id) return res.status(400).json({ success: false, error: "Missing id" });
 
     const patch = {};
-    const allow = ["name", "phone", "address", "city", "category", "plan", "country", "payment_status", "expires_at"];
+    const allow = ["name", "phone", "address", "city", "category", "plan", "country", "payment_status", "expires_at", "trial_ends_at"];
     for (const k of allow) {
       if (req.body?.[k] !== undefined) patch[k] = req.body[k];
     }
@@ -314,7 +330,7 @@ app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
 
     if (patch.payment_status !== undefined) {
       const s = String(patch.payment_status || "").toLowerCase();
-      if (!["pending", "paid", "expired"].includes(s)) {
+      if (!["pending", "trial", "paid", "expired"].includes(s)) {
         return res.status(400).json({ success: false, error: "Invalid payment_status" });
       }
       patch.payment_status = s;
@@ -433,6 +449,8 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
         paid_at: new Date(),
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         deleted_at: null,
+        trial_started_at: null,
+        trial_ends_at: null,
       };
       if (detectedPlan) update.plan = detectedPlan;
 
@@ -482,7 +500,6 @@ app.post(
     { name: "photos", maxCount: 10 },
   ]),
   async (req, res) => {
-    let createdId = null;
     try {
       let { name, email, phone, address, city, category, plan, country } = req.body;
 
@@ -494,16 +511,13 @@ app.post(
       if (!name || !email || !phoneNorm || !address || !cityNorm || !category || !plan) {
         return res.status(400).json({ success: false, error: "Missing fields" });
       }
+
+      plan = String(plan || "").toLowerCase();
       if (!["basic", "standard", "premium"].includes(plan)) {
         return res.status(400).json({ success: false, error: "Invalid plan" });
       }
 
-      const exists = await Firma.findOne({ email }).lean();
-      if (exists) {
-        return res.status(409).json({ success: false, error: "Ky email tashmë ekziston" });
-      }
-
-      // ✅ NEW: geocode address+city -> location
+      // ✅ geocode
       const geo = await geocodeNominatim({
         address: String(address || "").trim(),
         city: cityNorm,
@@ -517,6 +531,7 @@ app.post(
         });
       }
 
+      // uploads (same rules)
       let logoUrl = null;
       let photos = [];
 
@@ -540,6 +555,73 @@ app.post(
         photos = [];
       }
 
+      // ===== If exists: if active -> block; if expired/pending -> send to checkout =====
+      const existing = await Firma.findOne({ email });
+
+      if (existing) {
+        const nowDate = new Date();
+
+        // paid active
+        if (existing.payment_status === "paid" && existing.expires_at && new Date(existing.expires_at) > nowDate) {
+          return res.status(409).json({ success: false, error: "Ky email tashmë është aktiv (paid)." });
+        }
+
+        // trial active
+        if (existing.payment_status === "trial" && existing.trial_ends_at && new Date(existing.trial_ends_at) > nowDate) {
+          return res.status(409).json({
+            success: false,
+            error: "Ky email është tashmë aktiv në trial.",
+            trialEndsAt: existing.trial_ends_at
+          });
+        }
+
+        // update info + set pending then send checkout
+        existing.name = name;
+        existing.phone = phoneNorm;
+        existing.address = address;
+        existing.city = cityNorm;
+        existing.category = category;
+        existing.country = countryNorm;
+        existing.plan = plan;
+        existing.location = { type: "Point", coordinates: [geo.lng, geo.lat] };
+
+        if (plan === "standard" || plan === "premium") {
+          if (logoUrl) existing.logoUrl = logoUrl;
+          if (photos.length) existing.photos = photos;
+        } else {
+          existing.logoUrl = null;
+          existing.photos = [];
+        }
+
+        existing.payment_status = "pending";
+        existing.deleted_at = null;
+        existing.paid_at = null;
+        existing.expires_at = null;
+        existing.trial_started_at = null;
+        existing.trial_ends_at = null;
+
+        await existing.save();
+
+        const variantId = planToVariant(plan);
+        const checkoutUrl = await createLemonCheckout({
+          variantId,
+          email,
+          firmId: String(existing._id),
+        });
+
+        return res.json({
+          success: true,
+          mode: "checkout",
+          message: "Vazhdo me pagesën për me u riaktivizu.",
+          checkoutUrl,
+        });
+      }
+
+      // ===== New: start trial (4 months) without checkout =====
+      const trialStarted = new Date();
+      const trialEnds = new Date(trialStarted);
+      trialEnds.setMonth(trialEnds.getMonth() + TRIAL_MONTHS);
+
       const firma = await Firma.create({
         name,
         email,
@@ -550,62 +632,56 @@ app.post(
         city: cityNorm,
         category,
         country: countryNorm,
-
-        location: {
-          type: "Point",
-          coordinates: [geo.lng, geo.lat],
-        },
+        location: { type: "Point", coordinates: [geo.lng, geo.lat] },
 
         plan,
-        payment_status: "pending",
+
+        payment_status: "trial",
+        trial_started_at: trialStarted,
+        trial_ends_at: trialEnds,
+
+        // kompatibilitet (expired cleanup, etj.)
+        expires_at: trialEnds,
+
         logoUrl,
         photos,
       });
 
-      createdId = firma._id;
-
-      const variantId = planToVariant(plan);
-      const checkoutUrl = await createLemonCheckout({
-        variantId,
-        email,
-        firmId: String(firma._id),
-      });
-
       return res.json({
         success: true,
-        message: "Regjistrimi u ruajt. Vazhdoni me pagesën.",
-        checkoutUrl,
+        mode: "trial",
+        message: `U aktivizua trial ${TRIAL_MONTHS} muaj falas.`,
+        nextUrl: `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}&firmId=${encodeURIComponent(String(firma._id))}`,
       });
+
     } catch (err) {
       errorWithTime("REGISTER ERROR:", err);
-
-      if (createdId) {
-        try { await Firma.deleteOne({ _id: createdId }); } catch {}
-      }
-
       return res.status(500).json({ success: false, error: "Server error" });
     }
   }
 );
 
 /* ================= PUBLIC ================= */
-// ✅ /firms?country=MK -> kthen vetëm firmat e atij shteti
 app.get("/firms", async (req, res) => {
   try {
     res.setHeader("Cache-Control", "no-store");
 
     const qCountry = String(req.query.country || "").trim().toUpperCase();
-    const base = { payment_status: "paid" };
+    const base = activeClause();
 
     if (/^[A-Z]{2}$/.test(qCountry)) {
       if (qCountry === "MK") {
         const firms = await Firma.find({
-          ...base,
-          $or: [
-            { country: "MK" },
-            { country: { $exists: false } },
-            { country: null },
-            { country: "" },
+          $and: [
+            base,
+            {
+              $or: [
+                { country: "MK" },
+                { country: { $exists: false } },
+                { country: null },
+                { country: "" },
+              ],
+            },
           ],
         })
           .select("-__v")
@@ -615,7 +691,7 @@ app.get("/firms", async (req, res) => {
         return res.json(firms);
       }
 
-      const firms = await Firma.find({ ...base, country: qCountry })
+      const firms = await Firma.find({ $and: [base, { country: qCountry }] })
         .select("-__v")
         .sort({ createdAt: -1 })
         .lean();
@@ -635,8 +711,7 @@ app.get("/firms", async (req, res) => {
   }
 });
 
-/* ================= NEAR ME (NEW) ================= */
-// GET /firms/near?country=MK&lat=41.99&lng=21.43&radius_km=25
+/* ================= NEAR ME ================= */
 app.get("/firms/near", async (req, res) => {
   try {
     res.setHeader("Cache-Control", "no-store");
@@ -648,7 +723,6 @@ app.get("/firms/near", async (req, res) => {
     let radiusKm = Number(req.query.radius_km || 25);
     if (!Number.isFinite(radiusKm)) radiusKm = 25;
 
-    // hard bounds (anti-abuse)
     radiusKm = Math.max(1, Math.min(radiusKm, 200));
     const radiusM = radiusKm * 1000;
 
@@ -665,16 +739,15 @@ app.get("/firms/near", async (req, res) => {
       },
     };
 
-    const basePaid = { payment_status: "paid" };
+    const baseActive = activeClause();
 
-    // country filter + legacy MK support
     let query = null;
 
     if (/^[A-Z]{2}$/.test(qCountry)) {
       if (qCountry === "MK") {
         query = {
           $and: [
-            basePaid,
+            baseActive,
             geoClause,
             {
               $or: [
@@ -687,10 +760,10 @@ app.get("/firms/near", async (req, res) => {
           ],
         };
       } else {
-        query = { $and: [basePaid, geoClause, { country: qCountry }] };
+        query = { $and: [baseActive, geoClause, { country: qCountry }] };
       }
     } else {
-      query = { $and: [basePaid, geoClause] };
+      query = { $and: [baseActive, geoClause] };
     }
 
     const firms = await Firma.find(query)
@@ -723,13 +796,21 @@ app.get("/check-status", async (req, res) => {
 async function runCleanup() {
   const nowDate = new Date();
 
+  // skado paid kur mbaron
   await Firma.updateMany(
     { payment_status: "paid", expires_at: { $lte: nowDate } },
     { $set: { payment_status: "expired" } }
   );
 
-  const cutoff = new Date(Date.now() - DELETE_AFTER_DAYS * 24 * 60 * 60 * 1000);
-  await Firma.deleteMany({ payment_status: "expired", expires_at: { $lte: cutoff } });
+  // skado trial kur mbaron
+  await Firma.updateMany(
+    { payment_status: "trial", trial_ends_at: { $lte: nowDate } },
+    { $set: { payment_status: "expired", expires_at: nowDate } }
+  );
+
+  // mos i fshij expired shpejt; fshiji plotesisht pas 180 diteve
+  const cutoffExpired = new Date(Date.now() - DELETE_EXPIRED_AFTER_DAYS * 24 * 60 * 60 * 1000);
+  await Firma.deleteMany({ payment_status: "expired", expires_at: { $lte: cutoffExpired } });
 }
 
 /* ================= MONGO + START ================= */

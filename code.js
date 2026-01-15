@@ -109,7 +109,6 @@ async function initPhoneInput() {
 
 /* ===================== MAIN INIT ===================== */
 window.addEventListener("DOMContentLoaded", async () => {
-  // i18n
   applyTranslations();
   setLangButtonsUI();
 
@@ -117,22 +116,15 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("#langMK")?.addEventListener("click", () => { setLang("mk"); applyTranslations(); setLangButtonsUI(); updateUploadHints(); });
   $("#langEN")?.addEventListener("click", () => { setLang("en"); applyTranslations(); setLangButtonsUI(); updateUploadHints(); });
 
-  // PLAN UI
   wirePlanButtons();
-
-  // default plan
   $("#planBasic")?.click();
 
-  // phone init
   const okPhone = await initPhoneInput();
   if (!okPhone) {
     showStatus("Phone input failed to initialize (country selector not loaded). Check console.", "error");
   }
 
-  // ✅ Prefill city (best-effort)
   await prefillCityFromIp();
-
-  // submit wire
   wireSubmit();
 });
 
@@ -213,7 +205,6 @@ function wireSubmit() {
       return;
     }
 
-    // privacy checkbox
     const agree = $("#agreePrivacy");
     if (agree && !agree.checked) {
       showStatus("You must agree to the Privacy Policy.", "error");
@@ -271,7 +262,8 @@ function wireSubmit() {
       const res = await fetch(`${BACKEND_URL}/register`, { method: "POST", body: formData });
 
       if (res.status === 409) {
-        showStatus(t("msg_email_exists"), "error");
+        const data409 = await res.json().catch(() => ({}));
+        showStatus(data409?.error || t("msg_email_exists"), "error");
         return;
       }
 
@@ -282,7 +274,15 @@ function wireSubmit() {
       }
 
       showStatus(t("msg_to_pay"), "success");
-      setTimeout(() => { window.location.href = data.checkoutUrl; }, 700);
+
+      setTimeout(() => {
+        if (data.checkoutUrl) {
+          window.location.href = data.checkoutUrl; // kur duhet pagesë (riaktivizim)
+        } else {
+          const next = data.nextUrl || `success.html?email=${encodeURIComponent(email)}`;
+          window.location.href = next; // trial activation
+        }
+      }, 700);
 
     } catch (err) {
       console.error(err);

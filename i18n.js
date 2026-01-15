@@ -23,6 +23,11 @@
       next: "Next",
       modal_help: "Esc për me mbyll, shigjeta ← → për Next/Prev",
 
+
+      continue_pay: "Aktivizo 4 muaj falas",
+      msg_to_pay: "Po ju dërgojmë te konfirmimi…",
+
+
       // index
       hero: "Gjej mjeshtrin që të duhet me shpejtësi",
       search_placeholder: "Kërko firmë ose shërbim...",
@@ -161,6 +166,13 @@
       next: "Напред",
       modal_help: "Esc за затворање, стрелки ← → за Next/Prev",
 
+
+
+      continue_pay: "Активирај 4 месеци бесплатно",
+      msg_to_pay: "Ве пренасочуваме кон потврда…",
+
+
+
       hero: "Најди мајстор брзо и лесно",
       search_placeholder: "Пребарај фирма или услуга...",
       all_categories: "Сите категории",
@@ -289,6 +301,12 @@
       prev: "Prev",
       next: "Next",
       modal_help: "Esc to close, arrows ← → for Next/Prev",
+      
+
+      continue_pay: "Activate 4 months free",
+      msg_to_pay: "Redirecting to confirmation…",
+
+
 
       hero: "Find the right professional quickly",
       search_placeholder: "Search for a company or service...",

@@ -13,6 +13,101 @@ dotenv.config();
 const app = express();
 app.use(cors());
 
+/* ================= ADMIN: STATS ================= */
+app.get("/admin/stats", requireAdmin, async (req, res) => {
+  try {
+    const total = await Firma.countDocuments({});
+    const pending = await Firma.countDocuments({ payment_status: "pending" });
+    const paid = await Firma.countDocuments({ payment_status: "paid" });
+    const expired = await Firma.countDocuments({ payment_status: "expired" });
+    const trial = await Firma.countDocuments({ payment_status: "trial" });
+
+    return res.json({
+      success: true,
+      stats: { total, pending, paid, expired, trial },
+    });
+  } catch (err) {
+    errorWithTime("ADMIN STATS ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+/* ================= ADMIN: DELETE FIRM ================= */
+app.delete("/admin/firms/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
+
+    const deleted = await Firma.findByIdAndDelete(id).lean();
+    if (!deleted) return res.status(404).json({ success: false, error: "Not found" });
+
+    return res.json({ success: true });
+  } catch (err) {
+    errorWithTime("ADMIN DELETE ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+/* ================= ADMIN: EXPIRE ================= */
+app.post("/admin/firms/:id/expire", requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
+
+    const nowD = new Date();
+
+    const updated = await Firma.findByIdAndUpdate(
+      id,
+      { $set: { payment_status: "expired", expires_at: nowD } },
+      { new: true }
+    ).lean();
+
+    if (!updated) return res.status(404).json({ success: false, error: "Not found" });
+
+    return res.json({ success: true, firm: updated });
+  } catch (err) {
+    errorWithTime("ADMIN EXPIRE ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+/* ================= ADMIN: MARK PAID ================= */
+app.post("/admin/firms/:id/mark-paid", requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
+
+    const daysRaw = req.body?.days;
+    let days = Number(daysRaw);
+    if (!Number.isFinite(days) || days <= 0) days = 30;
+    days = Math.min(3650, Math.max(1, Math.floor(days))); // 1..3650
+
+    const nowD = new Date();
+    const expires = new Date(nowD.getTime() + days * 24 * 60 * 60 * 1000);
+
+    const updated = await Firma.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          payment_status: "paid",
+          paid_at: nowD,
+          expires_at: expires,
+          deleted_at: null,
+        },
+      },
+      { new: true }
+    ).lean();
+
+    if (!updated) return res.status(404).json({ success: false, error: "Not found" });
+
+    return res.json({ success: true, firm: updated });
+  } catch (err) {
+    errorWithTime("ADMIN MARK-PAID ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+
 /* ================= resend email ================= */
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
 const RESEND_FROM = String(process.env.RESEND_FROM || "").trim();

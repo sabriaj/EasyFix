@@ -1,4 +1,4 @@
-// server.js (MODIFIED - 4 months free trial + reminder emails + pay-now flow + delete after 180 days)
+// server.js (FIXED - 4 months free trial + reminder emails + pay-now flow + delete after 180 days)
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -145,7 +145,6 @@ async function geocodeNominatim({ address, city, countryIso2 }) {
   try {
     const resp = await fetchWithTimeout(url, 9000, {
       headers: {
-        // Nominatim kërkon UA/Referer të arsyeshëm
         "User-Agent": "EasyFix/1.0 (support@easyfix.services)",
         "Accept": "application/json",
       },
@@ -192,13 +191,11 @@ const firmaSchema = new mongoose.Schema(
     phone_verified_at: Date,
 
     address: String,
-    city: String, // ✅ NEW
+    city: String,
     category: String,
 
-    // Country for international use (ISO2)
     country: { type: String, default: DEFAULT_COUNTRY, index: true },
 
-    // ✅ NEW: Geo location (GeoJSON)
     location: {
       type: {
         type: String,
@@ -224,10 +221,7 @@ const firmaSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ Index për /firms dhe admin filters
 firmaSchema.index({ payment_status: 1, country: 1, plan: 1, createdAt: -1 });
-
-// ✅ NEW: 2dsphere index për near me
 firmaSchema.index({ location: "2dsphere", payment_status: 1, country: 1 });
 
 const Firma = mongoose.model("Firma", firmaSchema);
@@ -268,6 +262,36 @@ function requireAdmin(req, res, next) {
   }
 }
 
+/* ================= ADMIN: TEST EMAIL (NEW) ================= */
+app.post("/admin/test-email", requireAdmin, async (req, res) => {
+  try {
+    const to = normalizeEmail(req.body?.to);
+    if (!to) return res.status(400).json({ success: false, error: "Missing to" });
+    await sendMail({
+      to,
+      subject: "EasyFix - Test Email",
+      text: "Ky është test email nga EasyFix (Resend).",
+      html: "<p>Ky është <b>test email</b> nga EasyFix (Resend).</p>",
+    });
+    return res.json({ success: true });
+  } catch (err) {
+    errorWithTime("ADMIN TEST EMAIL ERROR:", err);
+    return res.status(500).json({ success: false, error: String(err?.message || err) });
+  }
+});
+
+/* ================= ADMIN: RUN SCHEDULER NOW (NEW) ================= */
+app.post("/admin/run-scheduler", requireAdmin, async (req, res) => {
+  try {
+    await runTrialNotifications();
+    await runCleanup();
+    return res.json({ success: true });
+  } catch (err) {
+    errorWithTime("ADMIN RUN SCHEDULER ERROR:", err);
+    return res.status(500).json({ success: false, error: String(err?.message || err) });
+  }
+});
+
 /* ================= ADMIN: LIST FIRMS ================= */
 app.get("/admin/firms", requireAdmin, async (req, res) => {
   try {
@@ -307,7 +331,7 @@ app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
     if (!id) return res.status(400).json({ success: false, error: "Missing id" });
 
     const patch = {};
-    const allow = ["name", "phone", "address", "city", "category", "plan", "country", "payment_status", "expires_at"];
+    const allow = ["name", "phone", "address", "city", "category", "plan", "country", "payment_status", "expires_at", "trial_ends_at"];
     for (const k of allow) {
       if (req.body?.[k] !== undefined) patch[k] = req.body[k];
     }
@@ -568,9 +592,12 @@ app.get("/pay-now/checkout", async (req, res) => {
   }
 });
 
-/* ================= TRIAL NOTIFICATIONS ================= */
+/* ================= TRIAL NOTIFICATIONS (FIXED) ================= */
 async function runTrialNotifications() {
-  if (!resend) return;
+  if (!resend) {
+    log("⚠️ TrialNotifications skipped: Resend not configured");
+    return;
+  }
 
   const nowD = new Date();
   const dayMs = 24 * 60 * 60 * 1000;
@@ -582,11 +609,17 @@ async function runTrialNotifications() {
   const w1_from = new Date(nowD.getTime() + (0.5 * dayMs));
   const w1_to = new Date(nowD.getTime() + (1.5 * dayMs));
 
+  // IMPORTANT: handle field missing OR null
+  const notSent7 = { $or: [{ trial_reminder_7d_sent_at: { $exists: false } }, { trial_reminder_7d_sent_at: null }] };
+  const notSent1 = { $or: [{ trial_reminder_1d_sent_at: { $exists: false } }, { trial_reminder_1d_sent_at: null }] };
+
   const list7 = await Firma.find({
     payment_status: "trial",
     trial_ends_at: { $gte: w7_from, $lte: w7_to },
-    trial_reminder_7d_sent_at: { $exists: false },
+    ...notSent7,
   }).select("_id email name trial_ends_at").lean();
+
+  log("📨 TrialNotifications 7d candidates:", list7.length);
 
   for (const f of list7) {
     try {
@@ -609,16 +642,19 @@ async function runTrialNotifications() {
         { _id: f._id },
         { $set: { trial_reminder_7d_sent_at: new Date() } }
       );
+      log("✅ Sent 7d reminder:", f.email);
     } catch (e) {
-      errorWithTime("TRIAL 7D EMAIL ERROR:", e);
+      errorWithTime("TRIAL 7D EMAIL ERROR:", f.email, e);
     }
   }
 
   const list1 = await Firma.find({
     payment_status: "trial",
     trial_ends_at: { $gte: w1_from, $lte: w1_to },
-    trial_reminder_1d_sent_at: { $exists: false },
+    ...notSent1,
   }).select("_id email name trial_ends_at").lean();
+
+  log("📨 TrialNotifications 1d candidates:", list1.length);
 
   for (const f of list1) {
     try {
@@ -640,8 +676,9 @@ async function runTrialNotifications() {
         { _id: f._id },
         { $set: { trial_reminder_1d_sent_at: new Date() } }
       );
+      log("✅ Sent 1d reminder:", f.email);
     } catch (e) {
-      errorWithTime("TRIAL 1D EMAIL ERROR:", e);
+      errorWithTime("TRIAL 1D EMAIL ERROR:", f.email, e);
     }
   }
 }
@@ -649,7 +686,13 @@ async function runTrialNotifications() {
 /* ================= HEALTH ================= */
 app.get("/health", (req, res) => {
   const rs = mongoose.connection.readyState;
-  res.json({ ok: true, time: now(), dbReadyState: rs });
+  res.json({
+    ok: true,
+    time: now(),
+    dbReadyState: rs,
+    resendConfigured: Boolean(resend),
+    resendFrom: RESEND_FROM ? RESEND_FROM : null
+  });
 });
 
 /* ================= REGISTER (multipart) ================= */
@@ -681,7 +724,6 @@ app.post(
         return res.status(409).json({ success: false, error: "Ky email tashmë ekziston" });
       }
 
-      // ✅ NEW: geocode address+city -> location
       const geo = await geocodeNominatim({
         address: String(address || "").trim(),
         city: cityNorm,
@@ -752,7 +794,6 @@ app.post(
 
       createdId = firma._id;
 
-      // ✅ Redirect to success (no payment during trial)
       const successUrl = `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}&trial=1`;
 
       return res.json({
@@ -773,7 +814,6 @@ app.post(
 );
 
 /* ================= PUBLIC ================= */
-// ✅ /firms?country=MK -> kthen vetëm firmat e atij shteti
 app.get("/firms", async (req, res) => {
   try {
     res.setHeader("Cache-Control", "no-store");
@@ -826,8 +866,7 @@ app.get("/firms", async (req, res) => {
   }
 });
 
-/* ================= NEAR ME (NEW) ================= */
-// GET /firms/near?country=MK&lat=41.99&lng=21.43&radius_km=25
+/* ================= NEAR ME ================= */
 app.get("/firms/near", async (req, res) => {
   try {
     res.setHeader("Cache-Control", "no-store");
@@ -839,7 +878,6 @@ app.get("/firms/near", async (req, res) => {
     let radiusKm = Number(req.query.radius_km || 25);
     if (!Number.isFinite(radiusKm)) radiusKm = 25;
 
-    // hard bounds (anti-abuse)
     radiusKm = Math.max(1, Math.min(radiusKm, 200));
     const radiusM = radiusKm * 1000;
 
@@ -864,7 +902,6 @@ app.get("/firms/near", async (req, res) => {
       ],
     };
 
-    // country filter + legacy MK support
     let query = null;
 
     if (/^[A-Z]{2}$/.test(qCountry)) {
@@ -951,8 +988,9 @@ async function runCleanup() {
           { _id: f._id },
           { $set: { trial_expired_email_sent_at: new Date() } }
         );
+        log("✅ Sent trial-expired email:", f.email);
       } catch (e) {
-        errorWithTime("TRIAL EXPIRED EMAIL ERROR:", e);
+        errorWithTime("TRIAL EXPIRED EMAIL ERROR:", f.email, e);
       }
     }
   }
@@ -965,7 +1003,8 @@ async function runCleanup() {
 
   // 3) Delete expired after DELETE_AFTER_DAYS
   const cutoff = new Date(Date.now() - DELETE_AFTER_DAYS * 24 * 60 * 60 * 1000);
-  await Firma.deleteMany({ payment_status: "expired", expires_at: { $lte: cutoff } });
+  const del = await Firma.deleteMany({ payment_status: "expired", expires_at: { $lte: cutoff } });
+  if (del?.deletedCount) log("🗑️ Deleted expired firms:", del.deletedCount);
 }
 
 /* ================= MONGO + START ================= */
@@ -988,12 +1027,25 @@ async function start() {
 
     await Firma.findOne({}).select("_id").lean();
 
+    // ✅ run once immediately (so you don’t wait up to CHECK_INTERVAL)
+    try {
+      await runTrialNotifications();
+      await runCleanup();
+      log("✅ Initial scheduler run completed");
+    } catch (e) {
+      errorWithTime("Initial scheduler error:", e);
+    }
+
     setInterval(async () => {
       try {
         await runTrialNotifications();
+      } catch (e) {
+        errorWithTime("TrialNotifications scheduler error:", e);
+      }
+      try {
         await runCleanup();
       } catch (e) {
-        errorWithTime("Scheduler error:", e);
+        errorWithTime("Cleanup scheduler error:", e);
       }
     }, CHECK_INTERVAL_MINUTES * 60 * 1000);
 

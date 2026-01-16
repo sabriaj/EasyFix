@@ -1,4 +1,4 @@
-// server.js (FIXED - 4 months free trial + reminder emails + pay-now flow + delete after 180 days)
+// server.js (FIXED - 4 months free trial + reminder emails + paid reminder/expired emails + pay-now flow + delete after 180 days)
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -12,101 +12,6 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-
-/* ================= ADMIN: STATS ================= */
-app.get("/admin/stats", requireAdmin, async (req, res) => {
-  try {
-    const total = await Firma.countDocuments({});
-    const pending = await Firma.countDocuments({ payment_status: "pending" });
-    const paid = await Firma.countDocuments({ payment_status: "paid" });
-    const expired = await Firma.countDocuments({ payment_status: "expired" });
-    const trial = await Firma.countDocuments({ payment_status: "trial" });
-
-    return res.json({
-      success: true,
-      stats: { total, pending, paid, expired, trial },
-    });
-  } catch (err) {
-    errorWithTime("ADMIN STATS ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-/* ================= ADMIN: DELETE FIRM ================= */
-app.delete("/admin/firms/:id", requireAdmin, async (req, res) => {
-  try {
-    const id = String(req.params.id || "").trim();
-    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
-
-    const deleted = await Firma.findByIdAndDelete(id).lean();
-    if (!deleted) return res.status(404).json({ success: false, error: "Not found" });
-
-    return res.json({ success: true });
-  } catch (err) {
-    errorWithTime("ADMIN DELETE ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-/* ================= ADMIN: EXPIRE ================= */
-app.post("/admin/firms/:id/expire", requireAdmin, async (req, res) => {
-  try {
-    const id = String(req.params.id || "").trim();
-    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
-
-    const nowD = new Date();
-
-    const updated = await Firma.findByIdAndUpdate(
-      id,
-      { $set: { payment_status: "expired", expires_at: nowD } },
-      { new: true }
-    ).lean();
-
-    if (!updated) return res.status(404).json({ success: false, error: "Not found" });
-
-    return res.json({ success: true, firm: updated });
-  } catch (err) {
-    errorWithTime("ADMIN EXPIRE ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-/* ================= ADMIN: MARK PAID ================= */
-app.post("/admin/firms/:id/mark-paid", requireAdmin, async (req, res) => {
-  try {
-    const id = String(req.params.id || "").trim();
-    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
-
-    const daysRaw = req.body?.days;
-    let days = Number(daysRaw);
-    if (!Number.isFinite(days) || days <= 0) days = 30;
-    days = Math.min(3650, Math.max(1, Math.floor(days))); // 1..3650
-
-    const nowD = new Date();
-    const expires = new Date(nowD.getTime() + days * 24 * 60 * 60 * 1000);
-
-    const updated = await Firma.findByIdAndUpdate(
-      id,
-      {
-        $set: {
-          payment_status: "paid",
-          paid_at: nowD,
-          expires_at: expires,
-          deleted_at: null,
-        },
-      },
-      { new: true }
-    ).lean();
-
-    if (!updated) return res.status(404).json({ success: false, error: "Not found" });
-
-    return res.json({ success: true, firm: updated });
-  } catch (err) {
-    errorWithTime("ADMIN MARK-PAID ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
 
 /* ================= resend email ================= */
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
@@ -268,6 +173,11 @@ const firmaSchema = new mongoose.Schema(
     delete_token_hash: String,
     delete_token_expires: Date,
 
+    // === PAID EMAILS ===
+    paid_reminder_7d_sent_at: Date,
+    paid_reminder_1d_sent_at: Date,
+    paid_expired_email_sent_at: Date,
+
     // === TRIAL ===
     trial_started_at: Date,
     trial_ends_at: Date,
@@ -316,7 +226,9 @@ const firmaSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// ✅ Index për /firms dhe admin filters
 firmaSchema.index({ payment_status: 1, country: 1, plan: 1, createdAt: -1 });
+// ✅ 2dsphere index për near me
 firmaSchema.index({ location: "2dsphere", payment_status: 1, country: 1 });
 
 const Firma = mongoose.model("Firma", firmaSchema);
@@ -357,7 +269,106 @@ function requireAdmin(req, res, next) {
   }
 }
 
-/* ================= ADMIN: TEST EMAIL (NEW) ================= */
+/* ================= ADMIN: STATS ================= */
+app.get("/admin/stats", requireAdmin, async (req, res) => {
+  try {
+    const total = await Firma.countDocuments({});
+    const pending = await Firma.countDocuments({ payment_status: "pending" });
+    const paid = await Firma.countDocuments({ payment_status: "paid" });
+    const expired = await Firma.countDocuments({ payment_status: "expired" });
+    const trial = await Firma.countDocuments({ payment_status: "trial" });
+
+    return res.json({
+      success: true,
+      stats: { total, pending, paid, expired, trial },
+    });
+  } catch (err) {
+    errorWithTime("ADMIN STATS ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+/* ================= ADMIN: DELETE FIRM ================= */
+app.delete("/admin/firms/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
+
+    const deleted = await Firma.findByIdAndDelete(id).lean();
+    if (!deleted) return res.status(404).json({ success: false, error: "Not found" });
+
+    return res.json({ success: true });
+  } catch (err) {
+    errorWithTime("ADMIN DELETE ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+/* ================= ADMIN: EXPIRE ================= */
+app.post("/admin/firms/:id/expire", requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
+
+    const nowD = new Date();
+
+    const updated = await Firma.findByIdAndUpdate(
+      id,
+      { $set: { payment_status: "expired", expires_at: nowD } },
+      { new: true }
+    ).lean();
+
+    if (!updated) return res.status(404).json({ success: false, error: "Not found" });
+
+    return res.json({ success: true, firm: updated });
+  } catch (err) {
+    errorWithTime("ADMIN EXPIRE ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+/* ================= ADMIN: MARK PAID ================= */
+app.post("/admin/firms/:id/mark-paid", requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
+
+    const daysRaw = req.body?.days;
+    let days = Number(daysRaw);
+    if (!Number.isFinite(days) || days <= 0) days = 30;
+    days = Math.min(3650, Math.max(1, Math.floor(days))); // 1..3650
+
+    const nowD = new Date();
+    const expires = new Date(nowD.getTime() + days * 24 * 60 * 60 * 1000);
+
+    const updated = await Firma.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          payment_status: "paid",
+          paid_at: nowD,
+          expires_at: expires,
+          deleted_at: null,
+
+          // reset paid email markers (useful if re-activating)
+          paid_reminder_7d_sent_at: null,
+          paid_reminder_1d_sent_at: null,
+          paid_expired_email_sent_at: null,
+        },
+      },
+      { new: true }
+    ).lean();
+
+    if (!updated) return res.status(404).json({ success: false, error: "Not found" });
+
+    return res.json({ success: true, firm: updated });
+  } catch (err) {
+    errorWithTime("ADMIN MARK-PAID ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+/* ================= ADMIN: TEST EMAIL ================= */
 app.post("/admin/test-email", requireAdmin, async (req, res) => {
   try {
     const to = normalizeEmail(req.body?.to);
@@ -375,10 +386,11 @@ app.post("/admin/test-email", requireAdmin, async (req, res) => {
   }
 });
 
-/* ================= ADMIN: RUN SCHEDULER NOW (NEW) ================= */
+/* ================= ADMIN: RUN SCHEDULER NOW ================= */
 app.post("/admin/run-scheduler", requireAdmin, async (req, res) => {
   try {
     await runTrialNotifications();
+    await runPaidNotifications();
     await runCleanup();
     return res.json({ success: true });
   } catch (err) {
@@ -566,6 +578,11 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
         paid_at: new Date(),
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         deleted_at: null,
+
+        // reset paid email markers on new payment
+        paid_reminder_7d_sent_at: null,
+        paid_reminder_1d_sent_at: null,
+        paid_expired_email_sent_at: null,
       };
       if (detectedPlan) update.plan = detectedPlan;
 
@@ -687,7 +704,7 @@ app.get("/pay-now/checkout", async (req, res) => {
   }
 });
 
-/* ================= TRIAL NOTIFICATIONS (FIXED) ================= */
+/* ================= TRIAL NOTIFICATIONS ================= */
 async function runTrialNotifications() {
   if (!resend) {
     log("⚠️ TrialNotifications skipped: Resend not configured");
@@ -697,14 +714,12 @@ async function runTrialNotifications() {
   const nowD = new Date();
   const dayMs = 24 * 60 * 60 * 1000;
 
-  // windows with buffer
   const w7_from = new Date(nowD.getTime() + (6.5 * dayMs));
   const w7_to = new Date(nowD.getTime() + (7.5 * dayMs));
 
   const w1_from = new Date(nowD.getTime() + (0.5 * dayMs));
   const w1_to = new Date(nowD.getTime() + (1.5 * dayMs));
 
-  // IMPORTANT: handle field missing OR null
   const notSent7 = { $or: [{ trial_reminder_7d_sent_at: { $exists: false } }, { trial_reminder_7d_sent_at: null }] };
   const notSent1 = { $or: [{ trial_reminder_1d_sent_at: { $exists: false } }, { trial_reminder_1d_sent_at: null }] };
 
@@ -774,6 +789,95 @@ async function runTrialNotifications() {
       log("✅ Sent 1d reminder:", f.email);
     } catch (e) {
       errorWithTime("TRIAL 1D EMAIL ERROR:", f.email, e);
+    }
+  }
+}
+
+/* ================= PAID NOTIFICATIONS (NEW) ================= */
+async function runPaidNotifications() {
+  if (!resend) {
+    log("⚠️ PaidNotifications skipped: Resend not configured");
+    return;
+  }
+
+  const nowD = new Date();
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  const w7_from = new Date(nowD.getTime() + (6.5 * dayMs));
+  const w7_to = new Date(nowD.getTime() + (7.5 * dayMs));
+
+  const w1_from = new Date(nowD.getTime() + (0.5 * dayMs));
+  const w1_to = new Date(nowD.getTime() + (1.5 * dayMs));
+
+  const notSent7 = { $or: [{ paid_reminder_7d_sent_at: { $exists: false } }, { paid_reminder_7d_sent_at: null }] };
+  const notSent1 = { $or: [{ paid_reminder_1d_sent_at: { $exists: false } }, { paid_reminder_1d_sent_at: null }] };
+
+  const list7 = await Firma.find({
+    payment_status: "paid",
+    expires_at: { $gte: w7_from, $lte: w7_to },
+    ...notSent7,
+  }).select("_id email name expires_at").lean();
+
+  log("📨 PaidNotifications 7d candidates:", list7.length);
+
+  for (const f of list7) {
+    try {
+      await sendMail({
+        to: f.email,
+        subject: "EasyFix - Abonimi po skadon (7 ditë)",
+        text:
+          `Abonimi yt po skadon më ${new Date(f.expires_at).toLocaleString("sq-AL")}. ` +
+          `Për me vazhdu me u shfaq në EasyFix: ${FRONTEND_BASE_URL}/pay.html`,
+        html: `
+          <div style="font-family:Arial;line-height:1.5">
+            <h2>Abonimi po skadon</h2>
+            <p>Abonimi yt skadon më <b>${new Date(f.expires_at).toLocaleString("sq-AL")}</b>.</p>
+            <p>Për me vazhdu me u shfaq në EasyFix:</p>
+            <p><a href="${FRONTEND_BASE_URL}/pay.html">Pay now</a></p>
+          </div>`,
+      });
+
+      await Firma.updateOne(
+        { _id: f._id },
+        { $set: { paid_reminder_7d_sent_at: new Date() } }
+      );
+      log("✅ Sent paid 7d reminder:", f.email);
+    } catch (e) {
+      errorWithTime("PAID 7D EMAIL ERROR:", f.email, e);
+    }
+  }
+
+  const list1 = await Firma.find({
+    payment_status: "paid",
+    expires_at: { $gte: w1_from, $lte: w1_to },
+    ...notSent1,
+  }).select("_id email name expires_at").lean();
+
+  log("📨 PaidNotifications 1d candidates:", list1.length);
+
+  for (const f of list1) {
+    try {
+      await sendMail({
+        to: f.email,
+        subject: "EasyFix - Abonimi po skadon nesër",
+        text:
+          `Abonimi yt po skadon nesër (${new Date(f.expires_at).toLocaleString("sq-AL")}). ` +
+          `Për me vazhdu me u shfaq në EasyFix: ${FRONTEND_BASE_URL}/pay.html`,
+        html: `
+          <div style="font-family:Arial;line-height:1.5">
+            <h2>Abonimi po skadon nesër</h2>
+            <p>Skadon më <b>${new Date(f.expires_at).toLocaleString("sq-AL")}</b>.</p>
+            <p><a href="${FRONTEND_BASE_URL}/pay.html">Pay now</a></p>
+          </div>`,
+      });
+
+      await Firma.updateOne(
+        { _id: f._id },
+        { $set: { paid_reminder_1d_sent_at: new Date() } }
+      );
+      log("✅ Sent paid 1d reminder:", f.email);
+    } catch (e) {
+      errorWithTime("PAID 1D EMAIL ERROR:", f.email, e);
     }
   }
 }
@@ -916,7 +1020,6 @@ app.get("/firms", async (req, res) => {
     const qCountry = String(req.query.country || "").trim().toUpperCase();
     const nowD = new Date();
 
-    // show only PAID or ACTIVE TRIAL
     const paidOrActiveTrial = {
       $or: [
         { payment_status: "paid" },
@@ -1055,7 +1158,7 @@ app.get("/check-status", async (req, res) => {
   }
 });
 
-/* ================= CLEANUP ================= */
+/* ================= CLEANUP (FIXED: PAID EXPIRED EMAIL) ================= */
 async function runCleanup() {
   const nowDate = new Date();
 
@@ -1097,17 +1200,61 @@ async function runCleanup() {
     }
   }
 
-  // 2) Expire paid subscriptions that ended
+  // 2) Paid that ended -> expire + email once
+  const paidExpiredList = await Firma.find({
+    payment_status: "paid",
+    expires_at: { $lte: nowDate },
+  }).select("_id email paid_expired_email_sent_at expires_at").lean();
+
   await Firma.updateMany(
     { payment_status: "paid", expires_at: { $lte: nowDate } },
     { $set: { payment_status: "expired" } }
   );
+
+  if (resend) {
+    for (const f of paidExpiredList) {
+      if (f.paid_expired_email_sent_at) continue;
+      try {
+        await sendMail({
+          to: f.email,
+          subject: "EasyFix - Abonimi skadoi, lista u çaktivizua",
+          text: `Abonimi yt skadoi dhe lista u çaktivizua. Për me vazhdu me u shfaq: ${FRONTEND_BASE_URL}/pay.html`,
+          html: `
+            <div style="font-family:Arial;line-height:1.5">
+              <h2>Lista u çaktivizua</h2>
+              <p>Abonimi yt skadoi dhe lista u çaktivizua.</p>
+              <p>Për me u shfaq prap: <a href="${FRONTEND_BASE_URL}/pay.html">Pay now</a></p>
+            </div>`,
+        });
+
+        await Firma.updateOne(
+          { _id: f._id },
+          { $set: { paid_expired_email_sent_at: new Date() } }
+        );
+        log("✅ Sent paid-expired email:", f.email);
+      } catch (e) {
+        errorWithTime("PAID EXPIRED EMAIL ERROR:", f.email, e);
+      }
+    }
+  }
 
   // 3) Delete expired after DELETE_AFTER_DAYS
   const cutoff = new Date(Date.now() - DELETE_AFTER_DAYS * 24 * 60 * 60 * 1000);
   const del = await Firma.deleteMany({ payment_status: "expired", expires_at: { $lte: cutoff } });
   if (del?.deletedCount) log("🗑️ Deleted expired firms:", del.deletedCount);
 }
+
+/* ================= HEALTH ================= */
+app.get("/health", (req, res) => {
+  const rs = mongoose.connection.readyState;
+  res.json({
+    ok: true,
+    time: now(),
+    dbReadyState: rs,
+    resendConfigured: Boolean(resend),
+    resendFrom: RESEND_FROM ? RESEND_FROM : null
+  });
+});
 
 /* ================= MONGO + START ================= */
 async function connectMongo() {
@@ -1129,9 +1276,10 @@ async function start() {
 
     await Firma.findOne({}).select("_id").lean();
 
-    // ✅ run once immediately (so you don’t wait up to CHECK_INTERVAL)
+    // run once immediately
     try {
       await runTrialNotifications();
+      await runPaidNotifications();
       await runCleanup();
       log("✅ Initial scheduler run completed");
     } catch (e) {
@@ -1143,6 +1291,11 @@ async function start() {
         await runTrialNotifications();
       } catch (e) {
         errorWithTime("TrialNotifications scheduler error:", e);
+      }
+      try {
+        await runPaidNotifications();
+      } catch (e) {
+        errorWithTime("PaidNotifications scheduler error:", e);
       }
       try {
         await runCleanup();

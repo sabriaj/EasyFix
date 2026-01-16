@@ -821,7 +821,8 @@ app.get("/firms", async (req, res) => {
     const qCountry = String(req.query.country || "").trim().toUpperCase();
     const nowD = new Date();
 
-    const base = {
+    // show only PAID or ACTIVE TRIAL
+    const paidOrActiveTrial = {
       $or: [
         { payment_status: "paid" },
         { payment_status: "trial", trial_ends_at: { $gt: nowD } },
@@ -831,12 +832,16 @@ app.get("/firms", async (req, res) => {
     if (/^[A-Z]{2}$/.test(qCountry)) {
       if (qCountry === "MK") {
         const firms = await Firma.find({
-          ...base,
-          $or: [
-            { country: "MK" },
-            { country: { $exists: false } },
-            { country: null },
-            { country: "" },
+          $and: [
+            paidOrActiveTrial,
+            {
+              $or: [
+                { country: "MK" },
+                { country: { $exists: false } },
+                { country: null },
+                { country: "" },
+              ],
+            },
           ],
         })
           .select("-__v")
@@ -846,7 +851,9 @@ app.get("/firms", async (req, res) => {
         return res.json(firms);
       }
 
-      const firms = await Firma.find({ ...base, country: qCountry })
+      const firms = await Firma.find({
+        $and: [paidOrActiveTrial, { country: qCountry }],
+      })
         .select("-__v")
         .sort({ createdAt: -1 })
         .lean();
@@ -854,7 +861,7 @@ app.get("/firms", async (req, res) => {
       return res.json(firms);
     }
 
-    const firms = await Firma.find(base)
+    const firms = await Firma.find(paidOrActiveTrial)
       .select("-__v")
       .sort({ createdAt: -1 })
       .lean();

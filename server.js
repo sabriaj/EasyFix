@@ -1,4 +1,4 @@
-// server.js (FIXED - 4 months free trial + reminder emails + paid reminder/expired emails + pay-now flow + delete after 180 days + EMAIL OTP VERIFY)
+// server.js (FINAL - 4 months free trial + reminder emails + paid reminder/expired emails + pay-now flow + delete after 180 days + EMAIL OTP VERIFY + GEO FIX)
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -11,6 +11,8 @@ import { Resend } from "resend";
 dotenv.config();
 
 const app = express();
+
+/* ================= CORS ================= */
 app.use(cors());
 
 /* ================= resend email ================= */
@@ -55,8 +57,8 @@ const DEFAULT_COUNTRY = String(process.env.DEFAULT_COUNTRY || "MK").toUpperCase(
 
 const PAY_TOKEN_MINUTES = Number(process.env.PAY_TOKEN_MINUTES || 30);
 
-/* ===== EMAIL OTP CONFIG (NEW) ===== */
-const EMAIL_OTP_MIN_SECONDS = Number(process.env.EMAIL_OTP_MIN_SECONDS || 30); // resend throttle
+/* ===== EMAIL OTP CONFIG ===== */
+const EMAIL_OTP_MIN_SECONDS = Number(process.env.EMAIL_OTP_MIN_SECONDS || 30);
 const EMAIL_OTP_EXPIRES_MINUTES = Number(process.env.EMAIL_OTP_EXPIRES_MINUTES || 10);
 const EMAIL_OTP_MAX_ATTEMPTS = Number(process.env.EMAIL_OTP_MAX_ATTEMPTS || 8);
 
@@ -75,7 +77,7 @@ cloudinary.config({
 /* ================= MULTER ================= */
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB/file
+  limits: { fileSize: 5 * 1024 * 1024 },
 });
 
 function uploadBufferToCloudinary(buffer, folder = "easyfix") {
@@ -107,25 +109,17 @@ function normalizeCountry(raw) {
   return DEFAULT_COUNTRY;
 }
 
-/**
- * normalizePhone:
- * - Preferon E.164 (+...).
- * - Pranon vetëm + dhe numra.
- * - Fallback MK local (8/9 shifra) -> +389...
- */
 function normalizePhone(raw) {
   let p = String(raw || "").trim();
   p = p.replace(/[^\d+]/g, "");
 
   if (p.startsWith("00")) p = "+" + p.slice(2);
 
-  // E.164
   if (p.startsWith("+")) {
     if (p.length < 9 || p.length > 16) return null;
     return p;
   }
 
-  // fallback MK local (vetëm nëse vjen pa +)
   const digits = p.replace(/[^\d]/g, "");
   if (digits.length === 8) return "+389" + digits;
   if (digits.length === 9 && digits.startsWith("0")) return "+389" + digits.slice(1);
@@ -133,7 +127,7 @@ function normalizePhone(raw) {
   return null;
 }
 
-/* ===== OTP HELPERS (NEW) ===== */
+/* ===== OTP HELPERS ===== */
 function makeOtp6() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
@@ -144,7 +138,7 @@ function canResendOtp(lastSentAt, minSeconds) {
   return (Date.now() - last) >= (minSeconds * 1000);
 }
 
-/* ================= GEO (NEW) ================= */
+/* ================= GEO ================= */
 function fetchWithTimeout(url, timeoutMs = 8000, options = {}) {
   const controller = new AbortController();
   const tmr = setTimeout(() => controller.abort(), timeoutMs);
@@ -155,7 +149,7 @@ async function geocodeNominatim({ address, city, countryIso2 }) {
   const q = [address, city].filter(Boolean).join(", ").trim();
   if (!q) return null;
 
-  const cc = String(countryIso2 || "").toLowerCase(); // e.g. mk
+  const cc = String(countryIso2 || "").toLowerCase();
   const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=0&countrycodes=${encodeURIComponent(cc)}&q=${encodeURIComponent(q)}`;
 
   try {
@@ -182,30 +176,25 @@ async function geocodeNominatim({ address, city, countryIso2 }) {
 /* ================= SCHEMA ================= */
 const firmaSchema = new mongoose.Schema(
   {
-    // === OWNER SELF-SERVICE TOKENS (magic links) ===
     owner_token_hash: String,
     owner_token_expires: Date,
 
     delete_token_hash: String,
     delete_token_expires: Date,
 
-    // === PAID EMAILS ===
     paid_reminder_7d_sent_at: Date,
     paid_reminder_1d_sent_at: Date,
     paid_expired_email_sent_at: Date,
 
-    // === TRIAL ===
     trial_started_at: Date,
     trial_ends_at: Date,
     trial_reminder_7d_sent_at: Date,
     trial_reminder_1d_sent_at: Date,
     trial_expired_email_sent_at: Date,
 
-    // === PAY NOW (magic link) ===
     pay_token_hash: String,
     pay_token_expires: Date,
 
-    // === EMAIL VERIFICATION (NEW) ===
     email_verified: { type: Boolean, default: false },
     email_verified_at: Date,
     email_otp_hash: String,
@@ -215,7 +204,7 @@ const firmaSchema = new mongoose.Schema(
 
     name: String,
     email: { type: String, unique: true, required: true },
-    phone: String, // E.164 +...
+    phone: String,
     phone_verified: { type: Boolean, default: false },
     phone_verified_at: Date,
 
@@ -225,19 +214,20 @@ const firmaSchema = new mongoose.Schema(
 
     country: { type: String, default: DEFAULT_COUNTRY, index: true },
 
-    // ✅ Location is OPTIONAL. Do NOT set default "Point" without coordinates.
-  location: {
-  type: {
-    type: String,
-    enum: ["Point"],
-    default: undefined, // IMPORTANT: no default
-  },
-  coordinates: {
-    type: [Number], // [lng, lat]  (longitude, latitude)
-    default: undefined,
-  },
-},
-
+    // IMPORTANT FIX:
+    // - NO default "Point"
+    // - location should NOT exist on stub documents
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: undefined,
+      },
+      coordinates: {
+        type: [Number], // [lng, lat]
+        default: undefined,
+      },
+    },
 
     plan: { type: String, default: "basic" },
     payment_status: { type: String, default: "pending", index: true },
@@ -252,19 +242,15 @@ const firmaSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ Index për /firms dhe admin filters
+// Index për /firms dhe admin filters
 firmaSchema.index({ payment_status: 1, country: 1, plan: 1, createdAt: -1 });
-// ✅ 2dsphere index për near me
-// ✅ 2dsphere index only when coordinates exist (prevents bad docs from breaking inserts)
+
+// IMPORTANT FIX:
+// Partial 2dsphere index - only index docs that have valid coordinates
 firmaSchema.index(
   { location: "2dsphere", payment_status: 1, country: 1 },
-  {
-    partialFilterExpression: {
-      "location.coordinates": { $type: "array" }
-    }
-  }
+  { partialFilterExpression: { "location.coordinates": { $type: "array" } } }
 );
-
 
 const Firma = mongoose.model("Firma", firmaSchema);
 
@@ -371,7 +357,7 @@ app.post("/admin/firms/:id/mark-paid", requireAdmin, async (req, res) => {
     const daysRaw = req.body?.days;
     let days = Number(daysRaw);
     if (!Number.isFinite(days) || days <= 0) days = 30;
-    days = Math.min(3650, Math.max(1, Math.floor(days))); // 1..3650
+    days = Math.min(3650, Math.max(1, Math.floor(days)));
 
     const nowD = new Date();
     const expires = new Date(nowD.getTime() + days * 24 * 60 * 60 * 1000);
@@ -385,7 +371,6 @@ app.post("/admin/firms/:id/mark-paid", requireAdmin, async (req, res) => {
           expires_at: expires,
           deleted_at: null,
 
-          // reset paid email markers (useful if re-activating)
           paid_reminder_7d_sent_at: null,
           paid_reminder_1d_sent_at: null,
           paid_expired_email_sent_at: null,
@@ -613,8 +598,6 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
         paid_at: new Date(),
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         deleted_at: null,
-
-        // reset paid email markers on new payment
         paid_reminder_7d_sent_at: null,
         paid_reminder_1d_sent_at: null,
         paid_expired_email_sent_at: null,
@@ -653,25 +636,21 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 /* ================= JSON (AFTER WEBHOOK) ================= */
 app.use(express.json());
 
-/* ================= EMAIL OTP VERIFY (NEW) ================= */
-// POST /auth/email/start  { email }
+/* ================= EMAIL OTP VERIFY ================= */
 app.post("/auth/email/start", async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
     if (!email) return res.status(400).json({ success: false, error: "Missing email" });
     if (!resend) return res.status(500).json({ success: false, error: "Email service not configured" });
 
-    // if email already exists as a fully registered firm (name present), don't allow "new registration"
     const existing = await Firma.findOne({ email })
       .select("_id email name email_verified email_otp_last_sent_at payment_status")
       .lean();
 
-    // If exists and has name -> already registered (trial/paid/expired etc). Block signup flow.
     if (existing?.name) {
       return res.status(409).json({ success: false, error: "Ky email tashmë ekziston" });
     }
 
-    // throttle resend
     if (existing?.email_otp_last_sent_at && !canResendOtp(existing.email_otp_last_sent_at, EMAIL_OTP_MIN_SECONDS)) {
       return res.status(429).json({ success: false, error: `Try again in ${EMAIL_OTP_MIN_SECONDS} seconds` });
     }
@@ -681,7 +660,6 @@ app.post("/auth/email/start", async (req, res) => {
     const expires = new Date(Date.now() + EMAIL_OTP_EXPIRES_MINUTES * 60 * 1000);
 
     if (!existing) {
-      // Create "stub" record so email remains unique and later /register updates it
       await Firma.create({
         email,
         plan: "basic",
@@ -691,13 +669,14 @@ app.post("/auth/email/start", async (req, res) => {
         email_otp_expires: expires,
         email_otp_attempts: 0,
         email_otp_last_sent_at: new Date(),
+        // NOTE: do NOT set location here
       });
     } else {
       await Firma.updateOne(
         { _id: existing._id },
         {
           $set: {
-            email_verified: false,        // re-verify for new signup attempt
+            email_verified: false,
             email_verified_at: null,
             email_otp_hash: otpHash,
             email_otp_expires: expires,
@@ -729,7 +708,6 @@ app.post("/auth/email/start", async (req, res) => {
   }
 });
 
-// POST /auth/email/verify  { email, code }
 app.post("/auth/email/verify", async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
@@ -742,7 +720,6 @@ app.post("/auth/email/verify", async (req, res) => {
       .select("_id email name email_verified email_otp_hash email_otp_expires email_otp_attempts")
       .lean();
 
-    // If not found OR already full registered -> treat as invalid for signup verification
     if (!firm) return res.status(400).json({ success: false, error: "Invalid code" });
     if (firm?.name) return res.status(409).json({ success: false, error: "Ky email tashmë ekziston" });
 
@@ -789,9 +766,7 @@ app.post("/pay-now/request", async (req, res) => {
 
     const firm = await Firma.findOne({ email }).select("_id email").lean();
 
-    // privacy: always return success
     if (!firm) return res.json({ success: true, message: "If the email exists, we sent a link." });
-
     if (!resend) return res.status(500).json({ success: false, error: "Email service not configured" });
 
     const token = makeToken();
@@ -1080,16 +1055,13 @@ app.post(
         return res.status(400).json({ success: false, error: "Invalid plan" });
       }
 
-      // MUST exist as verified stub (created by /auth/email/start)
       const stub = await Firma.findOne({ email })
         .select("_id name email_verified")
         .lean();
 
-      // If not exists, they never started OTP
       if (!stub) {
         return res.status(403).json({ success: false, error: "Email not verified" });
       }
-      // If already fully registered
       if (stub?.name) {
         return res.status(409).json({ success: false, error: "Ky email tashmë ekziston" });
       }
@@ -1133,12 +1105,10 @@ app.post(
         photos = [];
       }
 
-      // ✅ 4 months trial
       const nowD = new Date();
       const trialEnds = new Date(nowD);
       trialEnds.setMonth(trialEnds.getMonth() + 4);
 
-      // IMPORTANT: Update the stub (do NOT create a new document)
       const firma = await Firma.findOneAndUpdate(
         { email },
         {
@@ -1152,6 +1122,7 @@ app.post(
             category,
             country: countryNorm,
 
+            // set valid GeoJSON
             location: {
               type: "Point",
               coordinates: [geo.lng, geo.lat],
@@ -1167,7 +1138,6 @@ app.post(
             logoUrl,
             photos,
 
-            // reset trial markers (fresh signup)
             trial_reminder_7d_sent_at: null,
             trial_reminder_1d_sent_at: null,
             trial_expired_email_sent_at: null,
@@ -1261,7 +1231,6 @@ app.get("/firms/near", async (req, res) => {
 
     let radiusKm = Number(req.query.radius_km || 25);
     if (!Number.isFinite(radiusKm)) radiusKm = 25;
-
     radiusKm = Math.max(1, Math.min(radiusKm, 200));
     const radiusM = radiusKm * 1000;
 
@@ -1337,11 +1306,10 @@ app.get("/check-status", async (req, res) => {
   }
 });
 
-/* ================= CLEANUP (FIXED: PAID EXPIRED EMAIL) ================= */
+/* ================= CLEANUP ================= */
 async function runCleanup() {
   const nowDate = new Date();
 
-  // 1) Expire trials that ended + send email once
   const expiredTrials = await Firma.find({
     payment_status: "trial",
     trial_ends_at: { $lte: nowDate },
@@ -1379,7 +1347,6 @@ async function runCleanup() {
     }
   }
 
-  // 2) Paid that ended -> expire + email once
   const paidExpiredList = await Firma.find({
     payment_status: "paid",
     expires_at: { $lte: nowDate },
@@ -1417,7 +1384,6 @@ async function runCleanup() {
     }
   }
 
-  // 3) Delete expired after DELETE_AFTER_DAYS
   const cutoff = new Date(Date.now() - DELETE_AFTER_DAYS * 24 * 60 * 60 * 1000);
   const del = await Firma.deleteMany({ payment_status: "expired", expires_at: { $lte: cutoff } });
   if (del?.deletedCount) log("🗑️ Deleted expired firms:", del.deletedCount);
@@ -1443,7 +1409,6 @@ async function start() {
 
     await Firma.findOne({}).select("_id").lean();
 
-    // run once immediately
     try {
       await runTrialNotifications();
       await runPaidNotifications();
@@ -1454,21 +1419,9 @@ async function start() {
     }
 
     setInterval(async () => {
-      try {
-        await runTrialNotifications();
-      } catch (e) {
-        errorWithTime("TrialNotifications scheduler error:", e);
-      }
-      try {
-        await runPaidNotifications();
-      } catch (e) {
-        errorWithTime("PaidNotifications scheduler error:", e);
-      }
-      try {
-        await runCleanup();
-      } catch (e) {
-        errorWithTime("Cleanup scheduler error:", e);
-      }
+      try { await runTrialNotifications(); } catch (e) { errorWithTime("TrialNotifications scheduler error:", e); }
+      try { await runPaidNotifications(); } catch (e) { errorWithTime("PaidNotifications scheduler error:", e); }
+      try { await runCleanup(); } catch (e) { errorWithTime("Cleanup scheduler error:", e); }
     }, CHECK_INTERVAL_MINUTES * 60 * 1000);
 
     app.listen(PORT, () => log(`🚀 Server running on port ${PORT}`));

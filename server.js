@@ -225,17 +225,19 @@ const firmaSchema = new mongoose.Schema(
 
     country: { type: String, default: DEFAULT_COUNTRY, index: true },
 
-    location: {
-      type: {
-        type: String,
-        enum: ["Point"],
-        default: "Point",
-      },
-      coordinates: {
-        type: [Number], // [lng, lat]
-        default: undefined,
-      },
-    },
+    // ✅ Location is OPTIONAL. Do NOT set default "Point" without coordinates.
+  location: {
+  type: {
+    type: String,
+    enum: ["Point"],
+    default: undefined, // IMPORTANT: no default
+  },
+  coordinates: {
+    type: [Number], // [lng, lat]  (longitude, latitude)
+    default: undefined,
+  },
+},
+
 
     plan: { type: String, default: "basic" },
     payment_status: { type: String, default: "pending", index: true },
@@ -253,7 +255,16 @@ const firmaSchema = new mongoose.Schema(
 // ✅ Index për /firms dhe admin filters
 firmaSchema.index({ payment_status: 1, country: 1, plan: 1, createdAt: -1 });
 // ✅ 2dsphere index për near me
-firmaSchema.index({ location: "2dsphere", payment_status: 1, country: 1 });
+// ✅ 2dsphere index only when coordinates exist (prevents bad docs from breaking inserts)
+firmaSchema.index(
+  { location: "2dsphere", payment_status: 1, country: 1 },
+  {
+    partialFilterExpression: {
+      "location.coordinates": { $type: "array" }
+    }
+  }
+);
+
 
 const Firma = mongoose.model("Firma", firmaSchema);
 

@@ -1,4 +1,4 @@
-// server.js (FINAL - 4 months free trial + reminder emails + paid reminder/expired emails + pay-now flow + delete after 180 days + EMAIL OTP VERIFY + GEO FIX)
+// server.js (FINAL - 4 months free trial + reminder emails + paid reminder/expired emails + pay-now flow + delete after 180 days + EMAIL OTP VERIFY + GEO FIX + DATA DELETION FIX)
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -61,6 +61,9 @@ const PAY_TOKEN_MINUTES = Number(process.env.PAY_TOKEN_MINUTES || 30);
 const EMAIL_OTP_MIN_SECONDS = Number(process.env.EMAIL_OTP_MIN_SECONDS || 30);
 const EMAIL_OTP_EXPIRES_MINUTES = Number(process.env.EMAIL_OTP_EXPIRES_MINUTES || 10);
 const EMAIL_OTP_MAX_ATTEMPTS = Number(process.env.EMAIL_OTP_MAX_ATTEMPTS || 8);
+
+/* ===== DATA DELETION CONFIG (NEW) ===== */
+const DELETE_TOKEN_HOURS = Number(process.env.DELETE_TOKEN_HOURS || 24);
 
 /* ================= LOG HELPERS ================= */
 function now() { return new Date().toISOString(); }
@@ -245,7 +248,6 @@ const firmaSchema = new mongoose.Schema(
 // Index për /firms dhe admin filters
 firmaSchema.index({ payment_status: 1, country: 1, plan: 1, createdAt: -1 });
 
-// IMPORTANT FIX:
 // Partial 2dsphere index - only index docs that have valid coordinates
 firmaSchema.index(
   { location: "2dsphere", payment_status: 1, country: 1 },
@@ -636,6 +638,101 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 /* ================= JSON (AFTER WEBHOOK) ================= */
 app.use(express.json());
 
+/* ================= DATA DELETION (FIX) ================= */
+// POST /delete-request { email, reason? }
+app.post("/delete-request", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const reason = String(req.body?.reason || "").trim().slice(0, 500);
+
+    if (!email) return res.status(400).json({ success: false, error: "Missing email" });
+    if (!resend) return res.status(500).json({ success: false, error: "Email service not configured" });
+
+    const firm = await Firma.findOne({ email }).select("_id email").lean();
+
+    // privacy: always success even if not found
+    if (!firm) {
+      return res.json({ success: true, message: "If the email exists, we sent a confirmation link." });
+    }
+
+    const token = makeToken();
+    const tokenHash = sha256Hex(token);
+    const expires = new Date(Date.now() + DELETE_TOKEN_HOURS * 60 * 60 * 1000);
+
+    await Firma.updateOne(
+      { _id: firm._id },
+      { $set: { delete_token_hash: tokenHash, delete_token_expires: expires } }
+    );
+
+    // IMPORTANT: your delete-confirm.html expects email+token in URL
+    const confirmUrl =
+      `${FRONTEND_BASE_URL}/delete-confirm.html?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+
+    await sendMail({
+      to: email,
+      subject: "EasyFix - Confirm data deletion",
+      text:
+        `Për me konfirmu fshirjen e listing-ut, kliko linkun:\n${confirmUrl}\n\n` +
+        `Ky link skadon për ${DELETE_TOKEN_HOURS} orë.\n` +
+        (reason ? `Arsyeja: ${reason}\n` : ""),
+      html: `
+        <div style="font-family:Arial;line-height:1.6">
+          <h2>EasyFix</h2>
+          <p>Për me konfirmu fshirjen e listing-ut, kliko:</p>
+          <p><a href="${confirmUrl}">${confirmUrl}</a></p>
+          <p style="color:#666">Ky link skadon për ${DELETE_TOKEN_HOURS} orë.</p>
+          ${reason ? `<p><b>Arsyeja:</b> ${reason}</p>` : ""}
+        </div>
+      `,
+    });
+
+    return res.json({ success: true, message: "If the email exists, we sent a confirmation link." });
+  } catch (err) {
+    errorWithTime("DELETE REQUEST ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// POST /delete-confirm { email, token }
+app.post("/delete-confirm", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const token = String(req.body?.token || "").trim();
+
+    if (!email || !token) return res.status(400).json({ success: false, error: "Missing email/token" });
+
+    const tokenHash = sha256Hex(token);
+
+    const firm = await Firma.findOne({
+      email,
+      delete_token_hash: tokenHash,
+      delete_token_expires: { $gt: new Date() },
+    }).select("_id").lean();
+
+    if (!firm) return res.status(400).json({ success: false, error: "Invalid or expired link" });
+
+    const nowD = new Date();
+
+    // soft delete
+    await Firma.updateOne(
+      { _id: firm._id },
+      {
+        $set: {
+          deleted_at: nowD,
+          payment_status: "expired",
+          expires_at: nowD,
+        },
+        $unset: { delete_token_hash: "", delete_token_expires: "" },
+      }
+    );
+
+    return res.json({ success: true });
+  } catch (err) {
+    errorWithTime("DELETE CONFIRM ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
 /* ================= EMAIL OTP VERIFY ================= */
 app.post("/auth/email/start", async (req, res) => {
   try {
@@ -669,7 +766,6 @@ app.post("/auth/email/start", async (req, res) => {
         email_otp_expires: expires,
         email_otp_attempts: 0,
         email_otp_last_sent_at: new Date(),
-        // NOTE: do NOT set location here
       });
     } else {
       await Firma.updateOne(
@@ -1122,7 +1218,6 @@ app.post(
             category,
             country: countryNorm,
 
-            // set valid GeoJSON
             location: {
               type: "Point",
               coordinates: [geo.lng, geo.lat],
@@ -1169,10 +1264,19 @@ app.get("/firms", async (req, res) => {
     const qCountry = String(req.query.country || "").trim().toUpperCase();
     const nowD = new Date();
 
+    const notDeleted = {
+      $or: [{ deleted_at: { $exists: false } }, { deleted_at: null }],
+    };
+
     const paidOrActiveTrial = {
-      $or: [
-        { payment_status: "paid" },
-        { payment_status: "trial", trial_ends_at: { $gt: nowD } },
+      $and: [
+        notDeleted,
+        {
+          $or: [
+            { payment_status: "paid" },
+            { payment_status: "trial", trial_ends_at: { $gt: nowD } },
+          ],
+        }
       ],
     };
 
@@ -1248,10 +1352,20 @@ app.get("/firms/near", async (req, res) => {
     };
 
     const nowD = new Date();
+
+    const notDeleted = {
+      $or: [{ deleted_at: { $exists: false } }, { deleted_at: null }],
+    };
+
     const basePaid = {
-      $or: [
-        { payment_status: "paid" },
-        { payment_status: "trial", trial_ends_at: { $gt: nowD } },
+      $and: [
+        notDeleted,
+        {
+          $or: [
+            { payment_status: "paid" },
+            { payment_status: "trial", trial_ends_at: { $gt: nowD } },
+          ],
+        }
       ],
     };
 
@@ -1384,6 +1498,7 @@ async function runCleanup() {
     }
   }
 
+  // Delete expired after DELETE_AFTER_DAYS
   const cutoff = new Date(Date.now() - DELETE_AFTER_DAYS * 24 * 60 * 60 * 1000);
   const del = await Firma.deleteMany({ payment_status: "expired", expires_at: { $lte: cutoff } });
   if (del?.deletedCount) log("🗑️ Deleted expired firms:", del.deletedCount);

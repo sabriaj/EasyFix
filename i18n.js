@@ -2,7 +2,6 @@
 (function () {
   const DICT = {
     sq: {
-      // common
       appName: "EasyFix",
       nav_register: "Regjistro Firmën",
       nav_contact: "Kontakt",
@@ -24,35 +23,21 @@
       modal_help: "Esc për me mbyll, shigjeta ← → për Next/Prev",
 
 
-      continue_pay: "Aktivizo 4 muaj falas",
-      msg_to_pay: "Po ju dërgojmë te konfirmimi…",
+      verify_email_title: "Verifiko Emailin",
+verify_email_hint: "Duhet me verifiku emailin para regjistrimit.",
+send_code_btn: "Dërgo kodin",
+code_placeholder: "Kodi 6-shifror",
+verify_btn: "Verifiko",
+msg_email_invalid: "Email jo valid.",
+msg_sending_code: "Duke dërgu kodin…",
+msg_code_sent: "Kodi u dërgua. Kontrollo email-in.",
+msg_send_code_fail: "S’u arrit me dërgu kodin. Provo prap.",
+msg_code_invalid_format: "Kodi duhet me qenë 6 shifra.",
+msg_verifying_code: "Duke verifiku kodin…",
+msg_code_invalid: "Kodi i gabuar ose i skaduar.",
+msg_code_verified: "Email u verifikua me sukses.",
+msg_email_verify_required: "Duhet me verifiku emailin me kod para regjistrimit.",
 
-
-      // index
-      hero: "Gjej mjeshtrin që të duhet me shpejtësi",
-      search_placeholder: "Kërko firmë ose shërbim...",
-      all_categories: "Të gjitha kategoritë",
-      no_results: "Nuk u gjetën firma për kriteret e kërkimit.",
-      load_fail_title: "Nuk po mundemi me i ngarku firmat për momentin.",
-      load_fail_hint: "Provo prap pas pak sekondash.",
-      retry: "Provo prap",
-      photos: "foto",
-      not_set: "Nuk është vendosur",
-
-      // near me (NEW)
-      near_me: "Afer meje (25 km)",
-      near_me_off: "Trego te gjitha",
-      near_me_active: "Duke shfaqur vetëm firmat brenda {km} km.",
-      near_me_title: "Po kërkojmë firmat afër teje…",
-      near_me_fetching: "Kërkojmë lokacionin dhe po i ngarkojmë firmat brenda 25 km.",
-      near_me_on_title: "U aktivizua “Near me”",
-      near_me_on_desc: "Po shfaqen firmat brenda {km} km nga lokacioni yt.",
-      near_me_denied_title: "Lokacioni u refuzua",
-      near_me_denied_desc: "Lejo Location në browser/telefon, pastaj provo prap.",
-      near_me_unsupported_title: "Lokacioni s’përkrahet",
-      near_me_unsupported_desc: "Ky browser nuk e përkrah Geolocation.",
-      near_me_error_title: "Gabim te “Near me”",
-      near_me_error_desc: "S’u arrit me i ngarku firmat afër. Provo prap.",
 
       // register
       reg_title: "Regjistrimi i Firmës",
@@ -64,7 +49,9 @@
       phone_with_country: "Telefoni (me shtet)",
       phone_help:
         "Zgjidh shtetin (flamuri), pastaj shkruaj numrin. Prefiksi (+389, +49, +1…) vendoset vet.",
-      continue_pay: "Vazhdo te Pagesa",
+      activate_trial_btn: "Aktivizo 4 muaj falas",
+      privacy_agree_html:
+        'Pajtohem me <a href="privacy.html" class="text-blue-700 underline font-semibold">Privacy Policy</a>.',
 
       plan_basic_title: "Basic – 15€/muaj",
       plan_basic_l1: "• Listim bazë në EasyFix",
@@ -83,7 +70,7 @@
       plan_premium_l3: "• Pozicion Top",
       plan_premium_l4: "• Deri 8 foto",
 
-      // categories (keys)
+      // categories
       cat_electrician: "Elektricist",
       cat_plumber: "Hidraulik",
       cat_mason: "Murator",
@@ -104,7 +91,6 @@
       msg_phone_required: "Ju lutem shkruani numrin e telefonit.",
       msg_phone_invalid: "Numri i telefonit nuk është valid për shtetin e zgjedhur.",
       msg_saving: "Duke ruajtur regjistrimin...",
-      msg_to_pay: "Po ju dërgojmë te pagesa...",
       msg_email_exists: "Ky email tashmë është i regjistruar.",
       msg_reg_error: "Gabim në regjistrim.",
       msg_comm_error: "Gabim gjatë komunikimit me serverin.",
@@ -112,27 +98,20 @@
       hint_valid_phone: "Numri duket valid: {e164}",
       hint_invalid_phone: "Numër telefoni jo valid për këtë shtet.",
       msg_city_required: "Ju lutem shkruani qytetin.",
+      msg_must_agree_privacy: "Duhet të pajtoheni me Privacy Policy.",
+      msg_check_email_verify: "Kontrollo email-in dhe kliko linkun për verifikim.",
 
-      // success
-      thanks: "Faleminderit!",
-      verifying_sub: "Po verifikojmë pagesën dhe aktivizimin e firmës suaj…",
-      status_verifying: "Duke verifikuar…",
-      hint_activation:
-        "Nëse sapo e kryet pagesën, zakonisht aktivizimi vjen brenda pak sekondash.",
-      email_line: "Email i regjistrimit: {email}",
-      go_firm: "Shko te firma jote",
-      refresh_status: "Rifresko statusin",
-      missing_email_sub: "Mungon email në link. Ju lutem kthehuni te faqja kryesore.",
-      missing_email_status: "Gabim: email mungon",
-      missing_email_err: "Nuk u gjet parametri ?email=... në URL.",
-      back_home_btn: "Kthehu te faqja kryesore",
-      active_paid: "Aktive (paid)",
-      activated_ok: "Firma juaj është aktivizuar me sukses.",
-      in_process: "Ende në proces: {status}",
-      not_confirmed:
-        "Nuk u konfirmua automatikisht (provoni përsëri).",
-      try_refresh:
-        "Nëse pagesa u krye, provoni butonin “Rifresko statusin”.",
+      // verify pages
+      verify_sent_title: "Verifikimi i Email-it",
+      verify_sent_desc: "Të dërguam një link verifikimi në email. Hape email-in dhe kliko “Verifiko Email-in”.",
+      verify_sent_tip: "Nëse nuk e gjen, kontrollo edhe Spam/Junk.",
+      resend_btn: "Dërgo përsëri linkun",
+      verifying_title: "Duke verifikuar…",
+      verifying_desc: "Po e konfirmojmë verifikimin e email-it.",
+      verified_ok_title: "U verifikua me sukses",
+      verified_ok_desc: "Email-i u verifikua. Tash po të dërgojmë te konfirmimi.",
+      verify_failed_title: "Verifikimi dështoi",
+      verify_failed_desc: "Linku është i pavlefshëm ose ka skaduar. Provo me “Dërgo përsëri linkun”.",
 
       // contact
       contact_title: "Kontakto EasyFix",
@@ -166,37 +145,21 @@
       next: "Напред",
       modal_help: "Esc за затворање, стрелки ← → за Next/Prev",
 
+      verify_email_title: "Верификувај е-пошта",
+verify_email_hint: "Мора да ја верификуваш е-поштата пред регистрација.",
+send_code_btn: "Испрати код",
+code_placeholder: "6-цифрен код",
+verify_btn: "Верификувај",
+msg_email_invalid: "Невалидна е-пошта.",
+msg_sending_code: "Се испраќа код…",
+msg_code_sent: "Кодот е испратен. Провери е-пошта.",
+msg_send_code_fail: "Не успеавме да испратиме код. Пробај повторно.",
+msg_code_invalid_format: "Кодот мора да биде 6 цифри.",
+msg_verifying_code: "Се верификува код…",
+msg_code_invalid: "Погрешен или истечен код.",
+msg_code_verified: "Е-поштата е успешно верифицирана.",
+msg_email_verify_required: "Мора да ја верификуваш е-поштата со код пред регистрација.",
 
-
-      continue_pay: "Активирај 4 месеци бесплатно",
-      msg_to_pay: "Ве пренасочуваме кон потврда…",
-
-
-
-      hero: "Најди мајстор брзо и лесно",
-      search_placeholder: "Пребарај фирма или услуга...",
-      all_categories: "Сите категории",
-      no_results: "Нема резултати за избраните филтри.",
-      load_fail_title: "Во моментов не можеме да ги вчитаме фирмите.",
-      load_fail_hint: "Пробај повторно по неколку секунди.",
-      retry: "Пробај повторно",
-      photos: "фотографии",
-      not_set: "Не е поставено",
-
-      // near me (NEW)
-      near_me: "Близу мене (25 km)",
-      near_me_off: "Прикажи ги сите",
-      near_me_active: "Прикажуваме само фирми во {km} km.",
-      near_me_title: "Бараме фирми во близина…",
-      near_me_fetching: "Го земаме твојот локалитет и вчитуваме фирми во 25 km.",
-      near_me_on_title: "Активирано “Near me”",
-      near_me_on_desc: "Прикажани се фирми во {km} km од твојата локација.",
-      near_me_denied_title: "Локацијата е одбиена",
-      near_me_denied_desc: "Дозволи Location во прелистувач/телефон и пробај пак.",
-      near_me_unsupported_title: "Локацијата не е поддржана",
-      near_me_unsupported_desc: "Овој прелистувач не поддржува Geolocation.",
-      near_me_error_title: "Грешка со “Near me”",
-      near_me_error_desc: "Не успеавме да ги вчитаме блиските фирми. Пробај пак.",
 
       reg_title: "Регистрација на фирма",
       choose_plan: "Избери план",
@@ -207,7 +170,9 @@
       phone_with_country: "Телефон (со држава)",
       phone_help:
         "Избери држава (знаме), потоа внеси број. Префиксот (+389, +49, +1…) се додава автоматски.",
-      continue_pay: "Продолжи кон плаќање",
+      activate_trial_btn: "Активирај 4 месеци бесплатно",
+      privacy_agree_html:
+        'Се согласувам со <a href="privacy.html" class="text-blue-700 underline font-semibold">Privacy Policy</a>.',
 
       plan_basic_title: "Basic – 15€/месец",
       plan_basic_l1: "• Основно листање на EasyFix",
@@ -245,7 +210,6 @@
       msg_phone_required: "Ве молиме внесете телефонски број.",
       msg_phone_invalid: "Телефонскиот број не е валиден за избраната држава.",
       msg_saving: "Се зачувува регистрацијата...",
-      msg_to_pay: "Ве пренасочуваме кон плаќање...",
       msg_email_exists: "Овој е-пошта веќе е регистриран.",
       msg_reg_error: "Грешка при регистрација.",
       msg_comm_error: "Грешка при комуникација со серверот.",
@@ -253,23 +217,19 @@
       hint_valid_phone: "Бројот изгледа валиден: {e164}",
       hint_invalid_phone: "Невалиден телефонски број за оваа држава.",
       msg_city_required: "Ве молиме внесете град.",
+      msg_must_agree_privacy: "Мора да се согласите со Privacy Policy.",
+      msg_check_email_verify: "Проверете го email-от и кликнете го линкот за верификација.",
 
-      thanks: "Ви благодариме!",
-      verifying_sub: "Ја проверуваме уплатата и активирањето…",
-      status_verifying: "Проверка…",
-      hint_activation: "Ако штотуку плативте, активирањето обично е за неколку секунди.",
-      email_line: "Е-пошта за регистрација: {email}",
-      go_firm: "Оди до твојата фирма",
-      refresh_status: "Освежи статус",
-      missing_email_sub: "Недостасува е-пошта во линкот. Вратете се на почетна.",
-      missing_email_status: "Грешка: недостасува е-пошта",
-      missing_email_err: "Не е најден параметарот ?email=... во URL.",
-      back_home_btn: "Врати се на почетна",
-      active_paid: "Активна (paid)",
-      activated_ok: "Фирмата е успешно активирана.",
-      in_process: "Сè уште во процес: {status}",
-      not_confirmed: "Не е потврдено автоматски (обидете се повторно).",
-      try_refresh: "Ако уплатата е завршена, пробајте “Освежи статус”.",
+      verify_sent_title: "Верификација на email",
+      verify_sent_desc: "Ви испративме линк за верификација. Отворете го email-от и кликнете “Verify”.",
+      verify_sent_tip: "Ако не го гледате, проверете Spam/Junk.",
+      resend_btn: "Испрати повторно линк",
+      verifying_title: "Се верифицира…",
+      verifying_desc: "Ја потврдуваме верификацијата на email-от.",
+      verified_ok_title: "Успешно верифицирано",
+      verified_ok_desc: "Email-от е верифициран. Ве пренасочуваме кон потврда.",
+      verify_failed_title: "Верификацијата не успеа",
+      verify_failed_desc: "Линкот е неважечки или истечен. Пробајте “Испрати повторно линк”.",
 
       contact_title: "Контакт со EasyFix",
       name_label: "Име",
@@ -301,37 +261,22 @@
       prev: "Prev",
       next: "Next",
       modal_help: "Esc to close, arrows ← → for Next/Prev",
-      
 
-      continue_pay: "Activate 4 months free",
-      msg_to_pay: "Redirecting to confirmation…",
+      verify_email_title: "Verify Email",
+verify_email_hint: "You must verify your email before registration.",
+send_code_btn: "Send code",
+code_placeholder: "6-digit code",
+verify_btn: "Verify",
+msg_email_invalid: "Invalid email.",
+msg_sending_code: "Sending code…",
+msg_code_sent: "Code sent. Check your email.",
+msg_send_code_fail: "Could not send code. Try again.",
+msg_code_invalid_format: "Code must be 6 digits.",
+msg_verifying_code: "Verifying code…",
+msg_code_invalid: "Wrong or expired code.",
+msg_code_verified: "Email verified successfully.",
+msg_email_verify_required: "You must verify your email with the code before registering.",
 
-
-
-      hero: "Find the right professional quickly",
-      search_placeholder: "Search for a company or service...",
-      all_categories: "All categories",
-      no_results: "No businesses found for the selected filters.",
-      load_fail_title: "We can’t load businesses right now.",
-      load_fail_hint: "Please try again in a few seconds.",
-      retry: "Try again",
-      photos: "photos",
-      not_set: "Not set",
-
-      // near me (NEW)
-      near_me: "Near me (25 km)",
-      near_me_off: "Show all",
-      near_me_active: "Showing only businesses within {km} km.",
-      near_me_title: "Finding nearby businesses…",
-      near_me_fetching: "Getting your location and loading businesses within 25 km.",
-      near_me_on_title: "“Near me” enabled",
-      near_me_on_desc: "Showing businesses within {km} km of your location.",
-      near_me_denied_title: "Location denied",
-      near_me_denied_desc: "Allow Location in your browser/phone, then try again.",
-      near_me_unsupported_title: "Location unsupported",
-      near_me_unsupported_desc: "This browser does not support Geolocation.",
-      near_me_error_title: "“Near me” error",
-      near_me_error_desc: "Could not load nearby businesses. Please try again.",
 
       reg_title: "Business Registration",
       choose_plan: "Choose a Plan",
@@ -342,7 +287,9 @@
       phone_with_country: "Phone (with country)",
       phone_help:
         "Select your country (flag), then enter your number. The prefix (+389, +49, +1…) is added automatically.",
-      continue_pay: "Continue to Payment",
+      activate_trial_btn: "Activate 4 months free",
+      privacy_agree_html:
+        'I agree to the <a href="privacy.html" class="text-blue-700 underline font-semibold">Privacy Policy</a>.',
 
       plan_basic_title: "Basic – €15/month",
       plan_basic_l1: "• Basic listing on EasyFix",
@@ -380,7 +327,6 @@
       msg_phone_required: "Please enter your phone number.",
       msg_phone_invalid: "The phone number is not valid for the selected country.",
       msg_saving: "Saving your registration...",
-      msg_to_pay: "Redirecting you to payment...",
       msg_email_exists: "This email is already registered.",
       msg_reg_error: "Registration error.",
       msg_comm_error: "Communication error with the server.",
@@ -388,23 +334,19 @@
       hint_valid_phone: "Looks valid: {e164}",
       hint_invalid_phone: "Invalid phone number for this country.",
       msg_city_required: "Please enter the city.",
+      msg_must_agree_privacy: "You must agree to the Privacy Policy.",
+      msg_check_email_verify: "Check your email and click the verification link.",
 
-      thanks: "Thank you!",
-      verifying_sub: "We are verifying your payment and activation…",
-      status_verifying: "Verifying…",
-      hint_activation: "If you just paid, activation usually completes within a few seconds.",
-      email_line: "Registration email: {email}",
-      go_firm: "Go to your business",
-      refresh_status: "Refresh status",
-      missing_email_sub: "Missing email in the link. Please go back to the home page.",
-      missing_email_status: "Error: missing email",
-      missing_email_err: "The parameter ?email=... was not found in the URL.",
-      back_home_btn: "Back to home",
-      active_paid: "Active (paid)",
-      activated_ok: "Your business has been activated successfully.",
-      in_process: "Still in process: {status}",
-      not_confirmed: "Not confirmed automatically (please try again).",
-      try_refresh: "If payment is completed, try “Refresh status”.",
+      verify_sent_title: "Email Verification",
+      verify_sent_desc: "We sent you a verification link. Open your email and click “Verify Email”.",
+      verify_sent_tip: "If you don’t see it, check Spam/Junk.",
+      resend_btn: "Resend verification link",
+      verifying_title: "Verifying…",
+      verifying_desc: "We are confirming your email verification.",
+      verified_ok_title: "Verified successfully",
+      verified_ok_desc: "Email verified. Redirecting you to confirmation.",
+      verify_failed_title: "Verification failed",
+      verify_failed_desc: "The link is invalid or expired. Try “Resend verification link”.",
 
       contact_title: "Contact EasyFix",
       name_label: "Name",
@@ -456,21 +398,18 @@
   }
 
   function applyTranslations(root = document) {
-    // textContent
     root.querySelectorAll("[data-i18n]").forEach(el => {
       const key = el.getAttribute("data-i18n");
       if (!key) return;
       el.textContent = t(key);
     });
 
-    // placeholder
     root.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
       const key = el.getAttribute("data-i18n-placeholder");
       if (!key) return;
       el.setAttribute("placeholder", t(key));
     });
 
-    // title attribute
     root.querySelectorAll("[data-i18n-title]").forEach(el => {
       const key = el.getAttribute("data-i18n-title");
       if (!key) return;
@@ -478,7 +417,7 @@
     });
   }
 
-  // ===== categories (keys + legacy fallback) =====
+  // categories helper (unchanged)
   const legacyToKey = {
     "elektricist": "electrician",
     "hidraulik": "plumber",
@@ -499,13 +438,12 @@
   function normalizeCategoryKey(raw) {
     const v = String(raw || "").trim();
     const low = v.toLowerCase();
-    // if already a key we use internally
     if (
       ["electrician","plumber","mason","cleaning","ac","gardener","parquet","gypsum","facade","painter","heating_cooling","doors_windows"]
         .includes(low)
     ) return low;
 
-    return legacyToKey[low] || v; // fallback: keep original
+    return legacyToKey[low] || v;
   }
 
   function categoryLabel(catKeyOrRaw) {
@@ -526,14 +464,10 @@
       doors_windows: "cat_doors_windows",
     };
     if (keyMap[low]) return t(keyMap[low]);
-    return k; // legacy raw
+    return k;
   }
 
-  function setLangButtonsUI() {
-    // Deprecated: language UI exists only on index page (dropdown).
-    // Keep as no-op for backward compatibility.
-    return;
-  }
+  function setLangButtonsUI() { return; }
 
   window.EASYFIX_I18N = {
     getLang, setLang, t, applyTranslations,
@@ -541,6 +475,5 @@
     setLangButtonsUI
   };
 
-  // initial
   setLang(getLang());
 })();

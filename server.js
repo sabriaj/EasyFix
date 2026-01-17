@@ -1,4 +1,4 @@
-// server.js (FIXED - 4 months free trial + reminder emails + paid reminder/expired emails + pay-now flow + delete after 180 days)
+// server.js (FIXED - 4 months free trial + reminder emails + paid reminder/expired emails + pay-now flow + delete after 180 days + EMAIL OTP VERIFY)
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -54,6 +54,11 @@ const CHECK_INTERVAL_MINUTES = Number(process.env.CHECK_INTERVAL_MINUTES || 60);
 const DEFAULT_COUNTRY = String(process.env.DEFAULT_COUNTRY || "MK").toUpperCase();
 
 const PAY_TOKEN_MINUTES = Number(process.env.PAY_TOKEN_MINUTES || 30);
+
+/* ===== EMAIL OTP CONFIG (NEW) ===== */
+const EMAIL_OTP_MIN_SECONDS = Number(process.env.EMAIL_OTP_MIN_SECONDS || 30); // resend throttle
+const EMAIL_OTP_EXPIRES_MINUTES = Number(process.env.EMAIL_OTP_EXPIRES_MINUTES || 10);
+const EMAIL_OTP_MAX_ATTEMPTS = Number(process.env.EMAIL_OTP_MAX_ATTEMPTS || 8);
 
 /* ================= LOG HELPERS ================= */
 function now() { return new Date().toISOString(); }
@@ -128,6 +133,17 @@ function normalizePhone(raw) {
   return null;
 }
 
+/* ===== OTP HELPERS (NEW) ===== */
+function makeOtp6() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function canResendOtp(lastSentAt, minSeconds) {
+  if (!lastSentAt) return true;
+  const last = new Date(lastSentAt).getTime();
+  return (Date.now() - last) >= (minSeconds * 1000);
+}
+
 /* ================= GEO (NEW) ================= */
 function fetchWithTimeout(url, timeoutMs = 8000, options = {}) {
   const controller = new AbortController();
@@ -188,6 +204,14 @@ const firmaSchema = new mongoose.Schema(
     // === PAY NOW (magic link) ===
     pay_token_hash: String,
     pay_token_expires: Date,
+
+    // === EMAIL VERIFICATION (NEW) ===
+    email_verified: { type: Boolean, default: false },
+    email_verified_at: Date,
+    email_otp_hash: String,
+    email_otp_expires: Date,
+    email_otp_attempts: { type: Number, default: 0 },
+    email_otp_last_sent_at: Date,
 
     name: String,
     email: { type: String, unique: true, required: true },
@@ -618,6 +642,134 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 /* ================= JSON (AFTER WEBHOOK) ================= */
 app.use(express.json());
 
+/* ================= EMAIL OTP VERIFY (NEW) ================= */
+// POST /auth/email/start  { email }
+app.post("/auth/email/start", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    if (!email) return res.status(400).json({ success: false, error: "Missing email" });
+    if (!resend) return res.status(500).json({ success: false, error: "Email service not configured" });
+
+    // if email already exists as a fully registered firm (name present), don't allow "new registration"
+    const existing = await Firma.findOne({ email })
+      .select("_id email name email_verified email_otp_last_sent_at payment_status")
+      .lean();
+
+    // If exists and has name -> already registered (trial/paid/expired etc). Block signup flow.
+    if (existing?.name) {
+      return res.status(409).json({ success: false, error: "Ky email tashmë ekziston" });
+    }
+
+    // throttle resend
+    if (existing?.email_otp_last_sent_at && !canResendOtp(existing.email_otp_last_sent_at, EMAIL_OTP_MIN_SECONDS)) {
+      return res.status(429).json({ success: false, error: `Try again in ${EMAIL_OTP_MIN_SECONDS} seconds` });
+    }
+
+    const otp = makeOtp6();
+    const otpHash = sha256Hex(otp);
+    const expires = new Date(Date.now() + EMAIL_OTP_EXPIRES_MINUTES * 60 * 1000);
+
+    if (!existing) {
+      // Create "stub" record so email remains unique and later /register updates it
+      await Firma.create({
+        email,
+        plan: "basic",
+        payment_status: "pending",
+        email_verified: false,
+        email_otp_hash: otpHash,
+        email_otp_expires: expires,
+        email_otp_attempts: 0,
+        email_otp_last_sent_at: new Date(),
+      });
+    } else {
+      await Firma.updateOne(
+        { _id: existing._id },
+        {
+          $set: {
+            email_verified: false,        // re-verify for new signup attempt
+            email_verified_at: null,
+            email_otp_hash: otpHash,
+            email_otp_expires: expires,
+            email_otp_attempts: 0,
+            email_otp_last_sent_at: new Date(),
+          }
+        }
+      );
+    }
+
+    await sendMail({
+      to: email,
+      subject: "EasyFix - Kodi i verifikimit",
+      text: `Kodi yt i verifikimit është: ${otp} (skadon për ${EMAIL_OTP_EXPIRES_MINUTES} minuta).`,
+      html: `
+        <div style="font-family:Arial;line-height:1.6">
+          <h2>EasyFix</h2>
+          <p>Kodi yt i verifikimit është:</p>
+          <p style="font-size:28px;font-weight:700;letter-spacing:2px">${otp}</p>
+          <p style="color:#666">Skadon për ${EMAIL_OTP_EXPIRES_MINUTES} minuta.</p>
+        </div>
+      `,
+    });
+
+    return res.json({ success: true });
+  } catch (err) {
+    errorWithTime("EMAIL START ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// POST /auth/email/verify  { email, code }
+app.post("/auth/email/verify", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const code = String(req.body?.code || "").trim();
+
+    if (!email || !code) return res.status(400).json({ success: false, error: "Missing email/code" });
+    if (!/^\d{6}$/.test(code)) return res.status(400).json({ success: false, error: "Invalid code" });
+
+    const firm = await Firma.findOne({ email })
+      .select("_id email name email_verified email_otp_hash email_otp_expires email_otp_attempts")
+      .lean();
+
+    // If not found OR already full registered -> treat as invalid for signup verification
+    if (!firm) return res.status(400).json({ success: false, error: "Invalid code" });
+    if (firm?.name) return res.status(409).json({ success: false, error: "Ky email tashmë ekziston" });
+
+    if (!firm.email_otp_hash || !firm.email_otp_expires) {
+      return res.status(400).json({ success: false, error: "No active code" });
+    }
+
+    if (new Date(firm.email_otp_expires).getTime() <= Date.now()) {
+      return res.status(400).json({ success: false, error: "Code expired" });
+    }
+
+    const attempts = Number(firm.email_otp_attempts || 0);
+    if (attempts >= EMAIL_OTP_MAX_ATTEMPTS) {
+      return res.status(429).json({ success: false, error: "Too many attempts. Request a new code." });
+    }
+
+    const ok = sha256Hex(code) === firm.email_otp_hash;
+
+    if (!ok) {
+      await Firma.updateOne({ _id: firm._id }, { $set: { email_otp_attempts: attempts + 1 } });
+      return res.status(400).json({ success: false, error: "Invalid code" });
+    }
+
+    await Firma.updateOne(
+      { _id: firm._id },
+      {
+        $set: { email_verified: true, email_verified_at: new Date() },
+        $unset: { email_otp_hash: "", email_otp_expires: "", email_otp_attempts: "", email_otp_last_sent_at: "" },
+      }
+    );
+
+    return res.json({ success: true, verified: true });
+  } catch (err) {
+    errorWithTime("EMAIL VERIFY ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
 /* ================= PAY NOW (MAGIC LINK) ================= */
 app.post("/pay-now/request", async (req, res) => {
   try {
@@ -793,7 +945,7 @@ async function runTrialNotifications() {
   }
 }
 
-/* ================= PAID NOTIFICATIONS (NEW) ================= */
+/* ================= PAID NOTIFICATIONS ================= */
 async function runPaidNotifications() {
   if (!resend) {
     log("⚠️ PaidNotifications skipped: Resend not configured");
@@ -902,7 +1054,6 @@ app.post(
     { name: "photos", maxCount: 10 },
   ]),
   async (req, res) => {
-    let createdId = null;
     try {
       let { name, email, phone, address, city, category, plan, country } = req.body;
 
@@ -918,9 +1069,21 @@ app.post(
         return res.status(400).json({ success: false, error: "Invalid plan" });
       }
 
-      const exists = await Firma.findOne({ email }).lean();
-      if (exists) {
+      // MUST exist as verified stub (created by /auth/email/start)
+      const stub = await Firma.findOne({ email })
+        .select("_id name email_verified")
+        .lean();
+
+      // If not exists, they never started OTP
+      if (!stub) {
+        return res.status(403).json({ success: false, error: "Email not verified" });
+      }
+      // If already fully registered
+      if (stub?.name) {
         return res.status(409).json({ success: false, error: "Ky email tashmë ekziston" });
+      }
+      if (!stub.email_verified) {
+        return res.status(403).json({ success: false, error: "Email not verified" });
       }
 
       const geo = await geocodeNominatim({
@@ -964,34 +1127,43 @@ app.post(
       const trialEnds = new Date(nowD);
       trialEnds.setMonth(trialEnds.getMonth() + 4);
 
-      const firma = await Firma.create({
-        name,
-        email,
-        phone: phoneNorm,
-        phone_verified: false,
-        phone_verified_at: null,
-        address,
-        city: cityNorm,
-        category,
-        country: countryNorm,
+      // IMPORTANT: Update the stub (do NOT create a new document)
+      const firma = await Firma.findOneAndUpdate(
+        { email },
+        {
+          $set: {
+            name,
+            phone: phoneNorm,
+            phone_verified: false,
+            phone_verified_at: null,
+            address,
+            city: cityNorm,
+            category,
+            country: countryNorm,
 
-        location: {
-          type: "Point",
-          coordinates: [geo.lng, geo.lat],
+            location: {
+              type: "Point",
+              coordinates: [geo.lng, geo.lat],
+            },
+
+            plan,
+            payment_status: "trial",
+            trial_started_at: nowD,
+            trial_ends_at: trialEnds,
+            expires_at: trialEnds,
+            deleted_at: null,
+
+            logoUrl,
+            photos,
+
+            // reset trial markers (fresh signup)
+            trial_reminder_7d_sent_at: null,
+            trial_reminder_1d_sent_at: null,
+            trial_expired_email_sent_at: null,
+          }
         },
-
-        plan,
-        payment_status: "trial",
-        trial_started_at: nowD,
-        trial_ends_at: trialEnds,
-        expires_at: trialEnds,
-        deleted_at: null,
-
-        logoUrl,
-        photos,
-      });
-
-      createdId = firma._id;
+        { new: true }
+      );
 
       const successUrl = `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}&trial=1`;
 
@@ -999,14 +1171,10 @@ app.post(
         success: true,
         message: "Regjistrimi u ruajt. Trial-i u aktivizua.",
         checkoutUrl: successUrl,
+        firmId: String(firma?._id || ""),
       });
     } catch (err) {
       errorWithTime("REGISTER ERROR:", err);
-
-      if (createdId) {
-        try { await Firma.deleteOne({ _id: createdId }); } catch {}
-      }
-
       return res.status(500).json({ success: false, error: "Server error" });
     }
   }
@@ -1243,18 +1411,6 @@ async function runCleanup() {
   const del = await Firma.deleteMany({ payment_status: "expired", expires_at: { $lte: cutoff } });
   if (del?.deletedCount) log("🗑️ Deleted expired firms:", del.deletedCount);
 }
-
-/* ================= HEALTH ================= */
-app.get("/health", (req, res) => {
-  const rs = mongoose.connection.readyState;
-  res.json({
-    ok: true,
-    time: now(),
-    dbReadyState: rs,
-    resendConfigured: Boolean(resend),
-    resendFrom: RESEND_FROM ? RESEND_FROM : null
-  });
-});
 
 /* ================= MONGO + START ================= */
 async function connectMongo() {

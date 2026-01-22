@@ -107,6 +107,7 @@ msg_email_verify_required: "Duhet me verifiku emailin me kod para regjistrimit."
       cat_painter: "Bojaxhi",
       cat_heating_cooling: "Instalime ngrohje/Ftohje",
       cat_doors_windows: "Dyer/Dritare",
+      cat_tiler: "Pllaka / Keramikë",
 
       // code.js messages
       msg_fill_all: "Ju lutem plotësoni të gjitha fushat.",
@@ -229,7 +230,7 @@ msg_email_verify_required: "Мора да ја верификуваш е-пош�
 
       plan_standard_title: "Standard – 20€/месец",
       plan_standard_l1: "• Сè од Basic +",
-      plan_standard_l2: "• Лого на компанија",
+      plan_standard_l2: "• Лого на компанијата",
       plan_standard_l3: "• До 3 фотографии",
       plan_standard_l4: "• Подобра позиција во листа",
 
@@ -251,6 +252,7 @@ msg_email_verify_required: "Мора да ја верификуваш е-пош�
       cat_painter: "Молер",
       cat_heating_cooling: "Инсталации греење/ладење",
       cat_doors_windows: "Врати/прозорци",
+      cat_tiler: "Плочки / Керамика",
 
       msg_fill_all: "Ве молиме пополнете ги сите полиња.",
       msg_choose_plan: "Ве молиме изберете план.",
@@ -392,6 +394,7 @@ msg_email_verify_required: "You must verify your email with the code before regi
       cat_painter: "Painter",
       cat_heating_cooling: "Heating/Cooling installation",
       cat_doors_windows: "Doors/Windows",
+      cat_tiler: "Tiles / Ceramics",
 
       msg_fill_all: "Please fill in all fields.",
       msg_choose_plan: "Please select a plan.",
@@ -505,13 +508,24 @@ msg_email_verify_required: "You must verify your email with the code before regi
     "bojaxhi": "painter",
     "instalime ngrohje/ftohje": "heating_cooling",
     "dyer/dritare": "doors_windows",
+    "pllaka": "tiler",
+    "pllaka / keramike": "tiler",
+    "pllaka / keramikë": "tiler",
+    "keramike": "tiler",
+    "keramikë": "tiler",
+    "plocki": "tiler",
+    "плочки": "tiler",
+    "керамика": "tiler",
+    "tiles": "tiler",
+    "ceramic": "tiler",
+    "ceramics": "tiler",
   };
 
   function normalizeCategoryKey(raw) {
     const v = String(raw || "").trim();
     const low = v.toLowerCase();
     if (
-      ["electrician","plumber","mason","cleaning","ac","gardener","parquet","gypsum","facade","painter","heating_cooling","doors_windows"]
+      ["electrician","plumber","mason","cleaning","ac","gardener","parquet","gypsum","facade","painter","heating_cooling","doors_windows","tiler"]
         .includes(low)
     ) return low;
 
@@ -534,6 +548,7 @@ msg_email_verify_required: "You must verify your email with the code before regi
       painter: "cat_painter",
       heating_cooling: "cat_heating_cooling",
       doors_windows: "cat_doors_windows",
+      tiler: "cat_tiler",
     };
     if (keyMap[low]) return t(keyMap[low]);
     return k;

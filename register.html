@@ -65,11 +65,48 @@
   </header>
 
   <section class="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-xl mt-10">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center" data-i18n="reg_title">Regjistrimi i Firmës</h1>
+    <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center" data-i18n="reg_title">Regjistrimi i Firmës</h1>
+
+    <!-- FREE TRIAL HERO (NEW) -->
+    <div class="mb-7 p-5 rounded-2xl border border-green-200 bg-green-50">
+      <div class="flex items-start gap-3">
+        <div class="mt-1 text-green-700 text-xl">
+          <i class="fas fa-gift"></i>
+        </div>
+        <div class="flex-1">
+          <div class="text-xl font-extrabold text-green-800 leading-tight" data-i18n="trial_banner_title">
+            4 muaj FALAS — pa pagesë sot
+          </div>
+          <div class="text-sm text-green-700 mt-1" data-i18n="trial_banner_desc">
+            Regjistrohu sot dhe shfaq listing-un për 4 muaj falas. Pagesa fillon vetëm pas mbarimit të trial-it.
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+            <div class="p-3 rounded-xl bg-white border border-green-100">
+              <div class="text-xs text-gray-500" data-i18n="trial_card_1_title">Sot</div>
+              <div class="font-bold text-gray-800" data-i18n="trial_card_1_value">0€</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white border border-green-100">
+              <div class="text-xs text-gray-500" data-i18n="trial_card_2_title">Trial</div>
+              <div class="font-bold text-gray-800" data-i18n="trial_card_2_value">4 muaj falas</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white border border-green-100">
+              <div class="text-xs text-gray-500" data-i18n="trial_card_3_title">Pas trial</div>
+              <div class="font-bold text-gray-800" data-i18n="trial_card_3_value">Plan mujor (opsional)</div>
+            </div>
+          </div>
+
+          <div class="text-xs text-gray-600 mt-3" data-i18n="trial_micro_note">
+            Zgjedh planin tani për renditje/foto, por aktivizimi është falas për 4 muaj.
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- /FREE TRIAL HERO -->
 
     <h2 class="text-xl font-semibold mb-3" data-i18n="choose_plan">Zgjidh Planin</h2>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
       <button data-plan="basic" id="planBasic" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
         <h3 class="text-lg font-bold mb-1" data-i18n="plan_basic_title">Basic – 15€/muaj</h3>
         <ul class="text-sm text-gray-600 space-y-1">
@@ -98,6 +135,12 @@
           <li data-i18n="plan_premium_l4">• Deri 8 foto</li>
         </ul>
       </button>
+    </div>
+
+    <!-- NOTE UNDER PLANS (NEW) -->
+    <div class="mb-4 text-sm text-gray-700">
+      <span class="font-semibold text-green-700" data-i18n="trial_note_strong">S’ka pagesë sot.</span>
+      <span data-i18n="trial_note_rest">Çmimet vlejnë vetëm pas 4 muajve falas.</span>
     </div>
 
     <input type="hidden" id="selectedPlan">
@@ -157,7 +200,8 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <button id="sendOtpBtn"
               type="button"
-              class="bg-blue-700 hover:bg-blue-800 text-white py-2 px-4 rounded-lg font-semibold">
+              class="bg-blue-700 hover:bg-blue-800 text-white py-2 px-4 rounded-lg font-semibold"
+              data-i18n="send_code_btn">
               Dërgo kodin
             </button>
 
@@ -166,11 +210,13 @@
               inputmode="numeric"
               maxlength="6"
               class="w-full border p-2 rounded"
+              data-i18n-placeholder="code_placeholder"
               placeholder="Kodi 6-shifror">
 
             <button id="verifyOtpBtn"
               type="button"
-              class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-semibold">
+              class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-semibold"
+              data-i18n="verify_btn">
               Verifiko
             </button>
           </div>
@@ -202,7 +248,8 @@
         </select>
       </div>
 
-      <button id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-lg" data-i18n="continue_pay">
+      <!-- FIXED: data-i18n key -->
+      <button id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-lg" data-i18n="activate_trial_btn">
         Aktivizo 4 muaj falas
       </button>
     </form>
@@ -210,7 +257,7 @@
     <div class="text-sm text-gray-600 mt-3">
       <label class="flex items-start gap-2">
         <input id="agreePrivacy" type="checkbox" class="mt-1" required>
-        <span>
+        <span data-i18n="privacy_agree_html">
           I agree to the <a href="privacy.html" class="text-blue-700 underline font-semibold">Privacy Policy</a>.
         </span>
       </label>

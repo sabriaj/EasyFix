@@ -22,22 +22,20 @@
       next: "Next",
       modal_help: "Esc për me mbyll, shigjeta ← → për Next/Prev",
 
-
       verify_email_title: "Verifiko Emailin",
-verify_email_hint: "Duhet me verifiku emailin para regjistrimit.",
-send_code_btn: "Dërgo kodin",
-code_placeholder: "Kodi 6-shifror",
-verify_btn: "Verifiko",
-msg_email_invalid: "Email jo valid.",
-msg_sending_code: "Duke dërgu kodin…",
-msg_code_sent: "Kodi u dërgua. Kontrollo email-in.",
-msg_send_code_fail: "S’u arrit me dërgu kodin. Provo prap.",
-msg_code_invalid_format: "Kodi duhet me qenë 6 shifra.",
-msg_verifying_code: "Duke verifiku kodin…",
-msg_code_invalid: "Kodi i gabuar ose i skaduar.",
-msg_code_verified: "Email u verifikua me sukses.",
-msg_email_verify_required: "Duhet me verifiku emailin me kod para regjistrimit.",
-
+      verify_email_hint: "Duhet me verifiku emailin para regjistrimit.",
+      send_code_btn: "Dërgo kodin",
+      code_placeholder: "Kodi 6-shifror",
+      verify_btn: "Verifiko",
+      msg_email_invalid: "Email jo valid.",
+      msg_sending_code: "Duke dërgu kodin…",
+      msg_code_sent: "Kodi u dërgua. Kontrollo email-in.",
+      msg_send_code_fail: "S’u arrit me dërgu kodin. Provo prap.",
+      msg_code_invalid_format: "Kodi duhet me qenë 6 shifra.",
+      msg_verifying_code: "Duke verifiku kodin…",
+      msg_code_invalid: "Kodi i gabuar ose i skaduar.",
+      msg_code_verified: "Email u verifikua me sukses.",
+      msg_email_verify_required: "Duhet me verifiku emailin me kod para regjistrimit.",
 
       hero: "Gjej mjeshtrin që të duhet me shpejtësi",
       search_placeholder: "Kërko firmë ose shërbim...",
@@ -62,7 +60,6 @@ msg_email_verify_required: "Duhet me verifiku emailin me kod para regjistrimit."
       load_fail_hint: "Kontrollo internetin ose provo prap.",
       not_set: "Nuk është vendosur",
 
-
       // register
       reg_title: "Regjistrimi i Firmës",
       choose_plan: "Zgjidh Planin",
@@ -77,18 +74,32 @@ msg_email_verify_required: "Duhet me verifiku emailin me kod para regjistrimit."
       privacy_agree_html:
         'Pajtohem me <a href="privacy.html" class="text-blue-700 underline font-semibold">Privacy Policy</a>.',
 
-      plan_basic_title: "Basic – 15€/muaj",
+      // FREE TRIAL (NEW)
+      trial_banner_title: "4 muaj FALAS — pa pagesë sot",
+      trial_banner_desc: "Regjistrohu sot dhe shfaq listing-un për 4 muaj falas. Pagesa fillon vetëm pas mbarimit të trial-it.",
+      trial_card_1_title: "Sot",
+      trial_card_1_value: "0€",
+      trial_card_2_title: "Trial",
+      trial_card_2_value: "4 muaj falas",
+      trial_card_3_title: "Pas trial",
+      trial_card_3_value: "Plan mujor (opsional)",
+      trial_micro_note: "Zgjedh planin tani për renditje/foto, por aktivizimi është falas për 4 muaj.",
+      trial_note_strong: "S’ka pagesë sot.",
+      trial_note_rest: "Çmimet vlejnë vetëm pas 4 muajve falas.",
+
+      // plans (UPDATED TITLES)
+      plan_basic_title: "Basic – 15€/muaj (pas 4 muaj falas)",
       plan_basic_l1: "• Listim bazë në EasyFix",
       plan_basic_l2: "• Të dhënat e kontaktit",
       plan_basic_l3: "• Shfaqje standard në kategori",
 
-      plan_standard_title: "Standard – 20€/muaj",
+      plan_standard_title: "Standard – 20€/muaj (pas 4 muaj falas)",
       plan_standard_l1: "• Gjithë Basic +",
       plan_standard_l2: "• Logo e kompanisë",
       plan_standard_l3: "• Deri në 3 foto të shërbimeve",
       plan_standard_l4: "• Pozicion më i mirë në listë",
 
-      plan_premium_title: "Premium – 30€/muaj",
+      plan_premium_title: "Premium – 30€/muaj (pas 4 muaj falas)",
       plan_premium_l1: "• Gjithë Standard +",
       plan_premium_l2: "• Brandim më i fortë",
       plan_premium_l3: "• Pozicion Top",
@@ -171,20 +182,19 @@ msg_email_verify_required: "Duhet me verifiku emailin me kod para regjistrimit."
       modal_help: "Esc за затворање, стрелки ← → за Next/Prev",
 
       verify_email_title: "Верификувај е-пошта",
-verify_email_hint: "Мора да ја верификуваш е-поштата пред регистрација.",
-send_code_btn: "Испрати код",
-code_placeholder: "6-цифрен код",
-verify_btn: "Верификувај",
-msg_email_invalid: "Невалидна е-пошта.",
-msg_sending_code: "Се испраќа код…",
-msg_code_sent: "Кодот е испратен. Провери е-пошта.",
-msg_send_code_fail: "Не успеавме да испратиме код. Пробај повторно.",
-msg_code_invalid_format: "Кодот мора да биде 6 цифри.",
-msg_verifying_code: "Се верификува код…",
-msg_code_invalid: "Погрешен или истечен код.",
-msg_code_verified: "Е-поштата е успешно верифицирана.",
-msg_email_verify_required: "Мора да ја верификуваш е-поштата со код пред регистрација.",
-
+      verify_email_hint: "Мора да ја верификуваш е-поштата пред регистрација.",
+      send_code_btn: "Испрати код",
+      code_placeholder: "6-цифрен код",
+      verify_btn: "Верификувај",
+      msg_email_invalid: "Невалидна е-пошта.",
+      msg_sending_code: "Се испраќа код…",
+      msg_code_sent: "Кодот е испратен. Провери е-пошта.",
+      msg_send_code_fail: "Не успеавме да испратиме код. Пробај повторно.",
+      msg_code_invalid_format: "Кодот мора да биде 6 цифри.",
+      msg_verifying_code: "Се верификува код…",
+      msg_code_invalid: "Погрешен или истечен код.",
+      msg_code_verified: "Е-поштата е успешно верифицирана.",
+      msg_email_verify_required: "Мора да ја верификуваш е-поштата со код пред регистрација.",
 
       hero: "Најди мајстор што ти треба брзо",
       search_placeholder: "Пребарај фирма или услуга...",
@@ -209,7 +219,6 @@ msg_email_verify_required: "Мора да ја верификуваш е-пош�
       load_fail_hint: "Провери интернет или пробај повторно.",
       not_set: "Не е внесено",
 
-
       reg_title: "Регистрација на фирма",
       choose_plan: "Избери план",
       upload_title: "Прикачи лого и фотографии",
@@ -223,18 +232,32 @@ msg_email_verify_required: "Мора да ја верификуваш е-пош�
       privacy_agree_html:
         'Се согласувам со <a href="privacy.html" class="text-blue-700 underline font-semibold">Privacy Policy</a>.',
 
-      plan_basic_title: "Basic – 15€/месец",
+      // FREE TRIAL (NEW)
+      trial_banner_title: "4 месеци БЕСПЛАТНО — без плаќање денес",
+      trial_banner_desc: "Регистрирај се денес и прикажувај се 4 месеци бесплатно. Плаќањето започнува дури по истекот на пробниот период.",
+      trial_card_1_title: "Денес",
+      trial_card_1_value: "0€",
+      trial_card_2_title: "Пробен период",
+      trial_card_2_value: "4 месеци бесплатно",
+      trial_card_3_title: "По пробниот период",
+      trial_card_3_value: "Месечен план (опционално)",
+      trial_micro_note: "Избери план сега за позиција/фотографии, но активирањето е бесплатно 4 месеци.",
+      trial_note_strong: "Без плаќање денес.",
+      trial_note_rest: "Цените важат само по 4-те бесплатни месеци.",
+
+      // plans (UPDATED TITLES)
+      plan_basic_title: "Basic – 15€/месец (по 4 месеци бесплатно)",
       plan_basic_l1: "• Основно листање на EasyFix",
       plan_basic_l2: "• Контакт податоци",
       plan_basic_l3: "• Стандардно прикажување",
 
-      plan_standard_title: "Standard – 20€/месец",
+      plan_standard_title: "Standard – 20€/месец (по 4 месеци бесплатно)",
       plan_standard_l1: "• Сè од Basic +",
       plan_standard_l2: "• Лого на компанијата",
       plan_standard_l3: "• До 3 фотографии",
       plan_standard_l4: "• Подобра позиција во листа",
 
-      plan_premium_title: "Premium – 30€/месец",
+      plan_premium_title: "Premium – 30€/месец (по 4 месеци бесплатно)",
       plan_premium_l1: "• Сè од Standard +",
       plan_premium_l2: "• Посилен брендинг",
       plan_premium_l3: "• Топ позиција",
@@ -313,20 +336,19 @@ msg_email_verify_required: "Мора да ја верификуваш е-пош�
       modal_help: "Esc to close, arrows ← → for Next/Prev",
 
       verify_email_title: "Verify Email",
-verify_email_hint: "You must verify your email before registration.",
-send_code_btn: "Send code",
-code_placeholder: "6-digit code",
-verify_btn: "Verify",
-msg_email_invalid: "Invalid email.",
-msg_sending_code: "Sending code…",
-msg_code_sent: "Code sent. Check your email.",
-msg_send_code_fail: "Could not send code. Try again.",
-msg_code_invalid_format: "Code must be 6 digits.",
-msg_verifying_code: "Verifying code…",
-msg_code_invalid: "Wrong or expired code.",
-msg_code_verified: "Email verified successfully.",
-msg_email_verify_required: "You must verify your email with the code before registering.",
-
+      verify_email_hint: "You must verify your email before registration.",
+      send_code_btn: "Send code",
+      code_placeholder: "6-digit code",
+      verify_btn: "Verify",
+      msg_email_invalid: "Invalid email.",
+      msg_sending_code: "Sending code…",
+      msg_code_sent: "Code sent. Check your email.",
+      msg_send_code_fail: "Could not send code. Try again.",
+      msg_code_invalid_format: "Code must be 6 digits.",
+      msg_verifying_code: "Verifying code…",
+      msg_code_invalid: "Wrong or expired code.",
+      msg_code_verified: "Email verified successfully.",
+      msg_email_verify_required: "You must verify your email with the code before registering.",
 
       hero: "Find the professional you need, fast",
       search_placeholder: "Search for a business or service...",
@@ -351,7 +373,6 @@ msg_email_verify_required: "You must verify your email with the code before regi
       load_fail_hint: "Check your internet connection and try again.",
       not_set: "Not set",
 
-
       reg_title: "Business Registration",
       choose_plan: "Choose a Plan",
       upload_title: "Upload Logo and Photos",
@@ -365,18 +386,32 @@ msg_email_verify_required: "You must verify your email with the code before regi
       privacy_agree_html:
         'I agree to the <a href="privacy.html" class="text-blue-700 underline font-semibold">Privacy Policy</a>.',
 
-      plan_basic_title: "Basic – €15/month",
+      // FREE TRIAL (NEW)
+      trial_banner_title: "4 months FREE — no payment today",
+      trial_banner_desc: "Register today and get listed for 4 months free. Payments start only after the trial ends.",
+      trial_card_1_title: "Today",
+      trial_card_1_value: "€0",
+      trial_card_2_title: "Trial",
+      trial_card_2_value: "4 months free",
+      trial_card_3_title: "After trial",
+      trial_card_3_value: "Monthly plan (optional)",
+      trial_micro_note: "Choose a plan now for ranking/photos, but activation is free for 4 months.",
+      trial_note_strong: "No payment today.",
+      trial_note_rest: "Prices apply only after the 4-month free trial.",
+
+      // plans (UPDATED TITLES)
+      plan_basic_title: "Basic – €15/month (after 4 months free)",
       plan_basic_l1: "• Basic listing on EasyFix",
       plan_basic_l2: "• Contact details",
       plan_basic_l3: "• Standard placement in category",
 
-      plan_standard_title: "Standard – €20/month",
+      plan_standard_title: "Standard – €20/month (after 4 months free)",
       plan_standard_l1: "• Everything in Basic +",
       plan_standard_l2: "• Company logo",
       plan_standard_l3: "• Up to 3 photos",
       plan_standard_l4: "• Better position in list",
 
-      plan_premium_title: "Premium – €30/month",
+      plan_premium_title: "Premium – €30/month (after 4 months free)",
       plan_premium_l1: "• Everything in Standard +",
       plan_premium_l2: "• Stronger branding",
       plan_premium_l3: "• Top position",

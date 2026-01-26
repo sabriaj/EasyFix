@@ -25,6 +25,42 @@ function showStatus(msg, type = "info") {
     "#2563eb";
 }
 
+/* ===== NEW: map server error_code -> i18n text ===== */
+function apiErrorToText(j) {
+  const code = String(j?.error_code || "").trim();
+
+  const map = {
+    MISSING_FIELDS: "api_missing_fields",
+    INVALID_PLAN: "api_invalid_plan",
+    EMAIL_NOT_VERIFIED: "api_email_not_verified",
+    EMAIL_EXISTS: "api_email_exists",
+    GEO_NOT_FOUND: "api_geo_not_found",
+    SERVER_ERROR: "api_server_error",
+    MISSING_EMAIL: "api_missing_email",
+    EMAIL_SERVICE_NOT_CONFIGURED: "api_email_service_not_configured",
+    MISSING_EMAIL_CODE: "api_missing_email_code",
+    INVALID_CODE_FORMAT: "api_invalid_code_format",
+    INVALID_CODE: "api_invalid_code",
+    NO_ACTIVE_CODE: "api_no_active_code",
+    CODE_EXPIRED: "api_code_expired",
+    TOO_MANY_ATTEMPTS: "api_too_many_attempts",
+    OTP_COOLDOWN: "api_otp_cooldown",
+    MISSING_LAT_LNG: "api_missing_lat_lng",
+  };
+
+  if (code === "OTP_COOLDOWN") {
+    const sec = Number(j?.retry_after_seconds || 0) || 45;
+    return t("api_otp_cooldown", { sec });
+  }
+
+  if (code && map[code]) return t(map[code]);
+
+  // fallback: nëse serveri ende kthen tekst
+  if (typeof j?.error === "string" && j.error.trim()) return j.error.trim();
+
+  return t("api_server_error");
+}
+
 /* ===================== PHONE (intl-tel-input) ===================== */
 let iti = null;
 
@@ -245,16 +281,8 @@ function wireEmailOtp() {
 
       const j = await r.json().catch(() => ({}));
 
-      if (r.status === 409) {
-        setOtpStatus(j?.error || t("msg_email_exists"), "error");
-        return;
-      }
-      if (r.status === 429) {
-        setOtpStatus(j?.error || "Too many requests. Try again.", "error");
-        return;
-      }
       if (!r.ok || !j.success) {
-        setOtpStatus(j?.error || t("msg_send_code_fail"), "error");
+        setOtpStatus(apiErrorToText(j), "error");
         return;
       }
 
@@ -289,16 +317,8 @@ function wireEmailOtp() {
 
       const j = await r.json().catch(() => ({}));
 
-      if (r.status === 409) {
-        setOtpStatus(j?.error || t("msg_email_exists"), "error");
-        return;
-      }
-      if (r.status === 429) {
-        setOtpStatus(j?.error || "Too many attempts. Request a new code.", "error");
-        return;
-      }
       if (!r.ok || !j.success) {
-        setOtpStatus(j?.error || t("msg_code_invalid"), "error");
+        setOtpStatus(apiErrorToText(j), "error");
         return;
       }
 
@@ -401,15 +421,9 @@ function wireSubmit() {
     try {
       const res = await fetch(`${BACKEND_URL}/register`, { method: "POST", body: formData });
 
-      if (res.status === 409) {
-        const data409 = await res.json().catch(() => ({}));
-        showStatus(data409?.error || t("msg_email_exists"), "error");
-        return;
-      }
-
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) {
-        showStatus(data?.error || t("msg_reg_error"), "error");
+        showStatus(apiErrorToText(data), "error");
         return;
       }
 

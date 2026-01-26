@@ -139,6 +139,24 @@
       msg_must_agree_privacy: "Duhet të pajtoheni me Privacy Policy.",
       msg_check_email_verify: "Kontrollo email-in dhe kliko linkun për verifikim.",
 
+      // NEW: API error translations (server -> error_code)
+      api_missing_fields: "Ju lutem plotësoni të gjitha fushat.",
+      api_invalid_plan: "Plani nuk është valid.",
+      api_email_not_verified: "Email-i nuk është i verifikuar.",
+      api_email_exists: "Ky email tashmë ekziston.",
+      api_geo_not_found: "Nuk u gjet lokacioni për këtë adresë/qytet. Ju lutem shkruani adresë më të saktë.",
+      api_server_error: "Gabim në server. Provo prap.",
+      api_missing_email: "Ju lutem shkruani email-in.",
+      api_email_service_not_configured: "Shërbimi i email-it nuk është i konfiguruar.",
+      api_missing_email_code: "Ju lutem shkruani email-in dhe kodin.",
+      api_invalid_code_format: "Kodi duhet me qenë 6 shifra.",
+      api_invalid_code: "Kodi i gabuar ose i skaduar.",
+      api_no_active_code: "Nuk ka kod aktiv. Kërko një kod të ri.",
+      api_code_expired: "Kodi ka skaduar. Kërko një kod të ri.",
+      api_too_many_attempts: "Shumë tentativa. Kërko një kod të ri.",
+      api_otp_cooldown: "Provo prap pas {sec} sekondash.",
+      api_missing_lat_lng: "Mungon lokacioni (lat/lng).",
+
       // verify pages
       verify_sent_title: "Verifikimi i Email-it",
       verify_sent_desc:
@@ -299,6 +317,24 @@
       msg_must_agree_privacy: "Мора да се согласите со Privacy Policy.",
       msg_check_email_verify: "Проверете го email-от и кликнете го линкот за верификација.",
 
+      // NEW: API error translations (server -> error_code)
+      api_missing_fields: "Ве молиме пополнете ги сите полиња.",
+      api_invalid_plan: "Невалиден план.",
+      api_email_not_verified: "Е-поштата не е верификувана.",
+      api_email_exists: "Оваа е-пошта веќе постои.",
+      api_geo_not_found: "Не успеавме да најдеме локација за оваа адреса/град. Внесете попрецизна адреса.",
+      api_server_error: "Серверска грешка. Пробај повторно.",
+      api_missing_email: "Внесете е-пошта.",
+      api_email_service_not_configured: "Email сервисот не е конфигуриран.",
+      api_missing_email_code: "Внесете е-пошта и код.",
+      api_invalid_code_format: "Кодот мора да биде 6 цифри.",
+      api_invalid_code: "Погрешен или истечен код.",
+      api_no_active_code: "Нема активен код. Побарај нов код.",
+      api_code_expired: "Кодот истече. Побарај нов код.",
+      api_too_many_attempts: "Премногу обиди. Побарај нов код.",
+      api_otp_cooldown: "Пробај повторно по {sec} секунди.",
+      api_missing_lat_lng: "Недостасува локација (lat/lng).",
+
       verify_sent_title: "Верификација на email",
       verify_sent_desc:
         "Ви испративме линк за верификација. Отворете го email-от и кликнете “Verify”.",
@@ -456,6 +492,24 @@
       msg_city_required: "Please enter the city.",
       msg_must_agree_privacy: "You must agree to the Privacy Policy.",
       msg_check_email_verify: "Check your email and click the verification link.",
+
+      // NEW: API error translations (server -> error_code)
+      api_missing_fields: "Please fill in all fields.",
+      api_invalid_plan: "Invalid plan.",
+      api_email_not_verified: "Email is not verified.",
+      api_email_exists: "This email already exists.",
+      api_geo_not_found: "We could not find a location for this address/city. Please enter a more precise address.",
+      api_server_error: "Server error. Please try again.",
+      api_missing_email: "Please enter the email.",
+      api_email_service_not_configured: "Email service is not configured.",
+      api_missing_email_code: "Please enter email and code.",
+      api_invalid_code_format: "Code must be 6 digits.",
+      api_invalid_code: "Wrong or expired code.",
+      api_no_active_code: "No active code. Request a new one.",
+      api_code_expired: "Code expired. Request a new one.",
+      api_too_many_attempts: "Too many attempts. Request a new code.",
+      api_otp_cooldown: "Try again in {sec} seconds.",
+      api_missing_lat_lng: "Missing location (lat/lng).",
 
       verify_sent_title: "Email Verification",
       verify_sent_desc:

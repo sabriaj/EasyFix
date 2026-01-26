@@ -130,6 +130,15 @@ function normalizePhone(raw) {
   return null;
 }
 
+/* ===== API ERROR HELPER (i18n-friendly) ===== */
+function sendError(res, status, code, extra = {}) {
+  return res.status(status).json({
+    success: false,
+    error_code: code,
+    ...extra,
+  });
+}
+
 /* ===== OTP HELPERS ===== */
 function makeOtp6() {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -737,19 +746,19 @@ app.post("/delete-confirm", async (req, res) => {
 app.post("/auth/email/start", async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
-    if (!email) return res.status(400).json({ success: false, error: "Missing email" });
-    if (!resend) return res.status(500).json({ success: false, error: "Email service not configured" });
+    if (!email) return sendError(res, 400, "MISSING_EMAIL");
+    if (!resend) return sendError(res, 500, "EMAIL_SERVICE_NOT_CONFIGURED");
 
     const existing = await Firma.findOne({ email })
       .select("_id email name email_verified email_otp_last_sent_at payment_status")
       .lean();
 
     if (existing?.name) {
-      return res.status(409).json({ success: false, error: "Ky email tashmë ekziston" });
+      return sendError(res, 409, "EMAIL_EXISTS");
     }
 
     if (existing?.email_otp_last_sent_at && !canResendOtp(existing.email_otp_last_sent_at, EMAIL_OTP_MIN_SECONDS)) {
-      return res.status(429).json({ success: false, error: `Try again in ${EMAIL_OTP_MIN_SECONDS} seconds` });
+      return sendError(res, 429, "OTP_COOLDOWN", { retry_after_seconds: EMAIL_OTP_MIN_SECONDS });
     }
 
     const otp = makeOtp6();
@@ -800,7 +809,7 @@ app.post("/auth/email/start", async (req, res) => {
     return res.json({ success: true });
   } catch (err) {
     errorWithTime("EMAIL START ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
+    return sendError(res, 500, "SERVER_ERROR");
   }
 });
 
@@ -809,34 +818,34 @@ app.post("/auth/email/verify", async (req, res) => {
     const email = normalizeEmail(req.body?.email);
     const code = String(req.body?.code || "").trim();
 
-    if (!email || !code) return res.status(400).json({ success: false, error: "Missing email/code" });
-    if (!/^\d{6}$/.test(code)) return res.status(400).json({ success: false, error: "Invalid code" });
+    if (!email || !code) return sendError(res, 400, "MISSING_EMAIL_CODE");
+    if (!/^\d{6}$/.test(code)) return sendError(res, 400, "INVALID_CODE_FORMAT");
 
     const firm = await Firma.findOne({ email })
       .select("_id email name email_verified email_otp_hash email_otp_expires email_otp_attempts")
       .lean();
 
-    if (!firm) return res.status(400).json({ success: false, error: "Invalid code" });
-    if (firm?.name) return res.status(409).json({ success: false, error: "Ky email tashmë ekziston" });
+    if (!firm) return sendError(res, 400, "INVALID_CODE");
+    if (firm?.name) return sendError(res, 409, "EMAIL_EXISTS");
 
     if (!firm.email_otp_hash || !firm.email_otp_expires) {
-      return res.status(400).json({ success: false, error: "No active code" });
+      return sendError(res, 400, "NO_ACTIVE_CODE");
     }
 
     if (new Date(firm.email_otp_expires).getTime() <= Date.now()) {
-      return res.status(400).json({ success: false, error: "Code expired" });
+      return sendError(res, 400, "CODE_EXPIRED");
     }
 
     const attempts = Number(firm.email_otp_attempts || 0);
     if (attempts >= EMAIL_OTP_MAX_ATTEMPTS) {
-      return res.status(429).json({ success: false, error: "Too many attempts. Request a new code." });
+      return sendError(res, 429, "TOO_MANY_ATTEMPTS");
     }
 
     const ok = sha256Hex(code) === firm.email_otp_hash;
 
     if (!ok) {
       await Firma.updateOne({ _id: firm._id }, { $set: { email_otp_attempts: attempts + 1 } });
-      return res.status(400).json({ success: false, error: "Invalid code" });
+      return sendError(res, 400, "INVALID_CODE");
     }
 
     await Firma.updateOne(
@@ -850,7 +859,7 @@ app.post("/auth/email/verify", async (req, res) => {
     return res.json({ success: true, verified: true });
   } catch (err) {
     errorWithTime("EMAIL VERIFY ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
+    return sendError(res, 500, "SERVER_ERROR");
   }
 });
 
@@ -1145,10 +1154,10 @@ app.post(
       const cityNorm = String(city || "").trim();
 
       if (!name || !email || !phoneNorm || !address || !cityNorm || !category || !plan) {
-        return res.status(400).json({ success: false, error: "Missing fields" });
+        return sendError(res, 400, "MISSING_FIELDS");
       }
       if (!["basic", "standard", "premium"].includes(plan)) {
-        return res.status(400).json({ success: false, error: "Invalid plan" });
+        return sendError(res, 400, "INVALID_PLAN");
       }
 
       const stub = await Firma.findOne({ email })
@@ -1156,13 +1165,13 @@ app.post(
         .lean();
 
       if (!stub) {
-        return res.status(403).json({ success: false, error: "Email not verified" });
+        return sendError(res, 403, "EMAIL_NOT_VERIFIED");
       }
       if (stub?.name) {
-        return res.status(409).json({ success: false, error: "Ky email tashmë ekziston" });
+        return sendError(res, 409, "EMAIL_EXISTS");
       }
       if (!stub.email_verified) {
-        return res.status(403).json({ success: false, error: "Email not verified" });
+        return sendError(res, 403, "EMAIL_NOT_VERIFIED");
       }
 
       const geo = await geocodeNominatim({
@@ -1172,10 +1181,7 @@ app.post(
       });
 
       if (!geo) {
-        return res.status(400).json({
-          success: false,
-          error: "Nuk u gjet lokacioni për këtë adresë/qytet. Ju lutem shkruani adresë më të saktë."
-        });
+        return sendError(res, 400, "GEO_NOT_FOUND");
       }
 
       let logoUrl = null;
@@ -1251,7 +1257,7 @@ app.post(
       });
     } catch (err) {
       errorWithTime("REGISTER ERROR:", err);
-      return res.status(500).json({ success: false, error: "Server error" });
+      return sendError(res, 500, "SERVER_ERROR");
     }
   }
 );
@@ -1339,7 +1345,7 @@ app.get("/firms/near", async (req, res) => {
     const radiusM = radiusKm * 1000;
 
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      return res.status(400).json({ success: false, error: "Missing lat/lng" });
+      return sendError(res, 400, "MISSING_LAT_LNG");
     }
 
     const geoClause = {

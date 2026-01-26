@@ -76,14 +76,16 @@
 
       // FREE TRIAL (NEW)
       trial_banner_title: "4 muaj FALAS — pa pagesë sot",
-      trial_banner_desc: "Regjistrohu sot dhe shfaq listing-un për 4 muaj falas. Pagesa fillon vetëm pas mbarimit të trial-it.",
+      trial_banner_desc:
+        "Regjistrohu sot dhe shfaq listing-un për 4 muaj falas. Pagesa fillon vetëm pas mbarimit të trial-it.",
       trial_card_1_title: "Sot",
       trial_card_1_value: "0€",
       trial_card_2_title: "Trial",
       trial_card_2_value: "4 muaj falas",
       trial_card_3_title: "Pas trial",
       trial_card_3_value: "Plan mujor (opsional)",
-      trial_micro_note: "Zgjedh planin tani për renditje/foto, por aktivizimi është falas për 4 muaj.",
+      trial_micro_note:
+        "Zgjedh planin tani për renditje/foto, por aktivizimi është falas për 4 muaj.",
       trial_note_strong: "S’ka pagesë sot.",
       trial_note_rest: "Çmimet vlejnë vetëm pas 4 muajve falas.",
 
@@ -139,7 +141,8 @@
 
       // verify pages
       verify_sent_title: "Verifikimi i Email-it",
-      verify_sent_desc: "Të dërguam një link verifikimi në email. Hape email-in dhe kliko “Verifiko Email-in”.",
+      verify_sent_desc:
+        "Të dërguam një link verifikimi në email. Hape email-in dhe kliko “Verifiko Email-in”.",
       verify_sent_tip: "Nëse nuk e gjen, kontrollo edhe Spam/Junk.",
       resend_btn: "Dërgo përsëri linkun",
       verifying_title: "Duke verifikuar…",
@@ -147,7 +150,8 @@
       verified_ok_title: "U verifikua me sukses",
       verified_ok_desc: "Email-i u verifikua. Tash po të dërgojmë te konfirmimi.",
       verify_failed_title: "Verifikimi dështoi",
-      verify_failed_desc: "Linku është i pavlefshëm ose ka skaduar. Provo me “Dërgo përsëri linkun”.",
+      verify_failed_desc:
+        "Linku është i pavlefshëm ose ka skaduar. Provo me “Dërgo përsëri linkun”.",
 
       // contact
       contact_title: "Kontakto EasyFix",
@@ -234,14 +238,16 @@
 
       // FREE TRIAL (NEW)
       trial_banner_title: "4 месеци БЕСПЛАТНО — без плаќање денес",
-      trial_banner_desc: "Регистрирај се денес и прикажувај се 4 месеци бесплатно. Плаќањето започнува дури по истекот на пробниот период.",
+      trial_banner_desc:
+        "Регистрирај се денес и прикажувај се 4 месеци бесплатно. Плаќањето започнува дури по истекот на пробниот период.",
       trial_card_1_title: "Денес",
       trial_card_1_value: "0€",
       trial_card_2_title: "Пробен период",
       trial_card_2_value: "4 месеци бесплатно",
       trial_card_3_title: "По пробниот период",
       trial_card_3_value: "Месечен план (опционално)",
-      trial_micro_note: "Избери план сега за позиција/фотографии, но активирањето е бесплатно 4 месеци.",
+      trial_micro_note:
+        "Избери план сега за позиција/фотографии, но активирањето е бесплатно 4 месеци.",
       trial_note_strong: "Без плаќање денес.",
       trial_note_rest: "Цените важат само по 4-те бесплатни месеци.",
 
@@ -294,7 +300,8 @@
       msg_check_email_verify: "Проверете го email-от и кликнете го линкот за верификација.",
 
       verify_sent_title: "Верификација на email",
-      verify_sent_desc: "Ви испративме линк за верификација. Отворете го email-от и кликнете “Verify”.",
+      verify_sent_desc:
+        "Ви испративме линк за верификација. Отворете го email-от и кликнете “Verify”.",
       verify_sent_tip: "Ако не го гледате, проверете Spam/Junk.",
       resend_btn: "Испрати повторно линк",
       verifying_title: "Се верифицира…",
@@ -302,7 +309,8 @@
       verified_ok_title: "Успешно верифицирано",
       verified_ok_desc: "Email-от е верифициран. Ве пренасочуваме кон потврда.",
       verify_failed_title: "Верификацијата не успеа",
-      verify_failed_desc: "Линкот е неважечки или истечен. Пробајте “Испрати повторно линк”.",
+      verify_failed_desc:
+        "Линкот е неважечки или истечен. Пробајте “Испрати повторно линк”.",
 
       contact_title: "Контакт со EasyFix",
       name_label: "Име",
@@ -388,14 +396,16 @@
 
       // FREE TRIAL (NEW)
       trial_banner_title: "4 months FREE — no payment today",
-      trial_banner_desc: "Register today and get listed for 4 months free. Payments start only after the trial ends.",
+      trial_banner_desc:
+        "Register today and get listed for 4 months free. Payments start only after the trial ends.",
       trial_card_1_title: "Today",
       trial_card_1_value: "€0",
       trial_card_2_title: "Trial",
       trial_card_2_value: "4 months free",
       trial_card_3_title: "After trial",
       trial_card_3_value: "Monthly plan (optional)",
-      trial_micro_note: "Choose a plan now for ranking/photos, but activation is free for 4 months.",
+      trial_micro_note:
+        "Choose a plan now for ranking/photos, but activation is free for 4 months.",
       trial_note_strong: "No payment today.",
       trial_note_rest: "Prices apply only after the 4-month free trial.",
 
@@ -448,7 +458,8 @@
       msg_check_email_verify: "Check your email and click the verification link.",
 
       verify_sent_title: "Email Verification",
-      verify_sent_desc: "We sent you a verification link. Open your email and click “Verify Email”.",
+      verify_sent_desc:
+        "We sent you a verification link. Open your email and click “Verify Email”.",
       verify_sent_tip: "If you don’t see it, check Spam/Junk.",
       resend_btn: "Resend verification link",
       verifying_title: "Verifying…",
@@ -456,7 +467,8 @@
       verified_ok_title: "Verified successfully",
       verified_ok_desc: "Email verified. Redirecting you to confirmation.",
       verify_failed_title: "Verification failed",
-      verify_failed_desc: "The link is invalid or expired. Try “Resend verification link”.",
+      verify_failed_desc:
+        "The link is invalid or expired. Try “Resend verification link”.",
 
       contact_title: "Contact EasyFix",
       name_label: "Name",
@@ -511,7 +523,13 @@
     root.querySelectorAll("[data-i18n]").forEach(el => {
       const key = el.getAttribute("data-i18n");
       if (!key) return;
-      el.textContent = t(key);
+
+      // Render HTML only for keys ending with _html (e.g., privacy_agree_html)
+      if (key.endsWith("_html")) {
+        el.innerHTML = t(key);
+      } else {
+        el.textContent = t(key);
+      }
     });
 
     root.querySelectorAll("[data-i18n-placeholder]").forEach(el => {

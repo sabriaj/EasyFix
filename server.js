@@ -1,4 +1,4 @@
-// server.js (FINAL - 4 months free trial + reminder emails + paid reminder/expired emails + pay-now flow + delete after 180 days + EMAIL OTP VERIFY + GEO FIX + DATA DELETION FIX)
+// server.js (FINAL - 4 months free trial + reminder emails + paid reminder/expired emails + pay-now flow + delete after 180 days + EMAIL OTP VERIFY + GEO FIX + DATA DELETION FIX + MULTI CATEGORY)
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -222,6 +222,11 @@ const firmaSchema = new mongoose.Schema(
 
     address: String,
     city: String,
+
+    // ✅ MULTI-CATEGORY (NEW)
+    // - categories is the real list
+    // - category is kept for backward compatibility (primary/first)
+    categories: { type: [String], default: undefined },
     category: String,
 
     country: { type: String, default: DEFAULT_COUNTRY, index: true },
@@ -267,6 +272,60 @@ const Firma = mongoose.model("Firma", firmaSchema);
 
 /* ================= PLAN RULES ================= */
 const planPhotoLimit = { basic: 0, standard: 3, premium: 8 };
+
+// ✅ CATEGORY LIMITS (NEW)
+const planCategoryLimit = { basic: 1, standard: 2, premium: 7 };
+
+// ✅ categories parsing/normalizing (NEW)
+function normalizeCategoryKey(raw) {
+  return String(raw || "").trim().toLowerCase();
+}
+
+function parseCategoriesFromBody(body) {
+  const b = body || {};
+  let v = b.categories ?? b.category ?? null;
+
+  if (v == null) return [];
+
+  if (Array.isArray(v)) {
+    return v.map(normalizeCategoryKey).filter(Boolean);
+  }
+
+  const s = String(v).trim();
+  if (!s) return [];
+
+  if (s.startsWith("[") && s.endsWith("]")) {
+    try {
+      const arr = JSON.parse(s);
+      if (Array.isArray(arr)) return arr.map(normalizeCategoryKey).filter(Boolean);
+    } catch {
+      // fall through
+    }
+  }
+
+  if (s.includes(",")) {
+    return s.split(",").map(normalizeCategoryKey).filter(Boolean);
+  }
+
+  return [normalizeCategoryKey(s)].filter(Boolean);
+}
+
+function applyCategoryPlanLimit(categories, plan) {
+  const p = String(plan || "").toLowerCase();
+  const max = planCategoryLimit[p] ?? 1;
+
+  const out = [];
+  const seen = new Set();
+  for (const c of (categories || [])) {
+    const k = normalizeCategoryKey(c);
+    if (!k) continue;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(k);
+  }
+
+  return out.slice(0, max);
+}
 
 function detectPlanFromVariant(variantId) {
   const v = String(variantId || "");
@@ -448,7 +507,13 @@ app.get("/admin/firms", requireAdmin, async (req, res) => {
     if (search) {
       firms = firms.filter(f => {
         const hay = [
-          f.name, f.email, f.phone, f.category, f.address, f.city,
+          f.name,
+          f.email,
+          f.phone,
+          f.category,
+          (Array.isArray(f.categories) ? f.categories.join(",") : ""),
+          f.address,
+          f.city,
           f.country
         ].map(x => String(x || "").toLowerCase()).join(" | ");
         return hay.includes(search);
@@ -469,7 +534,7 @@ app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
     if (!id) return res.status(400).json({ success: false, error: "Missing id" });
 
     const patch = {};
-    const allow = ["name", "phone", "address", "city", "category", "plan", "country", "payment_status", "expires_at", "trial_ends_at"];
+    const allow = ["name", "phone", "address", "city", "category", "categories", "plan", "country", "payment_status", "expires_at", "trial_ends_at"];
     for (const k of allow) {
       if (req.body?.[k] !== undefined) patch[k] = req.body[k];
     }
@@ -498,6 +563,27 @@ app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
 
     if (patch.country !== undefined) {
       patch.country = normalizeCountry(patch.country);
+    }
+
+    // ✅ categories admin patch (NEW)
+    if (patch.categories !== undefined || patch.category !== undefined) {
+      // decide effective plan for limit: patch.plan OR existing.plan OR basic
+      let effectivePlan = patch.plan;
+      if (!effectivePlan) {
+        const existing = await Firma.findById(id).select("plan").lean();
+        effectivePlan = String(existing?.plan || "basic").toLowerCase();
+      }
+
+      const parsed = parseCategoriesFromBody({
+        categories: patch.categories,
+        category: patch.category
+      });
+
+      const limited = applyCategoryPlanLimit(parsed, effectivePlan);
+
+      // store multi + legacy primary
+      patch.categories = limited.length ? limited : undefined;
+      patch.category = limited[0] || (patch.category ? String(patch.category) : null);
     }
 
     const updated = await Firma.findByIdAndUpdate(id, { $set: patch }, { new: true }).select("-__v").lean();
@@ -1146,14 +1232,19 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      let { name, email, phone, address, city, category, plan, country } = req.body;
+      let { name, email, phone, address, city, category, categories, plan, country } = req.body;
 
       email = normalizeEmail(email);
       const phoneNorm = normalizePhone(phone);
       const countryNorm = normalizeCountry(country);
       const cityNorm = String(city || "").trim();
 
-      if (!name || !email || !phoneNorm || !address || !cityNorm || !category || !plan) {
+      // ✅ parse categories (multipart can send repeated "categories")
+      const parsedCats = parseCategoriesFromBody({ category, categories });
+      const catsLimited = applyCategoryPlanLimit(parsedCats, plan);
+      const primaryCategory = catsLimited[0] || null;
+
+      if (!name || !email || !phoneNorm || !address || !cityNorm || !primaryCategory || !plan) {
         return sendError(res, 400, "MISSING_FIELDS");
       }
       if (!["basic", "standard", "premium"].includes(plan)) {
@@ -1221,7 +1312,11 @@ app.post(
             phone_verified_at: null,
             address,
             city: cityNorm,
-            category,
+
+            // ✅ store multi categories + keep legacy primary
+            categories: catsLimited,
+            category: primaryCategory,
+
             country: countryNorm,
 
             location: {

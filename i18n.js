@@ -138,6 +138,13 @@
       msg_city_required: "Ju lutem shkruani qytetin.",
       msg_must_agree_privacy: "Duhet të pajtoheni me Privacy Policy.",
       msg_check_email_verify: "Kontrollo email-in dhe kliko linkun për verifikim.",
+      msg_too_many_requests: "Shumë kërkesa. Provo prap pak ma vonë.",
+      msg_too_many_attempts: "Shumë tentativa. Kërko një kod të ri.",
+      msg_categories_required: "Ju lutem zgjidhni të paktën 1 kategori.",
+      msg_max_categories: "Mund të zgjidhni maksimum {n} kategori për planin {plan}.",
+      categories_limit_hint: "Maksimum {n} kategori për planin {plan}.",
+      msg_reg_ok: "Regjistrimi u ruajt me sukses.",
+
 
       // NEW: API error translations (server -> error_code)
       api_missing_fields: "Ju lutem plotësoni të gjitha fushat.",
@@ -301,6 +308,8 @@
       cat_doors_windows: "Врати/прозорци",
       cat_tiler: "Плочки / Керамика",
 
+
+
       msg_fill_all: "Ве молиме пополнете ги сите полиња.",
       msg_choose_plan: "Ве молиме изберете план.",
       msg_phone_init_fail: "Телефонското поле не се иницијализира. Освежи ја страницата.",
@@ -316,6 +325,13 @@
       msg_city_required: "Ве молиме внесете град.",
       msg_must_agree_privacy: "Мора да се согласите со Privacy Policy.",
       msg_check_email_verify: "Проверете го email-от и кликнете го линкот за верификација.",
+      msg_too_many_requests: "Премногу барања. Пробај повторно подоцна.",
+      msg_too_many_attempts: "Премногу обиди. Побарај нов код.",
+      msg_categories_required: "Ве молиме изберете најмалку 1 категорија.",
+      msg_max_categories: "Може да изберете максимум {n} категории за планот {plan}.",
+      categories_limit_hint: "Максимум {n} категории за планот {plan}.",
+      msg_reg_ok: "Регистрацијата е успешно зачувана.",
+
 
       // NEW: API error translations (server -> error_code)
       api_missing_fields: "Ве молиме пополнете ги сите полиња.",
@@ -492,6 +508,13 @@
       msg_city_required: "Please enter the city.",
       msg_must_agree_privacy: "You must agree to the Privacy Policy.",
       msg_check_email_verify: "Check your email and click the verification link.",
+      msg_too_many_requests: "Too many requests. Please try again later.",
+      msg_too_many_attempts: "Too many attempts. Request a new code.",
+      msg_categories_required: "Please select at least 1 category.",
+      msg_max_categories: "You can select up to {n} categories for the {plan} plan.",
+      categories_limit_hint: "Up to {n} categories for the {plan} plan.",
+      msg_reg_ok: "Registration saved successfully.",
+
 
       // NEW: API error translations (server -> error_code)
       api_missing_fields: "Please fill in all fields.",

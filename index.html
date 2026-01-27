@@ -246,17 +246,17 @@ let currentCountry = "MK";
 // i18n (NEW)
 const { getLang, setLang, t, applyTranslations, normalizeCategoryKey, categoryLabel } = window.EASYFIX_I18N;
 
-/* ===== language dropdown (ONLY index) ===== */
-const langBtn = document.getElementById("langBtn");
-const langMenu = document.getElementById("langMenu");
-const langLabel = document.getElementById("langLabel");
-const langFlagImg = document.getElementById("langFlagImg");
-
 const LANG_META = {
   sq: { flagUrl: "https://flagcdn.com/w40/al.png", label: "Shqip" },
   mk: { flagUrl: "https://flagcdn.com/w40/mk.png", label: "Македонски" },
   en: { flagUrl: "https://flagcdn.com/w40/gb.png", label: "English" },
 };
+
+/* ===== language dropdown (ONLY index) ===== */
+const langBtn = document.getElementById("langBtn");
+const langMenu = document.getElementById("langMenu");
+const langLabel = document.getElementById("langLabel");
+const langFlagImg = document.getElementById("langFlagImg");
 
 function renderLangUI() {
   const current = (getLang && getLang()) ? getLang() : "sq";
@@ -279,7 +279,6 @@ function renderLangUI() {
 
   if (langLabel) langLabel.textContent = meta.label;
 
-  // near-me button label refresh (important when language changes)
   updateNearMeUI();
 }
 
@@ -331,12 +330,23 @@ document.addEventListener("keydown", (e) => {
 function sanitize(text) { return text ? text.toString().trim() : ""; }
 function normalizeEmail(email) { return sanitize(email).toLowerCase(); }
 function phoneToTelHref(phone) { const p = sanitize(phone).replace(/[^\d+]/g, ""); return p || ""; }
+
 function clampPhotos(firm) {
   const photos = Array.isArray(firm.photos) ? firm.photos : [];
   const plan = (firm.plan || "").toLowerCase();
   if (plan === "standard") return photos.slice(0, 3);
   if (plan === "premium") return photos.slice(0, 8);
   return [];
+}
+
+function normalizeFirmCategories(f) {
+  // backend returns categories[] (NEW). fallback to category (OLD).
+  const arr = Array.isArray(f.categories) ? f.categories : (f.category ? [f.category] : []);
+  const keys = arr.map(x => normalizeCategoryKey(x)).filter(Boolean);
+  // also keep legacy _catKey for any old code, but new is _catKeys
+  f._catKeys = keys.length ? keys : (f.category ? [normalizeCategoryKey(f.category)] : []);
+  f._catKey = f._catKeys[0] || normalizeCategoryKey(f.category);
+  return f;
 }
 
 function setLoading(isLoading) {
@@ -440,13 +450,9 @@ async function enableNearMe() {
     showTopStatus("info", t("near_me_title"), t("near_me_fetching"));
 
     const loc = await getBrowserLocation();
-
     const data = await fetchNearFirmsWithRetry(currentCountry, loc.lat, loc.lng, NEAR_RADIUS_KM, 5);
 
-    allFirms = (data || []).map(f => {
-      f._catKey = normalizeCategoryKey(f.category);
-      return f;
-    }).sort((a, b) => {
+    allFirms = (data || []).map(f => normalizeFirmCategories(f)).sort((a, b) => {
       const order = { premium: 1, standard: 2, basic: 3 };
       return (order[(a.plan || "").toLowerCase()] || 9) - (order[(b.plan || "").toLowerCase()] || 9);
     });
@@ -461,7 +467,6 @@ async function enableNearMe() {
     clearTopStatus();
     showTopStatus("success", t("near_me_on_title"), t("near_me_on_desc", { km: NEAR_RADIUS_KM }));
 
-    // focus param still works
     requestAnimationFrame(() => {
       setTimeout(() => focusFirmFromUrl(), 60);
     });
@@ -472,7 +477,6 @@ async function enableNearMe() {
     nearMode = false;
     updateNearMeUI();
 
-    // better message depending on error
     const code = String(err?.code || err?.message || "");
     if (code.includes("PERMISSION_DENIED") || code.includes("GEO_DENIED") || err?.code === 1) {
       showTopStatus("error", t("near_me_denied_title"), t("near_me_denied_desc"), false);
@@ -487,7 +491,7 @@ async function enableNearMe() {
 function disableNearMe() {
   nearMode = false;
   updateNearMeUI();
-  loadFirms(); // back to normal list
+  loadFirms();
 }
 
 nearMeBtn?.addEventListener("click", () => {
@@ -503,9 +507,14 @@ function populateCategoryFilter(firms) {
   optAll.textContent = t("all_categories");
   categorySelect.appendChild(optAll);
 
-  const keys = [...new Set(firms.map(f => f._catKey))].sort((a,b) => categoryLabel(a).localeCompare(categoryLabel(b)));
+  const set = new Set();
+  firms.forEach(f => {
+    const keys = Array.isArray(f._catKeys) ? f._catKeys : (f._catKey ? [f._catKey] : []);
+    keys.forEach(k => { if (k) set.add(String(k)); });
+  });
+
+  const keys = [...set].sort((a,b) => categoryLabel(a).localeCompare(categoryLabel(b)));
   keys.forEach(k => {
-    if (!k) return;
     const opt = document.createElement("option");
     opt.value = k;
     opt.textContent = categoryLabel(k);
@@ -701,6 +710,9 @@ function renderFirms(firms) {
       `
       : "";
 
+    const catKeys = Array.isArray(firm._catKeys) ? firm._catKeys : (firm._catKey ? [firm._catKey] : []);
+    const catLabel = catKeys.length ? catKeys.map(k => categoryLabel(k)).join(", ") : categoryLabel(firm._catKey);
+
     div.innerHTML = `
       ${headerHTML}
       <p><strong>${t("address")}:</strong> ${sanitize(firm.address)}</p>
@@ -709,7 +721,7 @@ function renderFirms(firms) {
       <p><strong>${t("email")}:</strong>
         <a href="mailto:${sanitize(firm.email)}" class="text-blue-600 underline">${sanitize(firm.email)}</a>
       </p>
-      <p><strong>${t("category")}:</strong> ${categoryLabel(firm._catKey)}</p>
+      <p><strong>${t("category")}:</strong> ${sanitize(catLabel)}</p>
       <p class="text-xs text-gray-500 mt-1"><strong>${t("country")}:</strong> ${sanitize(firm.country || "MK")}</p>
       ${callButtons}
       ${photosHTML}
@@ -755,7 +767,10 @@ function filterFirms() {
 
   const filtered = allFirms.filter(f => {
     const matchName = sanitize(f.name).toLowerCase().includes(txt);
-    const matchCat = !cat || String(f._catKey) === String(cat);
+
+    const keys = Array.isArray(f._catKeys) ? f._catKeys : (f._catKey ? [f._catKey] : []);
+    const matchCat = !cat || keys.includes(String(cat));
+
     return matchName && matchCat;
   });
 
@@ -812,10 +827,7 @@ async function loadFirms() {
   try {
     const data = await fetchFirmsWithRetry(country, 5);
 
-    allFirms = (data || []).map(f => {
-      f._catKey = normalizeCategoryKey(f.category);
-      return f;
-    }).sort((a, b) => {
+    allFirms = (data || []).map(f => normalizeFirmCategories(f)).sort((a, b) => {
       const order = { premium: 1, standard: 2, basic: 3 };
       return (order[(a.plan || "").toLowerCase()] || 9) - (order[(b.plan || "").toLowerCase()] || 9);
     });
@@ -825,7 +837,6 @@ async function loadFirms() {
 
     setLoading(false);
 
-    // ✅ focus after content is visible (mobile safe)
     requestAnimationFrame(() => {
       setTimeout(() => focusFirmFromUrl(), 60);
     });

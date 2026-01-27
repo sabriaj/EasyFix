@@ -7,6 +7,12 @@ const t = I18N ? I18N.t : (k) => k;
 const applyTranslations = I18N ? I18N.applyTranslations : () => {};
 const setLangButtonsUI = I18N ? I18N.setLangButtonsUI : () => {};
 const setLang = I18N ? I18N.setLang : () => {};
+const getLang = I18N ? I18N.getLang : () => "sq";
+
+function getLangHeader() {
+  const l = (getLang && getLang()) ? getLang() : "sq";
+  return (l === "mk" || l === "en") ? l : "sq";
+}
 
 function showStatus(msg, type = "info") {
   let box = $("#statusBox");
@@ -23,42 +29,6 @@ function showStatus(msg, type = "info") {
     type === "error" ? "#dc2626" :
     type === "success" ? "#16a34a" :
     "#2563eb";
-}
-
-/* ===== NEW: map server error_code -> i18n text ===== */
-function apiErrorToText(j) {
-  const code = String(j?.error_code || "").trim();
-
-  const map = {
-    MISSING_FIELDS: "api_missing_fields",
-    INVALID_PLAN: "api_invalid_plan",
-    EMAIL_NOT_VERIFIED: "api_email_not_verified",
-    EMAIL_EXISTS: "api_email_exists",
-    GEO_NOT_FOUND: "api_geo_not_found",
-    SERVER_ERROR: "api_server_error",
-    MISSING_EMAIL: "api_missing_email",
-    EMAIL_SERVICE_NOT_CONFIGURED: "api_email_service_not_configured",
-    MISSING_EMAIL_CODE: "api_missing_email_code",
-    INVALID_CODE_FORMAT: "api_invalid_code_format",
-    INVALID_CODE: "api_invalid_code",
-    NO_ACTIVE_CODE: "api_no_active_code",
-    CODE_EXPIRED: "api_code_expired",
-    TOO_MANY_ATTEMPTS: "api_too_many_attempts",
-    OTP_COOLDOWN: "api_otp_cooldown",
-    MISSING_LAT_LNG: "api_missing_lat_lng",
-  };
-
-  if (code === "OTP_COOLDOWN") {
-    const sec = Number(j?.retry_after_seconds || 0) || 45;
-    return t("api_otp_cooldown", { sec });
-  }
-
-  if (code && map[code]) return t(map[code]);
-
-  // fallback: nëse serveri ende kthen tekst
-  if (typeof j?.error === "string" && j.error.trim()) return j.error.trim();
-
-  return t("api_server_error");
 }
 
 /* ===================== PHONE (intl-tel-input) ===================== */
@@ -141,6 +111,9 @@ async function initPhoneInput() {
 /* ===================== PLAN UI ===================== */
 let selectedPlan = "";
 
+const planPhotoLimit = { basic: 0, standard: 3, premium: 8 };
+const planCategoryLimit = { basic: 1, standard: 2, premium: 7 };
+
 function updateUploadHints() {
   const photosLabel = $("#photosLabel");
   const photosHint = $("#photosHint");
@@ -157,6 +130,75 @@ function updateUploadHints() {
     photosHint.textContent = "";
   }
 }
+
+/* ===================== MULTI CATEGORY UI ===================== */
+function getCategoryCheckboxes() {
+  return Array.from(document.querySelectorAll('input[name="categories"]'));
+}
+
+function getSelectedCategories() {
+  return getCategoryCheckboxes()
+    .filter(cb => cb.checked)
+    .map(cb => String(cb.value || "").trim())
+    .filter(Boolean);
+}
+
+function setCategoriesHint() {
+  const hint = $("#categoriesHint");
+  if (!hint) return;
+
+  const max = planCategoryLimit[selectedPlan] || 1;
+  hint.textContent = t("categories_limit_hint", { n: max, plan: selectedPlan || "basic" });
+}
+
+function enforceCategoryLimitUI(changedCb = null) {
+  const max = planCategoryLimit[selectedPlan] || 1;
+  const boxes = getCategoryCheckboxes();
+  if (!boxes.length) return;
+
+  let selected = boxes.filter(b => b.checked);
+
+  // ✅ max=1 => behave like radio (no disabled)
+  if (max === 1) {
+    if (changedCb && changedCb.checked) {
+      boxes.forEach(b => { if (b !== changedCb) b.checked = false; });
+      selected = [changedCb];
+    }
+
+    // ensure at least one selected
+    if (selected.length === 0) boxes[0].checked = true;
+
+    setCategoriesHint();
+    return;
+  }
+
+  // ✅ max>1 => don’t disable, just prevent exceeding max
+  if (selected.length > max) {
+    if (changedCb && changedCb.checked) {
+      changedCb.checked = false; // revert last change
+    } else {
+      selected.slice(max).forEach(b => { b.checked = false; });
+    }
+  }
+
+  // ensure at least one selected
+  if (boxes.filter(b => b.checked).length === 0) boxes[0].checked = true;
+
+  setCategoriesHint();
+}
+
+
+function wireCategoryUI() {
+  const boxes = getCategoryCheckboxes();
+  if (!boxes.length) return;
+
+  boxes.forEach(cb => {
+    cb.addEventListener("change", () => {
+      enforceCategoryLimitUI(cb); // pass which checkbox changed
+    });
+  });
+}
+
 
 function wirePlanButtons() {
   document.querySelectorAll(".plan-btn").forEach(btn => {
@@ -180,6 +222,9 @@ function wirePlanButtons() {
       }
 
       updateUploadHints();
+
+      // ✅ categories limit depends on plan
+      enforceCategoryLimitUI();
     });
   });
 }
@@ -275,14 +320,25 @@ function wireEmailOtp() {
     try {
       const r = await fetch(`${BACKEND_URL}/auth/email/start`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-lang": getLangHeader()
+        },
         body: JSON.stringify({ email })
       });
 
       const j = await r.json().catch(() => ({}));
 
+      if (r.status === 409) {
+        setOtpStatus(j?.error || t("msg_email_exists"), "error");
+        return;
+      }
+      if (r.status === 429) {
+        setOtpStatus(j?.error || t("msg_too_many_requests"), "error");
+        return;
+      }
       if (!r.ok || !j.success) {
-        setOtpStatus(apiErrorToText(j), "error");
+        setOtpStatus(j?.error || t("msg_send_code_fail"), "error");
         return;
       }
 
@@ -311,14 +367,25 @@ function wireEmailOtp() {
     try {
       const r = await fetch(`${BACKEND_URL}/auth/email/verify`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-lang": getLangHeader()
+        },
         body: JSON.stringify({ email, code })
       });
 
       const j = await r.json().catch(() => ({}));
 
+      if (r.status === 409) {
+        setOtpStatus(j?.error || t("msg_email_exists"), "error");
+        return;
+      }
+      if (r.status === 429) {
+        setOtpStatus(j?.error || t("msg_too_many_attempts"), "error");
+        return;
+      }
       if (!r.ok || !j.success) {
-        setOtpStatus(apiErrorToText(j), "error");
+        setOtpStatus(j?.error || t("msg_code_invalid"), "error");
         return;
       }
 
@@ -342,9 +409,11 @@ function wireSubmit() {
     const address = $("#adresa").value.trim();
     const city = $("#qyteti")?.value?.trim() || "";
     const email = $("#emaili").value.trim();
-    const category = $("#kategoria").value.trim();
 
-    if (!name || !address || !email || !category) {
+    const categories = getSelectedCategories();
+    const maxCats = planCategoryLimit[selectedPlan] || 1;
+
+    if (!name || !address || !email) {
       showStatus(t("msg_fill_all"), "error");
       return;
     }
@@ -356,6 +425,16 @@ function wireSubmit() {
 
     if (!selectedPlan) {
       showStatus(t("msg_choose_plan"), "error");
+      return;
+    }
+
+    if (!categories.length) {
+      showStatus(t("msg_categories_required"), "error");
+      return;
+    }
+
+    if (categories.length > maxCats) {
+      showStatus(t("msg_max_categories", { n: maxCats, plan: selectedPlan }), "error");
       return;
     }
 
@@ -401,7 +480,13 @@ function wireSubmit() {
     formData.append("country", countryIso2);
     formData.append("address", address);
     formData.append("city", city);
-    formData.append("category", category);
+
+    // ✅ categories array
+    categories.forEach(c => formData.append("categories", c));
+
+    // ✅ keep backward compatibility: primary category
+    formData.append("category", categories[0]);
+
     formData.append("plan", selectedPlan);
 
     if (selectedPlan === "standard" || selectedPlan === "premium") {
@@ -419,15 +504,26 @@ function wireSubmit() {
     showStatus(t("msg_saving"), "info");
 
     try {
-      const res = await fetch(`${BACKEND_URL}/register`, { method: "POST", body: formData });
+      const res = await fetch(`${BACKEND_URL}/register`, {
+        method: "POST",
+        headers: { "x-lang": getLangHeader() },
+        body: formData
+      });
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.success) {
-        showStatus(apiErrorToText(data), "error");
+      if (res.status === 409) {
+        const data409 = await res.json().catch(() => ({}));
+        showStatus(data409?.error || t("msg_email_exists"), "error");
         return;
       }
 
-      showStatus(t("msg_to_pay"), "success");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        showStatus(data?.error || t("msg_reg_error"), "error");
+        return;
+      }
+
+      // keep your existing flow: redirect to success
+      showStatus(t("msg_reg_ok"), "success");
 
       setTimeout(() => {
         if (data.checkoutUrl) window.location.href = data.checkoutUrl;
@@ -445,15 +541,18 @@ window.addEventListener("DOMContentLoaded", async () => {
   applyTranslations();
   setLangButtonsUI();
 
-  $("#langSQ")?.addEventListener("click", () => { setLang("sq"); applyTranslations(); setLangButtonsUI(); updateUploadHints(); setOtpUITranslated(); });
-  $("#langMK")?.addEventListener("click", () => { setLang("mk"); applyTranslations(); setLangButtonsUI(); updateUploadHints(); setOtpUITranslated(); });
-  $("#langEN")?.addEventListener("click", () => { setLang("en"); applyTranslations(); setLangButtonsUI(); updateUploadHints(); setOtpUITranslated(); });
+  $("#langSQ")?.addEventListener("click", () => { setLang("sq"); applyTranslations(); setLangButtonsUI(); updateUploadHints(); setOtpUITranslated(); setCategoriesHint(); });
+  $("#langMK")?.addEventListener("click", () => { setLang("mk"); applyTranslations(); setLangButtonsUI(); updateUploadHints(); setOtpUITranslated(); setCategoriesHint(); });
+  $("#langEN")?.addEventListener("click", () => { setLang("en"); applyTranslations(); setLangButtonsUI(); updateUploadHints(); setOtpUITranslated(); setCategoriesHint(); });
 
   wirePlanButtons();
   $("#planBasic")?.click();
 
+  wireCategoryUI();
+  enforceCategoryLimitUI();
+
   const okPhone = await initPhoneInput();
-  if (!okPhone) showStatus("Phone input failed to initialize. Check console.", "error");
+  if (!okPhone) showStatus(t("msg_phone_init_fail"), "error");
 
   await prefillCityFromIp();
 

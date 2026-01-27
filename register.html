@@ -229,24 +229,80 @@
         </div>
       </div>
 
+      <!-- ✅ MULTI-CATEGORY (NEW) -->
       <div>
         <label class="font-semibold" data-i18n="category">Kategoria</label>
-        <select id="kategoria" class="w-full border p-2 rounded" required>
-          <option value="electrician" data-i18n="cat_electrician">Elektricist</option>
-          <option value="plumber" data-i18n="cat_plumber">Hidraulik</option>
-          <option value="mason" data-i18n="cat_mason">Murator</option>
-          <option value="cleaning" data-i18n="cat_cleaning">Pastrim profesional</option>
-          <option value="ac" data-i18n="cat_ac">Klimë</option>
-          <option value="tiler" data-i18n="cat_tiler">Pllaka / Keramikë</option>
-          <option value="gardener" data-i18n="cat_gardener">Kopshtar</option>
-          <option value="parquet" data-i18n="cat_parquet">Salltim i parketit</option>
-          <option value="gypsum" data-i18n="cat_gypsum">Punime me gips</option>
-          <option value="facade" data-i18n="cat_facade">Punime fasade</option>
-          <option value="painter" data-i18n="cat_painter">Bojaxhi</option>
-          <option value="heating_cooling" data-i18n="cat_heating_cooling">Instalime ngrohje/Ftohje</option>
-          <option value="doors_windows" data-i18n="cat_doors_windows">Dyer/Dritare</option>
-        </select>
+
+        <div id="categoriesBox" class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
+            <input type="checkbox" name="categories" value="electrician" class="h-4 w-4">
+            <span data-i18n="cat_electrician">Elektricist</span>
+          </label>
+
+          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
+            <input type="checkbox" name="categories" value="plumber" class="h-4 w-4">
+            <span data-i18n="cat_plumber">Hidraulik</span>
+          </label>
+
+          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
+            <input type="checkbox" name="categories" value="mason" class="h-4 w-4">
+            <span data-i18n="cat_mason">Murator</span>
+          </label>
+
+          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
+            <input type="checkbox" name="categories" value="cleaning" class="h-4 w-4">
+            <span data-i18n="cat_cleaning">Pastrim profesional</span>
+          </label>
+
+          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
+            <input type="checkbox" name="categories" value="ac" class="h-4 w-4">
+            <span data-i18n="cat_ac">Klimë</span>
+          </label>
+
+          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
+            <input type="checkbox" name="categories" value="tiler" class="h-4 w-4">
+            <span data-i18n="cat_tiler">Pllaka / Keramikë</span>
+          </label>
+
+          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
+            <input type="checkbox" name="categories" value="gardener" class="h-4 w-4">
+            <span data-i18n="cat_gardener">Kopshtar</span>
+          </label>
+
+          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
+            <input type="checkbox" name="categories" value="parquet" class="h-4 w-4">
+            <span data-i18n="cat_parquet">Salltim i parketit</span>
+          </label>
+
+          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
+            <input type="checkbox" name="categories" value="gypsum" class="h-4 w-4">
+            <span data-i18n="cat_gypsum">Punime me gips</span>
+          </label>
+
+          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
+            <input type="checkbox" name="categories" value="facade" class="h-4 w-4">
+            <span data-i18n="cat_facade">Punime fasade</span>
+          </label>
+
+          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
+            <input type="checkbox" name="categories" value="painter" class="h-4 w-4">
+            <span data-i18n="cat_painter">Bojaxhi</span>
+          </label>
+
+          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
+            <input type="checkbox" name="categories" value="heating_cooling" class="h-4 w-4">
+            <span data-i18n="cat_heating_cooling">Instalime ngrohje/Ftohje</span>
+          </label>
+
+          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
+            <input type="checkbox" name="categories" value="doors_windows" class="h-4 w-4">
+            <span data-i18n="cat_doors_windows">Dyer/Dritare</span>
+          </label>
+        </div>
+
+        <p id="categoriesHint" class="text-xs text-gray-500 mt-2"></p>
       </div>
+      <!-- /MULTI-CATEGORY -->
 
       <!-- FIXED: data-i18n key -->
       <button id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-lg" data-i18n="activate_trial_btn">

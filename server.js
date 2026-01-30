@@ -1,4 +1,4 @@
-// server.js (FINAL - 4 months free trial + reminder emails + paid reminder/expired emails + pay-now flow + delete after 180 days + EMAIL OTP VERIFY + GEO FIX + DATA DELETION FIX + MULTI CATEGORY)
+// server.js (FINAL - 4 months free trial + reminder emails + paid reminder/expired emails + pay-now flow + delete after 180 days + EMAIL OTP VERIFY + GEO FIX + DATA DELETION FIX + MULTI CATEGORY + STUB FILTER + TRIAL ONCE)
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -62,8 +62,11 @@ const EMAIL_OTP_MIN_SECONDS = Number(process.env.EMAIL_OTP_MIN_SECONDS || 30);
 const EMAIL_OTP_EXPIRES_MINUTES = Number(process.env.EMAIL_OTP_EXPIRES_MINUTES || 10);
 const EMAIL_OTP_MAX_ATTEMPTS = Number(process.env.EMAIL_OTP_MAX_ATTEMPTS || 8);
 
-/* ===== DATA DELETION CONFIG (NEW) ===== */
+/* ===== DATA DELETION CONFIG ===== */
 const DELETE_TOKEN_HOURS = Number(process.env.DELETE_TOKEN_HOURS || 24);
+
+/* ===== STUB CLEANUP ===== */
+const STUB_DELETE_AFTER_HOURS = Number(process.env.STUB_DELETE_AFTER_HOURS || 48);
 
 /* ================= LOG HELPERS ================= */
 function now() { return new Date().toISOString(); }
@@ -130,7 +133,7 @@ function normalizePhone(raw) {
   return null;
 }
 
-/* ===== API ERROR HELPER (i18n-friendly) ===== */
+/* ===== API ERROR HELPER ===== */
 function sendError(res, status, code, extra = {}) {
   return res.status(status).json({
     success: false,
@@ -188,6 +191,9 @@ async function geocodeNominatim({ address, city, countryIso2 }) {
 /* ================= SCHEMA ================= */
 const firmaSchema = new mongoose.Schema(
   {
+    // ===== IMPORTANT: stubs created by OTP flow =====
+    is_stub: { type: Boolean, default: false, index: true },
+
     owner_token_hash: String,
     owner_token_expires: Date,
 
@@ -223,27 +229,14 @@ const firmaSchema = new mongoose.Schema(
     address: String,
     city: String,
 
-    // ✅ MULTI-CATEGORY (NEW)
-    // - categories is the real list
-    // - category is kept for backward compatibility (primary/first)
     categories: { type: [String], default: undefined },
     category: String,
 
     country: { type: String, default: DEFAULT_COUNTRY, index: true },
 
-    // IMPORTANT FIX:
-    // - NO default "Point"
-    // - location should NOT exist on stub documents
     location: {
-      type: {
-        type: String,
-        enum: ["Point"],
-        default: undefined,
-      },
-      coordinates: {
-        type: [Number], // [lng, lat]
-        default: undefined,
-      },
+      type: { type: String, enum: ["Point"], default: undefined },
+      coordinates: { type: [Number], default: undefined }, // [lng, lat]
     },
 
     plan: { type: String, default: "basic" },
@@ -270,13 +263,22 @@ firmaSchema.index(
 
 const Firma = mongoose.model("Firma", firmaSchema);
 
+/* ===== TRIAL USAGE (trial only once per email) ===== */
+const trialUsageSchema = new mongoose.Schema(
+  {
+    email: { type: String, unique: true, required: true, index: true },
+    used_at: { type: Date, required: true },
+    first_firm_id: { type: mongoose.Schema.Types.ObjectId },
+  },
+  { timestamps: true }
+);
+const TrialUsage = mongoose.model("TrialUsage", trialUsageSchema);
+
 /* ================= PLAN RULES ================= */
 const planPhotoLimit = { basic: 0, standard: 3, premium: 8 };
-
-// ✅ CATEGORY LIMITS (NEW)
 const planCategoryLimit = { basic: 1, standard: 2, premium: 7 };
 
-// ✅ categories parsing/normalizing (NEW)
+/* ================= CATEGORY HELPERS ================= */
 function normalizeCategoryKey(raw) {
   return String(raw || "").trim().toLowerCase();
 }
@@ -298,9 +300,7 @@ function parseCategoriesFromBody(body) {
     try {
       const arr = JSON.parse(s);
       if (Array.isArray(arr)) return arr.map(normalizeCategoryKey).filter(Boolean);
-    } catch {
-      // fall through
-    }
+    } catch {}
   }
 
   if (s.includes(",")) {
@@ -363,11 +363,14 @@ function requireAdmin(req, res, next) {
 /* ================= ADMIN: STATS ================= */
 app.get("/admin/stats", requireAdmin, async (req, res) => {
   try {
-    const total = await Firma.countDocuments({});
-    const pending = await Firma.countDocuments({ payment_status: "pending" });
-    const paid = await Firma.countDocuments({ payment_status: "paid" });
-    const expired = await Firma.countDocuments({ payment_status: "expired" });
-    const trial = await Firma.countDocuments({ payment_status: "trial" });
+    // Count only "real firms" (name exists) by default
+    const base = { name: { $exists: true, $ne: null, $ne: "" } };
+
+    const total = await Firma.countDocuments(base);
+    const pending = await Firma.countDocuments({ ...base, payment_status: "pending" });
+    const paid = await Firma.countDocuments({ ...base, payment_status: "paid" });
+    const expired = await Firma.countDocuments({ ...base, payment_status: "expired" });
+    const trial = await Firma.countDocuments({ ...base, payment_status: "trial" });
 
     return res.json({
       success: true,
@@ -496,6 +499,7 @@ app.get("/admin/firms", requireAdmin, async (req, res) => {
     const plan = String(req.query.plan || "all").toLowerCase();
     const country = String(req.query.country || "all").toUpperCase();
     const search = String(req.query.search || "").trim().toLowerCase();
+    const includeStubs = String(req.query.include_stubs || "") === "1";
 
     const q = {};
     if (status !== "all") q.payment_status = status;
@@ -503,6 +507,11 @@ app.get("/admin/firms", requireAdmin, async (req, res) => {
     if (country !== "ALL") q.country = country;
 
     let firms = await Firma.find(q).select("-__v").sort({ createdAt: -1 }).lean();
+
+    // ✅ Hide OTP stubs by default (they have no name)
+    if (!includeStubs) {
+      firms = firms.filter(f => String(f?.name || "").trim().length > 0);
+    }
 
     if (search) {
       firms = firms.filter(f => {
@@ -565,9 +574,8 @@ app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
       patch.country = normalizeCountry(patch.country);
     }
 
-    // ✅ categories admin patch (NEW)
+    // ✅ categories admin patch
     if (patch.categories !== undefined || patch.category !== undefined) {
-      // decide effective plan for limit: patch.plan OR existing.plan OR basic
       let effectivePlan = patch.plan;
       if (!effectivePlan) {
         const existing = await Firma.findById(id).select("plan").lean();
@@ -581,7 +589,6 @@ app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
 
       const limited = applyCategoryPlanLimit(parsed, effectivePlan);
 
-      // store multi + legacy primary
       patch.categories = limited.length ? limited : undefined;
       patch.category = limited[0] || (patch.category ? String(patch.category) : null);
     }
@@ -733,8 +740,7 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 /* ================= JSON (AFTER WEBHOOK) ================= */
 app.use(express.json());
 
-/* ================= DATA DELETION (FIX) ================= */
-// POST /delete-request { email, reason? }
+/* ================= DATA DELETION ================= */
 app.post("/delete-request", async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
@@ -745,7 +751,6 @@ app.post("/delete-request", async (req, res) => {
 
     const firm = await Firma.findOne({ email }).select("_id email").lean();
 
-    // privacy: always success even if not found
     if (!firm) {
       return res.json({ success: true, message: "If the email exists, we sent a confirmation link." });
     }
@@ -759,7 +764,6 @@ app.post("/delete-request", async (req, res) => {
       { $set: { delete_token_hash: tokenHash, delete_token_expires: expires } }
     );
 
-    // IMPORTANT: your delete-confirm.html expects email+token in URL
     const confirmUrl =
       `${FRONTEND_BASE_URL}/delete-confirm.html?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
 
@@ -788,7 +792,6 @@ app.post("/delete-request", async (req, res) => {
   }
 });
 
-// POST /delete-confirm { email, token }
 app.post("/delete-confirm", async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
@@ -808,7 +811,6 @@ app.post("/delete-confirm", async (req, res) => {
 
     const nowD = new Date();
 
-    // soft delete
     await Firma.updateOne(
       { _id: firm._id },
       {
@@ -836,10 +838,11 @@ app.post("/auth/email/start", async (req, res) => {
     if (!resend) return sendError(res, 500, "EMAIL_SERVICE_NOT_CONFIGURED");
 
     const existing = await Firma.findOne({ email })
-      .select("_id email name email_verified email_otp_last_sent_at payment_status")
+      .select("_id email name deleted_at email_verified email_otp_last_sent_at payment_status is_stub")
       .lean();
 
-    if (existing?.name) {
+    // If there is an ACTIVE real firm (not deleted), block OTP start
+    if (existing?.name && !existing.deleted_at) {
       return sendError(res, 409, "EMAIL_EXISTS");
     }
 
@@ -857,18 +860,22 @@ app.post("/auth/email/start", async (req, res) => {
         plan: "basic",
         payment_status: "pending",
         email_verified: false,
+        is_stub: true, // ✅ mark as OTP stub
         email_otp_hash: otpHash,
         email_otp_expires: expires,
         email_otp_attempts: 0,
         email_otp_last_sent_at: new Date(),
       });
     } else {
+      // Keep existing doc (could be deleted old firm) - just refresh OTP
       await Firma.updateOne(
         { _id: existing._id },
         {
           $set: {
             email_verified: false,
             email_verified_at: null,
+            // if it has no name, it's a stub (hide from admin)
+            is_stub: existing?.name ? false : true,
             email_otp_hash: otpHash,
             email_otp_expires: expires,
             email_otp_attempts: 0,
@@ -908,11 +915,13 @@ app.post("/auth/email/verify", async (req, res) => {
     if (!/^\d{6}$/.test(code)) return sendError(res, 400, "INVALID_CODE_FORMAT");
 
     const firm = await Firma.findOne({ email })
-      .select("_id email name email_verified email_otp_hash email_otp_expires email_otp_attempts")
+      .select("_id email name deleted_at email_verified email_otp_hash email_otp_expires email_otp_attempts")
       .lean();
 
     if (!firm) return sendError(res, 400, "INVALID_CODE");
-    if (firm?.name) return sendError(res, 409, "EMAIL_EXISTS");
+
+    // If active real firm exists, block
+    if (firm?.name && !firm.deleted_at) return sendError(res, 409, "EMAIL_EXISTS");
 
     if (!firm.email_otp_hash || !firm.email_otp_expires) {
       return sendError(res, 400, "NO_ACTIVE_CODE");
@@ -1029,6 +1038,366 @@ app.get("/pay-now/checkout", async (req, res) => {
     return res.json({ success: true, checkoutUrl });
   } catch (err) {
     errorWithTime("PAY-NOW CHECKOUT ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+/* ================= HEALTH ================= */
+app.get("/health", (req, res) => {
+  const rs = mongoose.connection.readyState;
+  res.json({
+    ok: true,
+    time: now(),
+    dbReadyState: rs,
+    resendConfigured: Boolean(resend),
+    resendFrom: RESEND_FROM ? RESEND_FROM : null
+  });
+});
+
+/* ================= REGISTER (multipart) ================= */
+app.post(
+  "/register",
+  upload.fields([
+    { name: "logo", maxCount: 1 },
+    { name: "photos", maxCount: 10 },
+  ]),
+  async (req, res) => {
+    try {
+      let { name, email, phone, address, city, category, categories, plan, country } = req.body;
+
+      email = normalizeEmail(email);
+      const phoneNorm = normalizePhone(phone);
+      const countryNorm = normalizeCountry(country);
+      const cityNorm = String(city || "").trim();
+
+      const parsedCats = parseCategoriesFromBody({ category, categories });
+      const catsLimited = applyCategoryPlanLimit(parsedCats, plan);
+      const primaryCategory = catsLimited[0] || null;
+
+      if (!name || !email || !phoneNorm || !address || !cityNorm || !primaryCategory || !plan) {
+        return sendError(res, 400, "MISSING_FIELDS");
+      }
+      if (!["basic", "standard", "premium"].includes(plan)) {
+        return sendError(res, 400, "INVALID_PLAN");
+      }
+
+      const existing = await Firma.findOne({ email })
+        .select("_id name deleted_at email_verified payment_status")
+        .lean();
+
+      if (!existing) {
+        return sendError(res, 403, "EMAIL_NOT_VERIFIED");
+      }
+      if (!existing.email_verified) {
+        return sendError(res, 403, "EMAIL_NOT_VERIFIED");
+      }
+      // Active real firm exists => block
+      if (existing?.name && !existing.deleted_at) {
+        return sendError(res, 409, "EMAIL_EXISTS");
+      }
+
+      const geo = await geocodeNominatim({
+        address: String(address || "").trim(),
+        city: cityNorm,
+        countryIso2: countryNorm
+      });
+
+      if (!geo) {
+        return sendError(res, 400, "GEO_NOT_FOUND");
+      }
+
+      let logoUrl = null;
+      let photos = [];
+
+      if (plan === "standard" || plan === "premium") {
+        const files = req.files || {};
+        if (files.logo?.[0]) {
+          logoUrl = await uploadBufferToCloudinary(files.logo[0].buffer, "easyfix/logos");
+        }
+
+        const maxPhotos = planPhotoLimit[plan] || 0;
+        const picked = (files.photos || []).slice(0, maxPhotos);
+
+        for (const f of picked) {
+          const url = await uploadBufferToCloudinary(f.buffer, "easyfix/photos");
+          photos.push(url);
+        }
+      }
+
+      if (plan === "basic") {
+        logoUrl = null;
+        photos = [];
+      }
+
+      // ✅ Trial once per email (even if firm doc is deleted later)
+      const trialUsed = await TrialUsage.exists({ email });
+
+      const nowD = new Date();
+
+      // Always update firm base profile (so admin has correct data)
+      const baseSet = {
+        is_stub: false, // ✅ this is a real firm profile now
+        name,
+        phone: phoneNorm,
+        phone_verified: false,
+        phone_verified_at: null,
+        address,
+        city: cityNorm,
+        categories: catsLimited,
+        category: primaryCategory,
+        country: countryNorm,
+        location: {
+          type: "Point",
+          coordinates: [geo.lng, geo.lat],
+        },
+        plan,
+        deleted_at: null,
+      };
+
+      if (!trialUsed) {
+        const trialEnds = new Date(nowD);
+        trialEnds.setMonth(trialEnds.getMonth() + 4);
+
+        const firma = await Firma.findOneAndUpdate(
+          { email },
+          {
+            $set: {
+              ...baseSet,
+              payment_status: "trial",
+              trial_started_at: nowD,
+              trial_ends_at: trialEnds,
+              expires_at: trialEnds,
+
+              logoUrl,
+              photos,
+
+              trial_reminder_7d_sent_at: null,
+              trial_reminder_1d_sent_at: null,
+              trial_expired_email_sent_at: null,
+            }
+          },
+          { new: true }
+        );
+
+        // mark trial usage
+        await TrialUsage.updateOne(
+          { email },
+          { $setOnInsert: { email, used_at: nowD, first_firm_id: firma?._id } },
+          { upsert: true }
+        );
+
+        const successUrl = `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}&trial=1`;
+
+        return res.json({
+          success: true,
+          message: "Regjistrimi u ruajt. Trial-i u aktivizua.",
+          checkoutUrl: successUrl,
+          firmId: String(firma?._id || ""),
+        });
+      }
+
+      // Trial already used => require payment immediately
+      const firma = await Firma.findOneAndUpdate(
+        { email },
+        {
+          $set: {
+            ...baseSet,
+            payment_status: "pending",
+            paid_at: null,
+            expires_at: null,
+
+            // clear trial fields (optional, but keeps it clean)
+            trial_started_at: null,
+            trial_ends_at: null,
+
+            logoUrl,
+            photos,
+          }
+        },
+        { new: true }
+      );
+
+      const variantId = planToVariant(plan);
+      const checkoutUrl = await createLemonCheckout({
+        variantId,
+        email,
+        firmId: String(firma?._id || ""),
+      });
+
+      return res.json({
+        success: true,
+        message: "Trial është përdorur më herët. Duhet pagesë për aktivizim.",
+        checkoutUrl,
+        firmId: String(firma?._id || ""),
+        trial_used: true,
+      });
+    } catch (err) {
+      errorWithTime("REGISTER ERROR:", err);
+      return sendError(res, 500, "SERVER_ERROR");
+    }
+  }
+);
+
+/* ================= PUBLIC ================= */
+app.get("/firms", async (req, res) => {
+  try {
+    res.setHeader("Cache-Control", "no-store");
+
+    const qCountry = String(req.query.country || "").trim().toUpperCase();
+    const nowD = new Date();
+
+    const notDeleted = {
+      $or: [{ deleted_at: { $exists: false } }, { deleted_at: null }],
+    };
+
+    const paidOrActiveTrial = {
+      $and: [
+        notDeleted,
+        {
+          $or: [
+            { payment_status: "paid" },
+            { payment_status: "trial", trial_ends_at: { $gt: nowD } },
+          ],
+        }
+      ],
+    };
+
+    if (/^[A-Z]{2}$/.test(qCountry)) {
+      if (qCountry === "MK") {
+        const firms = await Firma.find({
+          $and: [
+            paidOrActiveTrial,
+            {
+              $or: [
+                { country: "MK" },
+                { country: { $exists: false } },
+                { country: null },
+                { country: "" },
+              ],
+            },
+          ],
+        })
+          .select("-__v")
+          .sort({ createdAt: -1 })
+          .lean();
+
+        return res.json(firms);
+      }
+
+      const firms = await Firma.find({
+        $and: [paidOrActiveTrial, { country: qCountry }],
+      })
+        .select("-__v")
+        .sort({ createdAt: -1 })
+        .lean();
+
+      return res.json(firms);
+    }
+
+    const firms = await Firma.find(paidOrActiveTrial)
+      .select("-__v")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json(firms);
+  } catch (err) {
+    errorWithTime("FIRMS ERROR:", err);
+    return res.status(500).send("Server error");
+  }
+});
+
+/* ================= NEAR ME ================= */
+app.get("/firms/near", async (req, res) => {
+  try {
+    res.setHeader("Cache-Control", "no-store");
+
+    const qCountry = String(req.query.country || "").trim().toUpperCase();
+    const lat = Number(req.query.lat);
+    const lng = Number(req.query.lng);
+
+    let radiusKm = Number(req.query.radius_km || 25);
+    if (!Number.isFinite(radiusKm)) radiusKm = 25;
+    radiusKm = Math.max(1, Math.min(radiusKm, 200));
+    const radiusM = radiusKm * 1000;
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return sendError(res, 400, "MISSING_LAT_LNG");
+    }
+
+    const geoClause = {
+      location: {
+        $nearSphere: {
+          $geometry: { type: "Point", coordinates: [lng, lat] },
+          $maxDistance: radiusM,
+        },
+      },
+    };
+
+    const nowD = new Date();
+
+    const notDeleted = {
+      $or: [{ deleted_at: { $exists: false } }, { deleted_at: null }],
+    };
+
+    const basePaid = {
+      $and: [
+        notDeleted,
+        {
+          $or: [
+            { payment_status: "paid" },
+            { payment_status: "trial", trial_ends_at: { $gt: nowD } },
+          ],
+        }
+      ],
+    };
+
+    let query = null;
+
+    if (/^[A-Z]{2}$/.test(qCountry)) {
+      if (qCountry === "MK") {
+        query = {
+          $and: [
+            basePaid,
+            geoClause,
+            {
+              $or: [
+                { country: "MK" },
+                { country: { $exists: false } },
+                { country: null },
+                { country: "" },
+              ],
+            },
+          ],
+        };
+      } else {
+        query = { $and: [basePaid, geoClause, { country: qCountry }] };
+      }
+    } else {
+      query = { $and: [basePaid, geoClause] };
+    }
+
+    const firms = await Firma.find(query)
+      .select("-__v")
+      .lean();
+
+    return res.json(firms);
+  } catch (err) {
+    errorWithTime("FIRMS NEAR ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+app.get("/check-status", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.query.email);
+    if (!email) return res.status(400).json({ success: false, error: "Missing email" });
+
+    const f = await Firma.findOne({ email }).select("-__v").lean();
+    if (!f) return res.status(404).json({ success: false, error: "Not found" });
+
+    return res.json({ success: true, firma: f });
+  } catch (err) {
+    errorWithTime("CHECK-STATUS ERROR:", err);
     return res.status(500).json({ success: false, error: "Server error" });
   }
 });
@@ -1211,319 +1580,19 @@ async function runPaidNotifications() {
   }
 }
 
-/* ================= HEALTH ================= */
-app.get("/health", (req, res) => {
-  const rs = mongoose.connection.readyState;
-  res.json({
-    ok: true,
-    time: now(),
-    dbReadyState: rs,
-    resendConfigured: Boolean(resend),
-    resendFrom: RESEND_FROM ? RESEND_FROM : null
-  });
-});
-
-/* ================= REGISTER (multipart) ================= */
-app.post(
-  "/register",
-  upload.fields([
-    { name: "logo", maxCount: 1 },
-    { name: "photos", maxCount: 10 },
-  ]),
-  async (req, res) => {
-    try {
-      let { name, email, phone, address, city, category, categories, plan, country } = req.body;
-
-      email = normalizeEmail(email);
-      const phoneNorm = normalizePhone(phone);
-      const countryNorm = normalizeCountry(country);
-      const cityNorm = String(city || "").trim();
-
-      // ✅ parse categories (multipart can send repeated "categories")
-      const parsedCats = parseCategoriesFromBody({ category, categories });
-      const catsLimited = applyCategoryPlanLimit(parsedCats, plan);
-      const primaryCategory = catsLimited[0] || null;
-
-      if (!name || !email || !phoneNorm || !address || !cityNorm || !primaryCategory || !plan) {
-        return sendError(res, 400, "MISSING_FIELDS");
-      }
-      if (!["basic", "standard", "premium"].includes(plan)) {
-        return sendError(res, 400, "INVALID_PLAN");
-      }
-
-      const stub = await Firma.findOne({ email })
-        .select("_id name email_verified")
-        .lean();
-
-      if (!stub) {
-        return sendError(res, 403, "EMAIL_NOT_VERIFIED");
-      }
-      if (stub?.name) {
-        return sendError(res, 409, "EMAIL_EXISTS");
-      }
-      if (!stub.email_verified) {
-        return sendError(res, 403, "EMAIL_NOT_VERIFIED");
-      }
-
-      const geo = await geocodeNominatim({
-        address: String(address || "").trim(),
-        city: cityNorm,
-        countryIso2: countryNorm
-      });
-
-      if (!geo) {
-        return sendError(res, 400, "GEO_NOT_FOUND");
-      }
-
-      let logoUrl = null;
-      let photos = [];
-
-      if (plan === "standard" || plan === "premium") {
-        const files = req.files || {};
-        if (files.logo?.[0]) {
-          logoUrl = await uploadBufferToCloudinary(files.logo[0].buffer, "easyfix/logos");
-        }
-
-        const maxPhotos = planPhotoLimit[plan] || 0;
-        const picked = (files.photos || []).slice(0, maxPhotos);
-
-        for (const f of picked) {
-          const url = await uploadBufferToCloudinary(f.buffer, "easyfix/photos");
-          photos.push(url);
-        }
-      }
-
-      if (plan === "basic") {
-        logoUrl = null;
-        photos = [];
-      }
-
-      const nowD = new Date();
-      const trialEnds = new Date(nowD);
-      trialEnds.setMonth(trialEnds.getMonth() + 4);
-
-      const firma = await Firma.findOneAndUpdate(
-        { email },
-        {
-          $set: {
-            name,
-            phone: phoneNorm,
-            phone_verified: false,
-            phone_verified_at: null,
-            address,
-            city: cityNorm,
-
-            // ✅ store multi categories + keep legacy primary
-            categories: catsLimited,
-            category: primaryCategory,
-
-            country: countryNorm,
-
-            location: {
-              type: "Point",
-              coordinates: [geo.lng, geo.lat],
-            },
-
-            plan,
-            payment_status: "trial",
-            trial_started_at: nowD,
-            trial_ends_at: trialEnds,
-            expires_at: trialEnds,
-            deleted_at: null,
-
-            logoUrl,
-            photos,
-
-            trial_reminder_7d_sent_at: null,
-            trial_reminder_1d_sent_at: null,
-            trial_expired_email_sent_at: null,
-          }
-        },
-        { new: true }
-      );
-
-      const successUrl = `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}&trial=1`;
-
-      return res.json({
-        success: true,
-        message: "Regjistrimi u ruajt. Trial-i u aktivizua.",
-        checkoutUrl: successUrl,
-        firmId: String(firma?._id || ""),
-      });
-    } catch (err) {
-      errorWithTime("REGISTER ERROR:", err);
-      return sendError(res, 500, "SERVER_ERROR");
-    }
-  }
-);
-
-/* ================= PUBLIC ================= */
-app.get("/firms", async (req, res) => {
-  try {
-    res.setHeader("Cache-Control", "no-store");
-
-    const qCountry = String(req.query.country || "").trim().toUpperCase();
-    const nowD = new Date();
-
-    const notDeleted = {
-      $or: [{ deleted_at: { $exists: false } }, { deleted_at: null }],
-    };
-
-    const paidOrActiveTrial = {
-      $and: [
-        notDeleted,
-        {
-          $or: [
-            { payment_status: "paid" },
-            { payment_status: "trial", trial_ends_at: { $gt: nowD } },
-          ],
-        }
-      ],
-    };
-
-    if (/^[A-Z]{2}$/.test(qCountry)) {
-      if (qCountry === "MK") {
-        const firms = await Firma.find({
-          $and: [
-            paidOrActiveTrial,
-            {
-              $or: [
-                { country: "MK" },
-                { country: { $exists: false } },
-                { country: null },
-                { country: "" },
-              ],
-            },
-          ],
-        })
-          .select("-__v")
-          .sort({ createdAt: -1 })
-          .lean();
-
-        return res.json(firms);
-      }
-
-      const firms = await Firma.find({
-        $and: [paidOrActiveTrial, { country: qCountry }],
-      })
-        .select("-__v")
-        .sort({ createdAt: -1 })
-        .lean();
-
-      return res.json(firms);
-    }
-
-    const firms = await Firma.find(paidOrActiveTrial)
-      .select("-__v")
-      .sort({ createdAt: -1 })
-      .lean();
-
-    return res.json(firms);
-  } catch (err) {
-    errorWithTime("FIRMS ERROR:", err);
-    return res.status(500).send("Server error");
-  }
-});
-
-/* ================= NEAR ME ================= */
-app.get("/firms/near", async (req, res) => {
-  try {
-    res.setHeader("Cache-Control", "no-store");
-
-    const qCountry = String(req.query.country || "").trim().toUpperCase();
-    const lat = Number(req.query.lat);
-    const lng = Number(req.query.lng);
-
-    let radiusKm = Number(req.query.radius_km || 25);
-    if (!Number.isFinite(radiusKm)) radiusKm = 25;
-    radiusKm = Math.max(1, Math.min(radiusKm, 200));
-    const radiusM = radiusKm * 1000;
-
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      return sendError(res, 400, "MISSING_LAT_LNG");
-    }
-
-    const geoClause = {
-      location: {
-        $nearSphere: {
-          $geometry: { type: "Point", coordinates: [lng, lat] },
-          $maxDistance: radiusM,
-        },
-      },
-    };
-
-    const nowD = new Date();
-
-    const notDeleted = {
-      $or: [{ deleted_at: { $exists: false } }, { deleted_at: null }],
-    };
-
-    const basePaid = {
-      $and: [
-        notDeleted,
-        {
-          $or: [
-            { payment_status: "paid" },
-            { payment_status: "trial", trial_ends_at: { $gt: nowD } },
-          ],
-        }
-      ],
-    };
-
-    let query = null;
-
-    if (/^[A-Z]{2}$/.test(qCountry)) {
-      if (qCountry === "MK") {
-        query = {
-          $and: [
-            basePaid,
-            geoClause,
-            {
-              $or: [
-                { country: "MK" },
-                { country: { $exists: false } },
-                { country: null },
-                { country: "" },
-              ],
-            },
-          ],
-        };
-      } else {
-        query = { $and: [basePaid, geoClause, { country: qCountry }] };
-      }
-    } else {
-      query = { $and: [basePaid, geoClause] };
-    }
-
-    const firms = await Firma.find(query)
-      .select("-__v")
-      .lean();
-
-    return res.json(firms);
-  } catch (err) {
-    errorWithTime("FIRMS NEAR ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-app.get("/check-status", async (req, res) => {
-  try {
-    const email = normalizeEmail(req.query.email);
-    if (!email) return res.status(400).json({ success: false, error: "Missing email" });
-
-    const f = await Firma.findOne({ email }).select("-__v").lean();
-    if (!f) return res.status(404).json({ success: false, error: "Not found" });
-
-    return res.json({ success: true, firma: f });
-  } catch (err) {
-    errorWithTime("CHECK-STATUS ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
 /* ================= CLEANUP ================= */
 async function runCleanup() {
   const nowDate = new Date();
+
+  // ✅ Delete OTP stubs older than STUB_DELETE_AFTER_HOURS
+  const stubCutoff = new Date(Date.now() - STUB_DELETE_AFTER_HOURS * 60 * 60 * 1000);
+  const stubsDel = await Firma.deleteMany({
+    createdAt: { $lte: stubCutoff },
+    payment_status: "pending",
+    $or: [{ name: { $exists: false } }, { name: null }, { name: "" }],
+    $or: [{ email_verified: { $exists: false } }, { email_verified: false }],
+  });
+  if (stubsDel?.deletedCount) log("🧹 Deleted OTP stubs:", stubsDel.deletedCount);
 
   const expiredTrials = await Firma.find({
     payment_status: "trial",
@@ -1599,7 +1668,6 @@ async function runCleanup() {
     }
   }
 
-  // Delete expired after DELETE_AFTER_DAYS
   const cutoff = new Date(Date.now() - DELETE_AFTER_DAYS * 24 * 60 * 60 * 1000);
   const del = await Firma.deleteMany({ payment_status: "expired", expires_at: { $lte: cutoff } });
   if (del?.deletedCount) log("🗑️ Deleted expired firms:", del.deletedCount);

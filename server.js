@@ -17,15 +17,20 @@ const app = express();
   Frontend is sending header "x-lang" => browser triggers preflight OPTIONS.
   If server doesn't explicitly allow it, fetch fails with net::ERR_FAILED.
 */
+/* ================= CORS (FIXED for x-lang + preflight) ================= */
 const corsOptions = {
-  origin: true, // reflect request origin (safe enough since we don't use cookies/credentials)
+  origin: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-lang"],
   optionsSuccessStatus: 204,
   maxAge: 86400,
 };
+
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+// Express v5 s'e pranon "*" si path, prandaj regex:
+app.options(/.*/, cors(corsOptions));
+
+
 
 /* ================= resend email ================= */
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();

@@ -1,863 +1,458 @@
 <!DOCTYPE html>
 <html lang="sq" class="scroll-smooth">
 <head>
-
-  <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-CWDYCJ09D8"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-CWDYCJ09D8');
-</script>
+  <!-- Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-CWDYCJ09D8"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-CWDYCJ09D8');
+  </script>
 
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EasyFix - Find preprepr Fast</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>EasyFix - Gjej Profesionistë</title>
+  
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- i18n (NEW) - duhet me qenë NON-defer se ke inline script poshtë -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="i18n.js"></script>
-
-  <!-- logo per tabs -->
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
-  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-16.png" sizes="16x16">
-  <link rel="apple-touch-icon" href="easyfix-icons-pack/apple-touch-icon.png">
-  <meta name="theme-color" content="#1d4ed8">
-  <!-- /logo per tabs -->
+  <meta name="theme-color" content="#2563eb">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' }
+          }
+        }
+      }
+    }
+  </script>
 
   <style>
-    .badge-premium { background: linear-gradient(to right, #fbbf24, #f59e0b); color: black; }
-    .badge-standard { background: #3b82f6; color: white; }
-    .badge-basic { background: #6b7280; color: white; }
-
-    #photoModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88);
-      justify-content: center; align-items: center; z-index: 9999; padding: 24px; }
-    #photoModal .modal-card { width: min(1100px, 95vw); height: min(720px, 92vh);
-      display: flex; flex-direction: column; gap: 12px; }
-    #photoModal .modal-img-wrap { position: relative; flex: 1; display: flex;
-      justify-content: center; align-items: center; border-radius: 14px; overflow: hidden;
-      background: rgba(255,255,255,0.06); box-shadow: 0 0 24px rgba(0,0,0,0.35); }
-    #photoModal img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; }
-    #photoModal .modal-actions { display: flex; justify-content: space-between; align-items: center; color: white; gap: 12px; }
-    .modal-btn { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.18);
-      padding: 10px 12px; border-radius: 10px; font-weight: 700; transition: transform .08s ease, background .15s ease; }
-    .modal-btn:hover { background: rgba(255,255,255,0.20); }
-    .modal-btn:active { transform: scale(0.98); }
-    .modal-close { background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.16);
-      padding: 8px 10px; border-radius: 10px; font-weight: 800; }
-    .focus-ring { outline: 3px solid rgba(37,99,235,0.9); outline-offset: 2px; box-shadow: 0 0 0 6px rgba(37,99,235,0.12); }
-
-    .skeleton {
-      background: linear-gradient(90deg, rgba(0,0,0,.03), rgba(0,0,0,.08), rgba(0,0,0,.03));
-      background-size: 200% 100%;
-      animation: shimmer 1.1s infinite;
-      border-radius: 14px;
-      height: 160px;
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .snap-x { scroll-snap-type: x mandatory; }
+    .snap-center { scroll-snap-align: center; }
+    .custom-select {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.5rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+        padding-right: 2.5rem;
+        -webkit-appearance: none;
+        appearance: none;
     }
-    @keyframes shimmer {
-      0% { background-position: 0% 0; }
-      100% { background-position: 200% 0; }
+    .badge-premium { 
+      background: linear-gradient(90deg, #F59E0B, #D97706); color: white; padding: 3px 8px; border-radius: 6px; 
+      font-size: 0.7rem; font-weight: 800; text-transform: uppercase; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
     }
+    .badge-standard { 
+      background: #EFF6FF; color: #2563eb; border: 1px solid #BFDBFE; padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;
+    }
+    /* Active Button State */
+    .cat-btn.active div { background-color: #2563eb !important; border-color: #2563eb !important; }
+    .cat-btn.active i { color: white !important; }
+    .cat-btn.active span { color: #2563eb !important; font-weight: 700; }
   </style>
 </head>
 
-<body class="bg-gray-50 min-h-screen flex flex-col">
+<body class="bg-gray-50 min-h-screen flex flex-col font-sans text-gray-800 pb-[80px] md:pb-0">
 
-  <!-- Header (responsive për mobile) -->
-  <header class="bg-blue-700 text-white shadow-md">
-    <div class="container mx-auto px-4 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex items-center gap-3">
-        <h1 class="text-3xl font-extrabold tracking-tight">EasyFix</h1>
-        <span id="countryPill" class="hidden text-xs font-bold bg-white/20 px-2 py-1 rounded-full"></span>
-
-        <!-- Language Dropdown (ONLY here) -->
-        <div class="relative ml-1" id="langDropdown">
-          <button
-            id="langBtn"
-            type="button"
-            class="flex items-center gap-2 text-xs sm:text-sm font-bold bg-white/15 hover:bg-white/25 px-3 py-2 rounded-lg"
-            aria-haspopup="true"
-            aria-expanded="false"
-            title="Language"
-          >
-            <span id="langFlag" class="inline-flex items-center">
-              <img id="langFlagImg" alt="" class="w-5 h-5 rounded-sm shadow-sm" />
-            </span>
-            <span id="langLabel" class="hidden sm:inline">Shqip</span>
-            <svg class="w-4 h-4 opacity-90" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.24 4.5a.75.75 0 0 1-1.08 0l-4.24-4.5a.75.75 0 0 1 .02-1.06z" clip-rule="evenodd"/>
-            </svg>
-          </button>
-
-          <div
-            id="langMenu"
-            class="hidden absolute left-0 mt-2 w-48 rounded-xl bg-white text-gray-900 shadow-lg ring-1 ring-black/10 overflow-hidden z-50"
-            role="menu"
-            aria-label="Language menu"
-          >
-            <button type="button" data-lang="sq" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left" role="menuitem">
-              <img data-flag="sq" alt="" class="w-5 h-5 rounded-sm shadow-sm" />
-              <span class="font-semibold">Shqip</span>
+  <!-- Header -->
+  <header class="bg-white sticky top-0 z-50 border-b border-gray-100 shadow-sm/50 backdrop-blur-md bg-white/95">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-1 cursor-pointer" onclick="window.location.reload()">
+          <span class="text-2xl font-black text-brand-600 tracking-tighter">EasyFix</span>
+          <span id="countryPill" class="hidden text-[9px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border">MK</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <button id="langBtn" class="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-full border border-gray-200 transition-all">
+               <img id="langFlagImg" class="w-5 h-5 rounded-full object-cover shadow-sm">
+               <span id="langLabel" class="text-xs font-bold text-gray-700 hidden sm:inline">SQ</span>
+               <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
             </button>
-            <button type="button" data-lang="mk" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left" role="menuitem">
-              <img data-flag="mk" alt="" class="w-5 h-5 rounded-sm shadow-sm" />
-              <span class="font-semibold">Македонски</span>
-            </button>
-            <button type="button" data-lang="en" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left" role="menuitem">
-              <img data-flag="en" alt="" class="w-5 h-5 rounded-sm shadow-sm" />
-              <span class="font-semibold">English</span>
-            </button>
+            <div id="langMenu" class="hidden absolute right-0 top-full mt-2 w-40 bg-white border border-gray-100 shadow-xl rounded-xl p-1 z-50">
+               <button onclick="changeLang('sq')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/al.png" class="w-4"> Shqip</button>
+               <button onclick="changeLang('mk')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/mk.png" class="w-4"> MKD</button>
+               <button onclick="changeLang('en')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/gb.png" class="w-4"> English</button>
+            </div>
           </div>
+          <a href="register.html" class="hidden md:inline-flex bg-gray-900 hover:bg-black text-white px-5 py-2 rounded-full text-sm font-bold shadow-lg transition-all" data-i18n="nav_register">
+            Regjistrohu
+          </a>
         </div>
       </div>
-
-      <nav class="flex flex-wrap gap-2 sm:gap-4">
-        <a href="register.html"
-           data-i18n="nav_register"
-           class="bg-white/15 hover:bg-white/20 px-4 py-2 rounded-lg font-semibold text-sm sm:text-base">
-          Regjistro Firmën
-        </a>
-        <a href="contact.html"
-           data-i18n="nav_contact"
-           class="bg-white/15 hover:bg-white/20 px-4 py-2 rounded-lg font-semibold text-sm sm:text-base">
-          Kontakt
-        </a>
-      </nav>
     </div>
   </header>
 
-  <main class="container mx-auto px-4 py-10 flex-grow">
-    <h2 class="text-4xl font-bold text-blue-900 mb-8 text-center" data-i18n="hero">
-      Gjej mjeshtrin që të duhet me shpejtësi
-    </h2>
+  <main class="flex-grow">
+    <!-- Hero Area -->
+    <section class="bg-brand-600 pb-12 pt-8 rounded-b-[2.5rem] shadow-xl shadow-brand-100 mb-6 relative overflow-hidden">
+      <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+      <div class="container mx-auto px-4 relative z-10">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-center text-white mb-2 tracking-tight" data-i18n="hero">Gjej Mjeshtër</h1>
+        <p class="text-blue-100 text-center text-sm md:text-base mb-8 font-medium" data-i18n="hero_sub">Zgjidhje të shpejta për shtëpinë tuaj.</p>
 
-    <section class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6">
+        <!-- Search Bar -->
+        <div class="bg-white p-2 rounded-2xl shadow-xl max-w-2xl mx-auto flex flex-col md:flex-row items-center gap-2 transform translate-y-2">
+           <div class="flex items-center w-full gap-2">
+               <div class="bg-gray-50 w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 shrink-0 ml-1"><i class="fas fa-search"></i></div>
+               <input id="searchInput" type="text" data-i18n-placeholder="search_placeholder" placeholder="Kërko (psh. Hidraulik...)" 
+                 class="w-full bg-transparent text-gray-800 text-sm font-semibold placeholder-gray-400 focus:outline-none h-10">
+           </div>
+           <div class="flex items-center w-full md:w-auto gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-2 md:pt-0 md:pl-2">
+               <!-- Dynamic Dropdown (Filled by JS) -->
+               <select id="headerCatSelect" class="custom-select bg-gray-50 text-gray-700 text-sm font-bold rounded-xl px-4 py-2.5 w-full md:w-48 outline-none border border-transparent focus:border-brand-300 transition-all cursor-pointer">
+                   <option value="all" data-i18n="all_categories">Të gjitha</option>
+               </select>
 
-      <!-- Status / errors -->
-      <div id="topStatus" class="hidden mb-5"></div>
+               <button id="nearMeBtn" class="bg-brand-50 hover:bg-brand-100 text-brand-600 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1 border border-brand-200">
+                 <i class="fas fa-location-arrow"></i> <span data-i18n="near_me">Afër</span>
+               </button>
+           </div>
+        </div>
+        <div id="nearMeStatus" class="text-[10px] text-center mt-4 text-blue-200 font-bold uppercase tracking-wider h-4"></div>
 
-      <div class="flex flex-col md:flex-row md:space-x-6 mb-4">
-        <input
-          id="searchInput"
-          type="text"
-          data-i18n-placeholder="search_placeholder"
-          placeholder="Kërko firmë ose shërbim..."
-          class="flex-grow border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 md:mb-0"
-        />
-
-        <select
-          id="categorySelect"
-          class="border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="" data-i18n="all_categories">Të gjitha kategoritë</option>
-        </select>
+        <!-- Dynamic Quick Buttons Container (Filled by JS) -->
+        <div id="quickButtonsContainer" class="flex gap-4 mt-6 overflow-x-auto no-scrollbar justify-start md:justify-center px-4 py-2">
+          <!-- Buttons will be injected here automatically -->
+        </div>
       </div>
+    </section>
 
-      <!-- ✅ Near Me row (NEW) -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
-        <button
-          id="nearMeBtn"
-          type="button"
-          class="inline-flex items-center justify-center px-4 py-2 rounded-lg border font-bold bg-white hover:bg-gray-50 text-blue-700 border-blue-200"
-          data-i18n="near_me"
-        >
-          Afer meje (25 km)
-        </button>
-        <div id="nearMeStatus" class="text-xs text-gray-500"></div>
+    <!-- Results Section -->
+    <section class="container mx-auto px-4 pb-4">
+      <div id="loadingGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+         <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 h-64 animate-pulse"></div>
+         <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 h-64 animate-pulse"></div>
       </div>
-
-      <!-- Loading skeleton -->
-      <div id="loadingGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="skeleton"></div>
-        <div class="skeleton"></div>
-        <div class="skeleton"></div>
-        <div class="skeleton"></div>
+      <div id="firmsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 hidden"></div>
+      <div id="noResults" class="hidden text-center py-12 opacity-60">
+        <i class="fas fa-search text-4xl text-gray-300 mb-2"></i>
+        <p class="text-gray-500 font-medium text-sm" data-i18n="no_results">Nuk u gjet asnjë rezultat.</p>
       </div>
-
-      <!-- Data -->
-      <div id="firmsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6 hidden"></div>
-
-      <p id="noResults" class="text-center text-gray-500 mt-4 hidden" data-i18n="no_results">
-        Nuk u gjetën firma për kriteret e kërkimit.
-      </p>
     </section>
   </main>
 
-  <!-- Footer -->
-  <footer class="bg-blue-700 text-white text-center py-6 mt-auto">
-    <!-- Links moved to bottom -->
-    <div class="text-sm opacity-95 mb-2 flex items-center justify-center gap-2 flex-wrap">
-      <a class="underline hover:opacity-90" href="privacy.html">Privacy Policy</a>
-      <span class="opacity-80">•</span>
-      <a class="underline hover:opacity-90" href="delete.html">Data Deletion</a>
-    </div>
+  <!-- Mobile Sticky Footer -->
+  <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-3 px-6 flex justify-between items-center z-50 md:hidden shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+      <div>
+         <div class="text-xs font-bold text-gray-400 uppercase tracking-wide" data-i18n="sticky_are_you_pro">Je Mjeshtër?</div>
+         <div class="text-sm font-bold text-gray-800" data-i18n="sticky_free_reg">Regjistrimi falas</div>
+      </div>
+      <a href="register.html" class="bg-brand-600 text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-lg shadow-brand-200 active:scale-95 transition-transform flex items-center gap-2">
+         <span data-i18n="sticky_btn">Regjistrohu</span> <i class="fas fa-arrow-right"></i>
+      </a>
+  </div>
 
-    <div data-i18n="footer">
-      &copy; 2025 EasyFix.services - Ndihma për çdo shtëpi
+  <footer class="bg-white border-t border-gray-100 py-8 text-center mt-auto hidden md:block">
+    <div class="text-2xl font-black text-gray-200 mb-4 tracking-tighter">EasyFix</div>
+    <div class="flex justify-center gap-6 text-xs font-bold text-gray-400">
+       <a href="contact.html" class="hover:text-brand-600" data-i18n="nav_contact">KONTAKT</a>
+       <a href="register.html" class="hover:text-brand-600" data-i18n="nav_register">REGJISTROHU</a>
+       <a href="privacy.html" class="hover:text-brand-600" data-i18n="nav_privacy">PRIVACY</a>
     </div>
   </footer>
 
-  <!-- MODAL -->
-  <div id="photoModal" aria-hidden="true">
-    <div class="modal-card">
-      <div class="modal-actions">
-        <div class="text-sm opacity-90">
-          <span id="modalTitle" class="font-semibold"></span>
-          <span id="modalCounter" class="ml-2 opacity-80"></span>
-        </div>
-        <button class="modal-close" id="modalCloseBtn" type="button" data-i18n="close">Mbyll</button>
-      </div>
-
-      <div class="modal-img-wrap" id="modalBackdrop">
-        <button class="modal-btn absolute left-3 top-1/2 -translate-y-1/2" id="modalPrevBtn" type="button">‹</button>
-        <img id="modalImage" src="" alt="Foto" />
-        <button class="modal-btn absolute right-3 top-1/2 -translate-y-1/2" id="modalNextBtn" type="button">›</button>
-      </div>
-
-      <div class="modal-actions">
-        <button class="modal-btn" id="modalPrevBtn2" type="button" data-i18n="prev">Prev</button>
-        <div class="text-xs opacity-80" data-i18n="modal_help">Esc për me mbyll, shigjeta ← → për Next/Prev</div>
-        <button class="modal-btn" id="modalNextBtn2" type="button" data-i18n="next">Next</button>
-      </div>
-    </div>
-  </div>
-
 <script>
+/* ================= GLOBAL & CONFIG ================= */
 const API_URL = "https://easyfix.onrender.com";
 let allFirms = [];
-
-const categorySelect = document.getElementById("categorySelect");
-const searchInput = document.getElementById("searchInput");
-const firmsContainer = document.getElementById("firmsContainer");
-const noResults = document.getElementById("noResults");
-const countryPill = document.getElementById("countryPill");
-const topStatus = document.getElementById("topStatus");
-const loadingGrid = document.getElementById("loadingGrid");
-
-// ✅ Near me UI
-const nearMeBtn = document.getElementById("nearMeBtn");
-const nearMeStatus = document.getElementById("nearMeStatus");
 const NEAR_RADIUS_KM = 25;
 let nearMode = false;
-let currentCountry = "MK";
+let autoScrollIntervals = [];
 
-// i18n (NEW)
-const { getLang, setLang, t, applyTranslations, normalizeCategoryKey, categoryLabel } = window.EASYFIX_I18N;
+/* ================= I18N ================= */
+const { getLang, setLang, t, applyTranslations, normalizeCategoryKey, categoryLabel, checkCategoryMatch } = window.EASYFIX_I18N;
+const LANG_META = { sq: { flag: "al.png", label: "SQ" }, mk: { flag: "mk.png", label: "MK" }, en: { flag: "gb.png", label: "EN" } };
 
-const LANG_META = {
-  sq: { flagUrl: "https://flagcdn.com/w40/al.png", label: "Shqip" },
-  mk: { flagUrl: "https://flagcdn.com/w40/mk.png", label: "Македонски" },
-  en: { flagUrl: "https://flagcdn.com/w40/gb.png", label: "English" },
-};
-
-/* ===== language dropdown (ONLY index) ===== */
+function updateLangUI() {
+    const lang = getLang() || "sq";
+    document.getElementById("langLabel").innerText = LANG_META[lang].label;
+    document.getElementById("langFlagImg").src = `https://flagcdn.com/w40/${LANG_META[lang].flag}`;
+}
 const langBtn = document.getElementById("langBtn");
 const langMenu = document.getElementById("langMenu");
-const langLabel = document.getElementById("langLabel");
-const langFlagImg = document.getElementById("langFlagImg");
+langBtn.addEventListener("click", (e) => { e.stopPropagation(); langMenu.classList.toggle("hidden"); });
+window.changeLang = (lang) => {
+    setLang(lang); 
+    applyTranslations(); 
+    updateLangUI(); 
+    langMenu.classList.add("hidden"); 
+    // Rifresko kategoritë dhe kërkimin kur ndërrohet gjuha
+    populateCategories(allFirms);
+    filterFirms();
+};
+document.addEventListener("click", () => langMenu.classList.add("hidden"));
 
-function renderLangUI() {
-  const current = (getLang && getLang()) ? getLang() : "sq";
-  const meta = LANG_META[current] || LANG_META.sq;
+/* ================= ICON MAP ================= */
+const CATEGORY_STYLES = {
+    "plumber": { icon: "fa-faucet", color: "text-cyan-400" },
+    "electrician": { icon: "fa-bolt", color: "text-yellow-400" },
+    "painter": { icon: "fa-paint-roller", color: "text-pink-400" },
+    "cleaning": { icon: "fa-broom", color: "text-green-400" },
+    "handyman": { icon: "fa-tools", color: "text-gray-400" },
+    "mason": { icon: "fa-trowel", color: "text-orange-400" },
+    "gardener": { icon: "fa-leaf", color: "text-emerald-400" },
+    "ac": { icon: "fa-snowflake", color: "text-blue-400" },
+    "default": { icon: "fa-hammer", color: "text-brand-400" }
+};
 
-  if (langFlagImg) {
-    langFlagImg.src = meta.flagUrl;
-    langFlagImg.alt = current.toUpperCase();
-    langFlagImg.referrerPolicy = "no-referrer";
-  }
+/* ================= DYNAMIC CATEGORY LOGIC ================= */
+const headerCatSelect = document.getElementById("headerCatSelect");
+const quickButtonsContainer = document.getElementById("quickButtonsContainer");
+let activeCategory = 'all';
 
-  document.querySelectorAll("#langMenu img[data-flag]").forEach(img => {
-    const code = img.getAttribute("data-flag");
-    const m = LANG_META[code];
-    if (!m) return;
-    img.src = m.flagUrl;
-    img.alt = code.toUpperCase();
-    img.referrerPolicy = "no-referrer";
-  });
+function populateCategories(firms) {
+    const catSet = new Set();
+    firms.forEach(f => (f._catKeys || []).forEach(k => catSet.add(k)));
+    const sortedCats = Array.from(catSet).sort((a,b) => categoryLabel(a).localeCompare(categoryLabel(b)));
 
-  if (langLabel) langLabel.textContent = meta.label;
-
-  updateNearMeUI();
-}
-
-function openLangMenu() {
-  if (!langMenu) return;
-  langMenu.classList.remove("hidden");
-  langBtn?.setAttribute("aria-expanded", "true");
-}
-
-function closeLangMenu() {
-  if (!langMenu) return;
-  langMenu.classList.add("hidden");
-  langBtn?.setAttribute("aria-expanded", "false");
-}
-
-function toggleLangMenu() {
-  if (!langMenu) return;
-  const isOpen = !langMenu.classList.contains("hidden");
-  if (isOpen) closeLangMenu();
-  else openLangMenu();
-}
-
-langBtn?.addEventListener("click", (e) => {
-  e.stopPropagation();
-  toggleLangMenu();
-});
-
-langMenu?.addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-lang]");
-  if (!btn) return;
-  const lang = btn.getAttribute("data-lang") || "sq";
-
-  setLang(lang);
-  applyTranslations();
-  renderLangUI();
-
-  populateCategoryFilter(allFirms);
-  filterFirms();
-
-  closeLangMenu();
-});
-
-document.addEventListener("click", () => closeLangMenu());
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeLangMenu();
-});
-
-/* ===== helpers ===== */
-function sanitize(text) { return text ? text.toString().trim() : ""; }
-function normalizeEmail(email) { return sanitize(email).toLowerCase(); }
-function phoneToTelHref(phone) { const p = sanitize(phone).replace(/[^\d+]/g, ""); return p || ""; }
-
-function clampPhotos(firm) {
-  const photos = Array.isArray(firm.photos) ? firm.photos : [];
-  const plan = (firm.plan || "").toLowerCase();
-  if (plan === "standard") return photos.slice(0, 3);
-  if (plan === "premium") return photos.slice(0, 8);
-  return [];
-}
-
-function normalizeFirmCategories(f) {
-  // backend returns categories[] (NEW). fallback to category (OLD).
-  const arr = Array.isArray(f.categories) ? f.categories : (f.category ? [f.category] : []);
-  const keys = arr.map(x => normalizeCategoryKey(x)).filter(Boolean);
-  // also keep legacy _catKey for any old code, but new is _catKeys
-  f._catKeys = keys.length ? keys : (f.category ? [normalizeCategoryKey(f.category)] : []);
-  f._catKey = f._catKeys[0] || normalizeCategoryKey(f.category);
-  return f;
-}
-
-function setLoading(isLoading) {
-  if (isLoading) {
-    loadingGrid.classList.remove("hidden");
-    firmsContainer.classList.add("hidden");
-  } else {
-    loadingGrid.classList.add("hidden");
-    firmsContainer.classList.remove("hidden");
-  }
-}
-
-function showTopStatus(kind, title, desc, withRetry=false) {
-  topStatus.classList.remove("hidden");
-
-  const base = "rounded-xl border p-4 flex flex-col gap-2";
-  const styles =
-    kind === "error" ? "bg-red-50 text-red-700 border-red-200"
-    : kind === "success" ? "bg-green-50 text-green-700 border-green-200"
-    : "bg-blue-50 text-blue-700 border-blue-200";
-
-  topStatus.className = `${base} ${styles}`;
-
-  topStatus.innerHTML = `
-    <div class="font-bold">${sanitize(title)}</div>
-    <div class="text-sm opacity-90">${sanitize(desc || "")}</div>
-    ${withRetry ? `<div class="pt-2">
-      <button id="retryBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg">
-        ${t("retry")}
-      </button>
-    </div>` : ""}
-  `;
-
-  if (withRetry) {
-    const btn = document.getElementById("retryBtn");
-    if (btn) btn.onclick = () => loadFirms();
-  }
-}
-
-function clearTopStatus() {
-  topStatus.classList.add("hidden");
-  topStatus.innerHTML = "";
-}
-
-async function detectUserCountryCode() {
-  try {
-    const r = await fetch("https://ipapi.co/json/");
-    const j = await r.json();
-    const code = (j?.country_code || "MK").toUpperCase();
-    return (code && code.length === 2) ? code : "MK";
-  } catch { return "MK"; }
-}
-
-/* ===== Near Me (NEW) ===== */
-function updateNearMeUI() {
-  if (!nearMeBtn) return;
-  if (nearMode) {
-    nearMeBtn.textContent = t("near_me_off");
-    nearMeBtn.className = "inline-flex items-center justify-center px-4 py-2 rounded-lg border font-bold bg-blue-600 hover:bg-blue-700 text-white border-blue-600";
-    if (nearMeStatus) nearMeStatus.textContent = t("near_me_active", { km: NEAR_RADIUS_KM });
-  } else {
-    nearMeBtn.textContent = t("near_me");
-    nearMeBtn.className = "inline-flex items-center justify-center px-4 py-2 rounded-lg border font-bold bg-white hover:bg-gray-50 text-blue-700 border-blue-200";
-    if (nearMeStatus) nearMeStatus.textContent = "";
-  }
-}
-
-function getBrowserLocation() {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) return reject(new Error("GEO_UNSUPPORTED"));
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      (err) => reject(err || new Error("GEO_DENIED")),
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
-    );
-  });
-}
-
-async function fetchNearFirmsWithRetry(country, lat, lng, radiusKm, attempts = 4) {
-  let lastErr = null;
-  for (let i = 1; i <= attempts; i++) {
-    try {
-      const url = `${API_URL}/firms/near?country=${encodeURIComponent(country)}&lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}&radius_km=${encodeURIComponent(radiusKm)}&t=${Date.now()}`;
-      const resp = await fetch(url, { cache: "no-store" });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      if (!Array.isArray(data)) throw new Error("Invalid response");
-      return data;
-    } catch (e) {
-      lastErr = e;
-      await sleep(700 * i);
-    }
-  }
-  throw lastErr || new Error("Fetch failed");
-}
-
-async function enableNearMe() {
-  try {
-    clearTopStatus();
-    setLoading(true);
-    showTopStatus("info", t("near_me_title"), t("near_me_fetching"));
-
-    const loc = await getBrowserLocation();
-    const data = await fetchNearFirmsWithRetry(currentCountry, loc.lat, loc.lng, NEAR_RADIUS_KM, 5);
-
-    allFirms = (data || []).map(f => normalizeFirmCategories(f)).sort((a, b) => {
-      const order = { premium: 1, standard: 2, basic: 3 };
-      return (order[(a.plan || "").toLowerCase()] || 9) - (order[(b.plan || "").toLowerCase()] || 9);
+    headerCatSelect.innerHTML = `<option value="all">${t("all_categories")}</option>`;
+    sortedCats.forEach(catKey => {
+        const opt = document.createElement("option");
+        opt.value = catKey;
+        opt.textContent = categoryLabel(catKey);
+        headerCatSelect.appendChild(opt);
     });
+    headerCatSelect.value = activeCategory;
 
-    populateCategoryFilter(allFirms);
-    renderFirms(allFirms);
-    setLoading(false);
-
-    nearMode = true;
-    updateNearMeUI();
-
-    clearTopStatus();
-    showTopStatus("success", t("near_me_on_title"), t("near_me_on_desc", { km: NEAR_RADIUS_KM }));
-
-    requestAnimationFrame(() => {
-      setTimeout(() => focusFirmFromUrl(), 60);
-    });
-
-  } catch (err) {
-    console.error("Near me error:", err);
-    setLoading(false);
-    nearMode = false;
-    updateNearMeUI();
-
-    const code = String(err?.code || err?.message || "");
-    if (code.includes("PERMISSION_DENIED") || code.includes("GEO_DENIED") || err?.code === 1) {
-      showTopStatus("error", t("near_me_denied_title"), t("near_me_denied_desc"), false);
-    } else if (code.includes("GEO_UNSUPPORTED")) {
-      showTopStatus("error", t("near_me_unsupported_title"), t("near_me_unsupported_desc"), false);
-    } else {
-      showTopStatus("error", t("near_me_error_title"), t("near_me_error_desc"), false);
-    }
-  }
-}
-
-function disableNearMe() {
-  nearMode = false;
-  updateNearMeUI();
-  loadFirms();
-}
-
-nearMeBtn?.addEventListener("click", () => {
-  if (nearMode) disableNearMe();
-  else enableNearMe();
-});
-
-/* ===== categories ===== */
-function populateCategoryFilter(firms) {
-  categorySelect.innerHTML = "";
-  const optAll = document.createElement("option");
-  optAll.value = "";
-  optAll.textContent = t("all_categories");
-  categorySelect.appendChild(optAll);
-
-  const set = new Set();
-  firms.forEach(f => {
-    const keys = Array.isArray(f._catKeys) ? f._catKeys : (f._catKey ? [f._catKey] : []);
-    keys.forEach(k => { if (k) set.add(String(k)); });
-  });
-
-  const keys = [...set].sort((a,b) => categoryLabel(a).localeCompare(categoryLabel(b)));
-  keys.forEach(k => {
-    const opt = document.createElement("option");
-    opt.value = k;
-    opt.textContent = categoryLabel(k);
-    categorySelect.appendChild(opt);
-  });
-}
-
-/* ===== modal slider ===== */
-const photoModal = document.getElementById("photoModal");
-const modalImage = document.getElementById("modalImage");
-const modalTitle = document.getElementById("modalTitle");
-const modalCounter = document.getElementById("modalCounter");
-const modalBackdrop = document.getElementById("modalBackdrop");
-
-const modalCloseBtn = document.getElementById("modalCloseBtn");
-const modalPrevBtn = document.getElementById("modalPrevBtn");
-const modalNextBtn = document.getElementById("modalNextBtn");
-const modalPrevBtn2 = document.getElementById("modalPrevBtn2");
-const modalNextBtn2 = document.getElementById("modalNextBtn2");
-
-let modalPhotos = [];
-let modalIndex = 0;
-
-function openModalSlider({ photos, startIndex, firmName }) {
-  modalPhotos = photos || [];
-  modalIndex = Math.max(0, Math.min(startIndex || 0, modalPhotos.length - 1));
-
-  modalTitle.textContent = firmName ? sanitize(firmName) : "";
-  updateModalImage();
-  photoModal.style.display = "flex";
-  photoModal.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
-}
-function updateModalImage() {
-  if (!modalPhotos.length) return;
-  modalImage.src = modalPhotos[modalIndex];
-  modalCounter.textContent = `(${modalIndex + 1}/${modalPhotos.length})`;
-}
-function closeModal() {
-  photoModal.style.display = "none";
-  photoModal.setAttribute("aria-hidden", "true");
-  document.body.style.overflow = "";
-  modalPhotos = [];
-  modalIndex = 0;
-}
-function modalPrev() {
-  if (!modalPhotos.length) return;
-  modalIndex = (modalIndex - 1 + modalPhotos.length) % modalPhotos.length;
-  updateModalImage();
-}
-function modalNext() {
-  if (!modalPhotos.length) return;
-  modalIndex = (modalIndex + 1) % modalPhotos.length;
-  updateModalImage();
-}
-
-modalCloseBtn.addEventListener("click", closeModal);
-modalPrevBtn.addEventListener("click", modalPrev);
-modalNextBtn.addEventListener("click", modalNext);
-modalPrevBtn2.addEventListener("click", modalPrev);
-modalNextBtn2.addEventListener("click", modalNext);
-
-photoModal.addEventListener("click", (e) => { if (e.target === photoModal) closeModal(); });
-modalBackdrop.addEventListener("click", (e) => { if (e.target === modalBackdrop) closeModal(); });
-
-document.addEventListener("keydown", (e) => {
-  if (photoModal.style.display !== "flex") return;
-  if (e.key === "Escape") closeModal();
-  if (e.key === "ArrowLeft") modalPrev();
-  if (e.key === "ArrowRight") modalNext();
-});
-
-/* ===== autoplay premium ===== */
-const autoplayTimers = new Map();
-function startAutoplay(containerEl, photos) {
-  stopAutoplay(containerEl);
-  if (!photos || photos.length <= 1) return;
-
-  let i = 0;
-  const imgEl = containerEl.querySelector("img[data-main-photo='1']");
-  const dots = Array.from(containerEl.querySelectorAll("[data-dot]"));
-
-  const tick = () => {
-    i = (i + 1) % photos.length;
-    if (imgEl) imgEl.src = photos[i];
-    dots.forEach((d, idx) => {
-      d.className = idx === i ? "w-2 h-2 rounded-full bg-blue-600" : "w-2 h-2 rounded-full bg-gray-300";
-    });
-  };
-
-  const tmr = setInterval(tick, 5000);
-  autoplayTimers.set(containerEl, tmr);
-}
-function stopAutoplay(containerEl) {
-  const tmr = autoplayTimers.get(containerEl);
-  if (tmr) clearInterval(tmr);
-  autoplayTimers.delete(containerEl);
-}
-
-/* ===== render ===== */
-function renderFirms(firms) {
-  autoplayTimers.forEach((tmr) => clearInterval(tmr));
-  autoplayTimers.clear();
-
-  firmsContainer.innerHTML = "";
-
-  if (!firms.length) {
-    noResults.classList.remove("hidden");
-    return;
-  } else {
-    noResults.classList.add("hidden");
-  }
-
-  firms.forEach((firm) => {
-    const div = document.createElement("div");
-    div.className = "border border-gray-300 rounded-xl p-5 shadow bg-white hover:shadow-md transition";
-    div.dataset.email = normalizeEmail(firm.email);
-
-    const plan = (firm.plan || "basic").toLowerCase();
-    const showMedia = plan !== "basic";
-    const logo = showMedia ? (firm.logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png") : null;
-    const photos = showMedia ? clampPhotos(firm) : [];
-
-    const tel = phoneToTelHref(firm.phone);
-    const hasTel = !!tel;
-
-    const badgeHTML =
-      plan === "premium"
-        ? `<span class="badge-premium px-3 py-1 rounded-full text-xs font-bold">Premium</span>`
-        : plan === "standard"
-          ? `<span class="badge-standard px-3 py-1 rounded-full text-xs font-bold">Standard</span>`
-          : `<span class="badge-basic px-3 py-1 rounded-full text-xs font-bold">Basic</span>`;
-
-    const headerHTML = showMedia
-      ? `
-        <div class="flex items-center mb-3">
-          <img src="${logo}" class="w-14 h-14 rounded-full object-cover border shadow-sm mr-3" />
-          <div>
-            <h3 class="text-xl font-bold text-blue-700">${sanitize(firm.name)}</h3>
-            ${badgeHTML}
-          </div>
+    quickButtonsContainer.innerHTML = ""; 
+    
+    // Butoni All
+    const allBtn = document.createElement("button");
+    allBtn.className = `cat-btn flex flex-col items-center gap-2 min-w-[70px] group ${activeCategory === 'all' ? 'active' : ''}`;
+    allBtn.onclick = () => quickFilter('all');
+    allBtn.innerHTML = `
+        <div class="w-14 h-14 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm transition-all group-hover:scale-105">
+            <i class="fas fa-th-large text-white text-xl"></i>
         </div>
-      `
-      : `
-        <div class="flex items-center justify-between mb-3">
-          <div>
-            <h3 class="text-xl font-bold text-blue-700">${sanitize(firm.name)}</h3>
-            ${badgeHTML}
-          </div>
-        </div>
-      `;
-
-    let photosHTML = "";
-    if (photos.length > 0) {
-      photosHTML = `
-        <div class="mt-4" data-slider="1">
-          <div class="rounded-xl overflow-hidden border bg-gray-50">
-            <img src="${photos[0]}" data-main-photo="1" class="w-full h-48 object-cover cursor-pointer" alt="Foto e shërbimeve" />
-          </div>
-
-          <div class="flex items-center justify-between mt-2">
-            <div class="flex gap-1">
-              ${photos.map((_, i) => `
-                <span data-dot="${i}" class="${i === 0 ? "w-2 h-2 rounded-full bg-blue-600" : "w-2 h-2 rounded-full bg-gray-300"}"></span>
-              `).join("")}
-            </div>
-            <div class="text-xs text-gray-500">${photos.length} ${t("photos")}</div>
-          </div>
-
-          <div class="flex space-x-2 mt-3 overflow-x-auto pb-1">
-            ${photos.map((p, i) => `
-              <img src="${p}" data-thumb-index="${i}" class="w-20 h-20 object-cover rounded-lg cursor-pointer shadow-sm border" alt="Foto ${i+1}" />
-            `).join("")}
-          </div>
-        </div>
-      `;
-    }
-
-    const phoneLine = hasTel
-      ? `
-        <p><strong>${t("phone")}:</strong>
-          <a href="tel:${tel}" class="text-blue-700 underline font-semibold">${sanitize(firm.phone)}</a>
-        </p>
-      `
-      : `<p><strong>${t("phone")}:</strong> <span class="text-gray-500">${t("not_set")}</span></p>`;
-
-    const callButtons = hasTel
-      ? `
-        <div class="mt-3 grid grid-cols-2 gap-2">
-          <a href="tel:${tel}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold">${t("call")}</a>
-          <a href="sms:${tel}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold">${t("sms")}</a>
-        </div>
-      `
-      : "";
-
-    const catKeys = Array.isArray(firm._catKeys) ? firm._catKeys : (firm._catKey ? [firm._catKey] : []);
-    const catLabel = catKeys.length ? catKeys.map(k => categoryLabel(k)).join(", ") : categoryLabel(firm._catKey);
-
-    div.innerHTML = `
-      ${headerHTML}
-      <p><strong>${t("address")}:</strong> ${sanitize(firm.address)}</p>
-      ${firm.city ? `<p><strong>${t("city")}:</strong> ${sanitize(firm.city)}</p>` : ""}
-      ${phoneLine}
-      <p><strong>${t("email")}:</strong>
-        <a href="mailto:${sanitize(firm.email)}" class="text-blue-600 underline">${sanitize(firm.email)}</a>
-      </p>
-      <p><strong>${t("category")}:</strong> ${sanitize(catLabel)}</p>
-      <p class="text-xs text-gray-500 mt-1"><strong>${t("country")}:</strong> ${sanitize(firm.country || "MK")}</p>
-      ${callButtons}
-      ${photosHTML}
+        <span class="text-[10px] font-semibold text-white/90">${t("all_categories")}</span>
     `;
+    quickButtonsContainer.appendChild(allBtn);
 
-    if (photos.length > 0) {
-      const slider = div.querySelector("[data-slider='1']");
-      const mainImg = slider.querySelector("img[data-main-photo='1']");
-      const thumbs = Array.from(slider.querySelectorAll("[data-thumb-index]"));
-      const dots = Array.from(slider.querySelectorAll("[data-dot]"));
-
-      let currentIndex = 0;
-
-      function setIndex(i) {
-        currentIndex = i;
-        mainImg.src = photos[currentIndex];
-        dots.forEach((d, idx) => {
-          d.className = idx === currentIndex ? "w-2 h-2 rounded-full bg-blue-600" : "w-2 h-2 rounded-full bg-gray-300";
-        });
-      }
-
-      mainImg.addEventListener("click", () => openModalSlider({ photos, startIndex: currentIndex, firmName: firm.name }));
-
-      thumbs.forEach(t => {
-        t.addEventListener("click", () => {
-          const i = Number(t.getAttribute("data-thumb-index") || "0");
-          setIndex(i);
-          openModalSlider({ photos, startIndex: i, firmName: firm.name });
-        });
-      });
-
-      if (plan === "premium") startAutoplay(slider, photos);
-    }
-
-    firmsContainer.appendChild(div);
-  });
-}
-
-/* ===== filter ===== */
-function filterFirms() {
-  const txt = searchInput.value.toLowerCase();
-  const cat = categorySelect.value;
-
-  const filtered = allFirms.filter(f => {
-    const matchName = sanitize(f.name).toLowerCase().includes(txt);
-
-    const keys = Array.isArray(f._catKeys) ? f._catKeys : (f._catKey ? [f._catKey] : []);
-    const matchCat = !cat || keys.includes(String(cat));
-
-    return matchName && matchCat;
-  });
-
-  renderFirms(filtered);
-}
-
-/* ===== focus from URL ===== */
-function focusFirmFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const focus = normalizeEmail(params.get("focus") || "");
-  if (!focus) return;
-
-  const el = firmsContainer.querySelector(`[data-email="${focus.replace(/"/g, '\\"')}"]`);
-  if (!el) return;
-
-  el.classList.add("focus-ring");
-  el.scrollIntoView({ behavior: "smooth", block: "center" });
-  setTimeout(() => el.classList.remove("focus-ring"), 6000);
-}
-
-/* ===== fetch with retry ===== */
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-async function fetchFirmsWithRetry(country, attempts = 4) {
-  let lastErr = null;
-  for (let i = 1; i <= attempts; i++) {
-    try {
-      const url = `${API_URL}/firms?country=${encodeURIComponent(country)}&t=${Date.now()}`;
-      const resp = await fetch(url, { cache: "no-store" });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      if (!Array.isArray(data)) throw new Error("Invalid response");
-      return data;
-    } catch (e) {
-      lastErr = e;
-      await sleep(700 * i);
-    }
-  }
-  throw lastErr || new Error("Fetch failed");
-}
-
-async function loadFirms() {
-  clearTopStatus();
-  setLoading(true);
-
-  const params = new URLSearchParams(window.location.search);
-  const urlCountry = (params.get("country") || "").toUpperCase();
-  const country = (/^[A-Z]{2}$/.test(urlCountry)) ? urlCountry : await detectUserCountryCode();
-  currentCountry = country;
-
-  countryPill.textContent = country;
-  countryPill.classList.remove("hidden");
-
-  try {
-    const data = await fetchFirmsWithRetry(country, 5);
-
-    allFirms = (data || []).map(f => normalizeFirmCategories(f)).sort((a, b) => {
-      const order = { premium: 1, standard: 2, basic: 3 };
-      return (order[(a.plan || "").toLowerCase()] || 9) - (order[(b.plan || "").toLowerCase()] || 9);
+    // Butonat e tjerë
+    sortedCats.forEach(catKey => {
+        const style = CATEGORY_STYLES[catKey] || CATEGORY_STYLES["default"];
+        const btn = document.createElement("button");
+        btn.className = `cat-btn flex flex-col items-center gap-2 min-w-[70px] group ${activeCategory === catKey ? 'active' : ''}`;
+        btn.id = `btn-${catKey}`;
+        btn.onclick = () => quickFilter(catKey);
+        btn.innerHTML = `
+            <div class="w-14 h-14 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm transition-all group-hover:scale-105">
+                <i class="fas ${style.icon} ${style.color} text-xl"></i>
+            </div>
+            <span class="text-[10px] font-semibold text-white/90 text-center leading-tight px-1">${categoryLabel(catKey)}</span>
+        `;
+        quickButtonsContainer.appendChild(btn);
     });
-
-    populateCategoryFilter(allFirms);
-    renderFirms(allFirms);
-
-    setLoading(false);
-
-    requestAnimationFrame(() => {
-      setTimeout(() => focusFirmFromUrl(), 60);
-    });
-
-  } catch (err) {
-    console.error("Gabim:", err);
-    setLoading(false);
-    showTopStatus("error", t("load_fail_title"), t("load_fail_hint"), true);
-  }
 }
 
-/* ===== init ===== */
-applyTranslations();
-renderLangUI();
-closeLangMenu();
-updateNearMeUI();
+window.quickFilter = (catKey) => {
+    activeCategory = catKey;
+    headerCatSelect.value = catKey;
+    updateActiveButton();
+    filterFirms();
+};
 
-loadFirms();
+headerCatSelect.addEventListener("change", (e) => {
+    activeCategory = e.target.value;
+    updateActiveButton();
+    filterFirms();
+});
+
+function updateActiveButton() {
+    document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
+    const btn = document.getElementById(`btn-${activeCategory}`);
+    if(btn) btn.classList.add('active');
+    else if(activeCategory === 'all' && quickButtonsContainer.firstChild) quickButtonsContainer.firstChild.classList.add('active');
+}
+
+/* ================= SMART SEARCH LOGIC (FIXED) ================= */
+const searchInput = document.getElementById("searchInput");
 searchInput.addEventListener("input", filterFirms);
-categorySelect.addEventListener("change", filterFirms);
-</script>
 
+function filterFirms() {
+    const term = searchInput.value.toLowerCase().trim();
+    const results = allFirms.filter(f => {
+        // 1. Kategoria e zgjedhur me buton
+        let matchesCategory = true;
+        if (activeCategory !== 'all') {
+            matchesCategory = (f._catKeys || []).includes(activeCategory);
+        }
+
+        // 2. Kërkimi me tekst (Në 3 Gjuhë)
+        let matchesSearch = true;
+        if (term) {
+            const nameMatch = f.name.toLowerCase().includes(term);
+            
+            // Përdor funksionin e ri nga i18n.js që kontrollon të 3 gjuhët
+            const catMatch = (f._catKeys || []).some(key => {
+                if(key.includes(term)) return true; // match "plumber" directly
+                return checkCategoryMatch(key, term); // match "vodovod", "hidraulik", etj.
+            });
+            
+            matchesSearch = nameMatch || catMatch;
+        }
+
+        return matchesCategory && matchesSearch;
+    });
+    renderFirms(results);
+}
+
+/* ================= RENDER LOGIC ================= */
+function renderFirms(firms) {
+    autoScrollIntervals.forEach(clearInterval);
+    autoScrollIntervals = [];
+
+    const container = document.getElementById("firmsContainer");
+    container.innerHTML = "";
+    
+    if (firms.length === 0) {
+        document.getElementById("noResults").classList.remove("hidden");
+        return;
+    }
+    document.getElementById("noResults").classList.add("hidden");
+
+    firms.forEach(f => {
+        const plan = (f.plan || "basic").toLowerCase();
+        const isPremium = plan === "premium";
+        const photos = plan !== "basic" ? (f.photos || []) : [];
+        const logo = f.logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+        
+        let badge = "";
+        if (isPremium) badge = `<span class="badge-premium"><i class="fas fa-crown"></i> PRO</span>`;
+        else if (plan === "standard") badge = `<span class="badge-standard">STANDARD</span>`;
+
+        let mediaHtml = "";
+        const sliderId = `slider-${Math.random().toString(36).substr(2, 9)}`;
+        
+        if (photos.length > 0) {
+            const slides = photos.map(src => `
+                <div class="snap-center shrink-0 w-full h-48 bg-gray-100 relative">
+                    <img src="${src}" class="w-full h-full object-cover pointer-events-none"> 
+                </div>
+            `).join("");
+
+            mediaHtml = `
+                <div class="relative w-full h-48 overflow-hidden rounded-t-xl group">
+                    <div id="${sliderId}" class="flex overflow-x-auto snap-x no-scrollbar w-full h-full scroll-smooth">
+                        ${slides}
+                    </div>
+                    <div class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-md border border-white/10">
+                       <i class="fas fa-images"></i> ${photos.length}
+                    </div>
+                </div>
+            `;
+            if(photos.length > 1) setTimeout(() => startAutoScroll(sliderId, photos.length), 100);
+        }
+
+        const card = document.createElement("div");
+        card.className = "bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1";
+        const catLabels = (f._catKeys || []).map(k => categoryLabel(k)).join(", ");
+
+        card.innerHTML = `
+            ${mediaHtml}
+            <div class="p-4">
+                <div class="flex justify-between items-start mb-2">
+                   <div>
+                      ${badge ? `<div class="mb-1">${badge}</div>` : ''}
+                      <h3 class="text-lg font-bold text-gray-900 leading-tight">${f.name}</h3>
+                      <p class="text-xs text-brand-600 font-bold uppercase tracking-wide mt-0.5">${catLabels}</p>
+                   </div>
+                   ${(plan !== 'basic') ? `<img src="${logo}" class="w-10 h-10 rounded-full border border-gray-100 shadow-sm object-cover">` : ''}
+                </div>
+                <div class="flex items-start gap-2 text-xs text-gray-500 font-medium mb-4">
+                   <i class="fas fa-map-marker-alt mt-0.5 text-gray-400"></i> <span>${f.address}</span>
+                </div>
+                ${f.phone ? `
+                <div class="flex gap-2 mt-auto">
+                    <a href="tel:${f.phone}" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-brand-100 active:scale-95 transition-all">
+                       <i class="fas fa-phone"></i> <span data-i18n="call">Thirr</span>
+                    </a>
+                    <a href="sms:${f.phone}" class="flex-1 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-all">
+                       <i class="fas fa-comment-alt text-brand-500"></i> <span data-i18n="sms">SMS</span>
+                    </a>
+                </div>` : ''}
+            </div>
+        `;
+        container.appendChild(card);
+    });
+    applyTranslations(container); 
+}
+
+function startAutoScroll(elementId, photoCount) {
+    const el = document.getElementById(elementId);
+    if(!el) return;
+    let direction = 1;
+    const interval = setInterval(() => {
+        if(!el) return clearInterval(interval);
+        if(el.matches(':hover') || el.matches(':active')) return;
+        const width = el.offsetWidth;
+        const scrollPos = el.scrollLeft;
+        const maxScroll = el.scrollWidth - width;
+        if (scrollPos >= maxScroll - 5) direction = -1;
+        if (scrollPos <= 0) direction = 1;
+        if(direction === 1) el.scrollLeft += width;
+        else el.scrollLeft = 0;
+    }, 3500);
+    autoScrollIntervals.push(interval);
+}
+
+document.getElementById("nearMeBtn").addEventListener("click", () => {
+    if(nearMode) { window.location.reload(); return; }
+    if (!navigator.geolocation) return alert(t("near_me_error"));
+    const btn = document.getElementById("nearMeBtn");
+    const status = document.getElementById("nearMeStatus");
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+    status.innerText = t("near_me_fetching");
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        try {
+            const res = await fetch(`${API_URL}/firms/near?country=MK&lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&radius_km=${NEAR_RADIUS_KM}`);
+            const data = await res.json();
+            allFirms = data.map(normalizeCategories).sort(sortFirms);
+            nearMode = true;
+            btn.innerHTML = `<i class="fas fa-check"></i> ${t("near_me_active", {km: NEAR_RADIUS_KM})}`;
+            btn.classList.add("bg-green-100", "text-green-700");
+            status.innerText = "";
+            populateCategories(allFirms);
+            activeCategory = 'all'; updateActiveButton(); filterFirms();
+        } catch(e) { status.innerText = t("near_me_error"); }
+    }, () => status.innerText = t("near_me_error"));
+});
+
+async function init() {
+    applyTranslations(); updateLangUI();
+    try {
+        const res = await fetch(`${API_URL}/firms?country=MK`);
+        const data = await res.json();
+        allFirms = data.map(normalizeCategories).sort(sortFirms);
+        document.getElementById("loadingGrid").classList.add("hidden");
+        document.getElementById("firmsContainer").classList.remove("hidden");
+        populateCategories(allFirms);
+        renderFirms(allFirms);
+    } catch(e) { console.error(e); }
+}
+
+function normalizeCategories(f) {
+    const arr = Array.isArray(f.categories) ? f.categories : (f.category ? [f.category] : []);
+    f._catKeys = arr.map(k => normalizeCategoryKey(k)).filter(Boolean);
+    return f;
+}
+function sortFirms(a, b) {
+    const score = p => p === 'premium' ? 1 : p === 'standard' ? 2 : 3;
+    return score((a.plan || '').toLowerCase()) - score((b.plan || '').toLowerCase());
+}
+
+init();
+</script>
 </body>
 </html>

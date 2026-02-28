@@ -15,17 +15,13 @@ function getLangHeader() {
 }
 
 function showStatus(msg, type = "info") {
-  let box = $("#statusBox");
-  if (!box) {
-    box = document.createElement("div");
-    box.id = "statusBox";
-    box.className = "mt-4 p-3 rounded text-white font-semibold";
-    $("#registerForm")?.before(box);
-  }
+  const box = document.querySelector("#statusBox");
   if (!box) return;
 
   box.textContent = msg;
-  box.style.background =
+  box.classList.remove("hidden");
+
+  box.style.backgroundColor =
     type === "error" ? "#dc2626" :
     type === "success" ? "#16a34a" :
     "#2563eb";

@@ -276,7 +276,7 @@ function updateActiveButton() {
     else if(activeCategory === 'all' && quickButtonsContainer.firstChild) quickButtonsContainer.firstChild.classList.add('active');
 }
 
-/* ================= SMART SEARCH LOGIC (FIXED) ================= */
+/* ================= SMART SEARCH LOGIC ================= */
 const searchInput = document.getElementById("searchInput");
 searchInput.addEventListener("input", filterFirms);
 
@@ -359,6 +359,9 @@ function renderFirms(firms) {
         card.className = "bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1";
         const catLabels = (f._catKeys || []).map(k => categoryLabel(k)).join(", ");
 
+        // SHTUAR: ID për Focus (Highlight)
+        card.dataset.email = (f.email || "").toLowerCase();
+
         card.innerHTML = `
             ${mediaHtml}
             <div class="p-4">
@@ -370,9 +373,12 @@ function renderFirms(firms) {
                    </div>
                    ${(plan !== 'basic') ? `<img src="${logo}" class="w-10 h-10 rounded-full border border-gray-100 shadow-sm object-cover">` : ''}
                 </div>
+                
+                <!-- NDRYSHUAR: Shfaq Qytetin -->
                 <div class="flex items-start gap-2 text-xs text-gray-500 font-medium mb-4">
-                   <i class="fas fa-map-marker-alt mt-0.5 text-gray-400"></i> <span>${f.city}</span>
+                   <i class="fas fa-map-marker-alt mt-0.5 text-gray-400"></i> <span>${f.city || f.address}</span>
                 </div>
+
                 ${f.phone ? `
                 <div class="flex gap-2 mt-auto">
                     <a href="tel:${f.phone}" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-brand-100 active:scale-95 transition-all">
@@ -429,19 +435,6 @@ document.getElementById("nearMeBtn").addEventListener("click", () => {
     }, () => status.innerText = t("near_me_error"));
 });
 
-async function init() {
-    applyTranslations(); updateLangUI();
-    try {
-        const res = await fetch(`${API_URL}/firms?country=MK`);
-        const data = await res.json();
-        allFirms = data.map(normalizeCategories).sort(sortFirms);
-        document.getElementById("loadingGrid").classList.add("hidden");
-        document.getElementById("firmsContainer").classList.remove("hidden");
-        populateCategories(allFirms);
-        renderFirms(allFirms);
-    } catch(e) { console.error(e); }
-}
-
 function normalizeCategories(f) {
     const arr = Array.isArray(f.categories) ? f.categories : (f.category ? [f.category] : []);
     f._catKeys = arr.map(k => normalizeCategoryKey(k)).filter(Boolean);
@@ -450,6 +443,41 @@ function normalizeCategories(f) {
 function sortFirms(a, b) {
     const score = p => p === 'premium' ? 1 : p === 'standard' ? 2 : 3;
     return score((a.plan || '').toLowerCase()) - score((b.plan || '').toLowerCase());
+}
+
+// --- FUNKSIONI I RI PER FOCUS (HIGHLIGHT) ---
+function focusFirmFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const focusEmail = params.get("focus"); 
+
+    if (focusEmail) {
+        const targetCard = document.querySelector(`[data-email="${focusEmail.toLowerCase()}"]`);
+        if (targetCard) {
+            targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+            targetCard.classList.add("ring-4", "ring-brand-500", "scale-105", "z-10");
+            setTimeout(() => {
+                targetCard.classList.remove("ring-4", "ring-brand-500", "scale-105", "z-10");
+            }, 3000);
+        }
+    }
+}
+
+async function init() {
+    applyTranslations(); updateLangUI();
+    try {
+        const res = await fetch(`${API_URL}/firms?country=MK`);
+        const data = await res.json();
+        allFirms = data.map(normalizeCategories).sort(sortFirms);
+        document.getElementById("loadingGrid").classList.add("hidden");
+        document.getElementById("firmsContainer").classList.remove("hidden");
+        
+        populateCategories(allFirms);
+        renderFirms(allFirms);
+
+        // THIRRJA E FOCUS PAS MBUSHJES SË FAQES
+        setTimeout(focusFirmFromUrl, 500);
+
+    } catch(e) { console.error(e); }
 }
 
 init();

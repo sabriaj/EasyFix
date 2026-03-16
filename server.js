@@ -52,6 +52,66 @@ async function sendMail({ to, subject, html, text }) {
   });
 }
 
+/* ================= OWNER MANAGE ================= */
+
+app.post("/owner/request-link", async (req, res) => {
+  try {
+
+    const email = normalizeEmail(req.body?.email);
+
+    if (!email) {
+      return res.status(400).json({ success:false, error:"Missing email" });
+    }
+
+    const firm = await Firma.findOne({ email }).select("_id email").lean();
+
+    if (!firm) {
+      return res.json({ success:true });
+    }
+
+    if (!resend) {
+      return res.status(500).json({ success:false, error:"Email service not configured" });
+    }
+
+    const token = makeToken();
+    const tokenHash = sha256Hex(token);
+    const expires = new Date(Date.now() + 60 * 60 * 1000);
+
+    await Firma.updateOne(
+      { _id: firm._id },
+      {
+        $set:{
+          owner_token_hash: tokenHash,
+          owner_token_expires: expires
+        }
+      }
+    );
+
+    const link =
+      `${FRONTEND_BASE_URL}/manage.html?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+
+    await sendMail({
+      to: email,
+      subject: "EasyFix - Manage your listing",
+      text: `Për me menaxhu profilin tënd përdor këtë link: ${link}`,
+      html: `
+        <div style="font-family:Arial">
+        <h2>EasyFix</h2>
+        <p>Kliko linkun për me menaxhu profilin tënd:</p>
+        <p><a href="${link}">${link}</a></p>
+        <p>Linku skadon për 1 orë.</p>
+        </div>
+      `
+    });
+
+    return res.json({ success:true });
+
+  } catch(err) {
+    console.error("OWNER REQUEST LINK ERROR", err);
+    return res.status(500).json({ success:false });
+  }
+});
+
 /* ================= CONFIG ================= */
 const PORT = process.env.PORT || 5000;
 

@@ -1,4 +1,4 @@
-const BACKEND_URL = "https://easyfix.onrender.com";
+const API_URL = "https://easyfix-dev-1.onrender.com";
 function $(s) { return document.querySelector(s); }
 
 // i18n

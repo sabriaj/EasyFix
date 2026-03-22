@@ -525,12 +525,7 @@ function wireSubmit() {
   if (data.checkoutUrl) {
     window.location.href = data.checkoutUrl;
   } else {
-    const next = data.nextUrl || "success.html";
-
-    const url = new URL(next, window.location.origin);
-    url.searchParams.set("email", email);
-
-    window.location.href = url.toString();
+    window.location.href = `success.html?email=${encodeURIComponent(email)}`;
   }
 }, 700);
 

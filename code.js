@@ -522,9 +522,17 @@ function wireSubmit() {
       showStatus(t("msg_reg_ok"), "success");
 
       setTimeout(() => {
-        if (data.checkoutUrl) window.location.href = data.checkoutUrl;
-        else window.location.href = data.nextUrl || `success.html?email=${encodeURIComponent(email)}`;
-      }, 700);
+  if (data.checkoutUrl) {
+    window.location.href = data.checkoutUrl;
+  } else {
+    const next = data.nextUrl || "success.html";
+
+    const url = new URL(next, window.location.origin);
+    url.searchParams.set("email", email);
+
+    window.location.href = url.toString();
+  }
+}, 700);
 
     } catch {
       showStatus(t("msg_comm_error"), "error");

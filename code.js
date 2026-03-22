@@ -1,4 +1,4 @@
-const API_URL = "https://easyfix-dev-1.onrender.com";
+const BACKEND_URL = "https://easyfix-dev-1.onrender.com";
 function $(s) { return document.querySelector(s); }
 
 // i18n
@@ -38,7 +38,7 @@ function fetchWithTimeout(url, timeoutMs = 4500) {
 
 async function guessCountryIso2() {
   try {
-    const r = await fetchWithTimeout("https://ipapi.co/json/", 4500);
+    const r = await fetchWithTimeout("", 4500);
     const j = await r.json().catch(() => ({}));
     const c = String(j?.country_code || "mk").toLowerCase();
     return (c && c.length === 2) ? c : "mk";
@@ -54,7 +54,7 @@ async function prefillCityFromIp() {
 
     if (String(cityInput.value || "").trim()) return;
 
-    const r = await fetchWithTimeout("https://ipapi.co/json/", 4500);
+    const r = await fetchWithTimeout("", 4500);
     const j = await r.json().catch(() => ({}));
     const city = String(j?.city || "").trim();
     if (city) cityInput.value = city;

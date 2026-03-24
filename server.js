@@ -293,6 +293,148 @@ const trialUsageSchema = new mongoose.Schema(
 );
 const TrialUsage = mongoose.model("TrialUsage", trialUsageSchema);
 
+/* ================= USERS ================= */
+const userSchema = new mongoose.Schema(
+{
+  email: { type: String, unique: true, required: true },
+  password_hash: String,
+
+  credits: { type: Number, default: 0 },
+
+  email_verified: { type: Boolean, default: false },
+  email_otp_hash: String,
+  email_otp_expires: Date,
+
+}, { timestamps: true }
+);
+
+const User = mongoose.model("User", userSchema);
+
+/* ================= USER SINGUP ================= */
+import bcrypt from "bcrypt";
+const SALT = 10;
+
+app.post("/user/signup", async (req, res) => {
+  try {
+    let { email, password } = req.body;
+
+    email = normalizeEmail(email);
+
+    if (!email || !password) {
+      return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    const exists = await User.findOne({ email });
+    if (exists) {
+      return sendError(res, 409, "EMAIL_EXISTS");
+    }
+
+    const hash = await bcrypt.hash(password, SALT);
+
+    const user = await User.create({
+      email,
+      password_hash: hash,
+      credits: 1 // 🎯 BONUS: japim 1 credit free
+    });
+
+    return res.json({ success: true });
+
+  } catch (err) {
+    errorWithTime("USER SIGNUP ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+
+/* ================== USER LOGIN ======================= */
+
+app.post("/user/login", async (req, res) => {
+  try {
+    let { email, password } = req.body;
+
+    email = normalizeEmail(email);
+
+    const user = await User.findOne({ email });
+    if (!user) return sendError(res, 400, "INVALID_CREDENTIALS");
+
+    const ok = await bcrypt.compare(password, user.password_hash);
+    if (!ok) return sendError(res, 400, "INVALID_CREDENTIALS");
+
+    return res.json({
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        credits: user.credits
+      }
+    });
+
+  } catch (err) {
+    errorWithTime("USER LOGIN ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+
+
+/*====================== BUY CREDITS ======================= */
+app.post("/credits/buy", async (req, res) => {
+  try {
+    const { userId, amount } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) return sendError(res, 404, "USER_NOT_FOUND");
+
+    // fake payment (për tani)
+    user.credits += amount;
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      credits: user.credits
+    });
+
+  } catch (err) {
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+ // ====================== CONTACT SYSTEM =======================//
+app.post("/contact", async (req, res) => {
+  try {
+    const { email, firmEmail } = req.body;
+
+    if (!email || !firmEmail) {
+      return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return sendError(res, 404, "USER_NOT_FOUND");
+
+    if (user.credits <= 0) {
+      return sendError(res, 402, "NO_CREDITS");
+    }
+
+    const firm = await Firma.findOne({ email: firmEmail });
+    if (!firm) return sendError(res, 404, "FIRM_NOT_FOUND");
+
+    user.credits -= 1;
+    await user.save();
+
+    return res.json({
+      success: true,
+      phone: firm.phone,
+      credits: user.credits
+    });
+
+  } catch (err) {
+    errorWithTime("CONTACT ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+
 /* ================= PLAN RULES ================= */
 const planPhotoLimit = { basic: 0, standard: 3, premium: 8 };
 const planCategoryLimit = { basic: 1, standard: 2, premium: 7 };

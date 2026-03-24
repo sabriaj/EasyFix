@@ -8,7 +8,10 @@
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
     gtag('config', 'G-CWDYCJ09D8');
+    
   </script>
+
+  
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
@@ -73,7 +76,13 @@
           <span id="countryPill" class="hidden text-[9px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border">MK</span>
         </div>
         <div class="flex items-center gap-3">
+            <span id="creditBox" class="text-xs font-bold text-gray-600"></span>
           <div class="relative">
+
+            <button id="loginBtn"
+class="bg-white border border-gray-200 px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-50">
+Login
+</button>
             <button id="langBtn" class="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-full border border-gray-200 transition-all">
                <img id="langFlagImg" class="w-5 h-5 rounded-full object-cover shadow-sm">
                <span id="langLabel" class="text-xs font-bold text-gray-700 hidden sm:inline">SQ</span>
@@ -377,18 +386,16 @@ function renderFirms(firms) {
                 <!-- NDRYSHUAR: Shfaq Qytetin -->
                 <div class="flex items-start gap-2 text-xs text-gray-500 font-medium mb-4">
                    <i class="fas fa-map-marker-alt mt-0.5 text-gray-400"></i> <span>${f.city || f.address}</span>
+                   
                 </div>
 
-                ${f.phone ? `
                 <div class="flex gap-2 mt-auto">
-                    <a href="tel:${f.phone}" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-brand-100 active:scale-95 transition-all">
-                       <i class="fas fa-phone"></i> <span data-i18n="call">Thirr</span>
-                    </a>
-                    <a href="sms:${f.phone}" class="flex-1 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-all">
-                       <i class="fas fa-comment-alt text-brand-500"></i> <span data-i18n="sms">SMS</span>
-                    </a>
-                </div>` : ''}
-            </div>
+  <button onclick="handleGetContact('${f.phone}', '${f.email}')"
+  class="flex-1 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-bold">
+    Shfaq Kontaktin
+  </button>
+</div>
+
         `;
         container.appendChild(card);
     });
@@ -479,8 +486,118 @@ async function init() {
 
     } catch(e) { console.error(e); }
 }
+function getUser() {
+  return JSON.parse(localStorage.getItem("easyfix_user"));
+}
 
+const loginBtn = document.getElementById("loginBtn");
+
+function updateAuthUI() {
+  const user = getUser();
+  if (user) {
+    loginBtn.innerText = "Account";
+  } else {
+    loginBtn.innerText = "Login";
+  }
+}
+
+updateAuthUI();
 init();
+
+
+// 🔥 LOGIN REAL (ME PASSWORD)
+async function loginUser() {
+  const email = prompt("Email:");
+  const password = prompt("Password:");
+
+  if (!email || !password) return;
+
+  try {
+    const res = await fetch(`${API_URL}/user/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Login gabim");
+      return;
+    }
+
+    localStorage.setItem("easyfix_user", JSON.stringify({
+      email: data.user.email
+    }));
+
+    updateAuthUI();
+    updateCreditsUI(data.user.credits);
+
+    alert("U kyçe me sukses");
+
+  } catch (err) {
+    console.error(err);
+    alert("Gabim serveri");
+  }
+}
+
+// 🔗 lidh button
+loginBtn.addEventListener("click", loginUser);
+
+
+// 🔥 CONTACT (FINAL)
+async function handleGetContact(phone, firmEmail) {
+  const user = getUser();
+
+  if (!user) {
+    alert("Duhet me u kyç fillimisht");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/contact`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email: user.email,
+        firmEmail
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "Gabim");
+      return;
+    }
+
+    alert(`Numri: ${data.phone}`);
+
+    updateCreditsUI(data.credits);
+
+  } catch (err) {
+    console.error(err);
+    alert("Gabim serveri");
+  }
+}
+
+
+// 🔥 UI KREDITE
+function updateCreditsUI(credits) {
+  const el = document.getElementById("creditBox");
+  const user = getUser();
+
+  if (!user) {
+    el.innerText = "";
+    return;
+  }
+
+  el.innerText = `Kredi: ${credits}`;
+}
 </script>
 </body>
 </html>

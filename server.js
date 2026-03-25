@@ -296,6 +296,10 @@ const TrialUsage = mongoose.model("TrialUsage", trialUsageSchema);
 /* ================= USERS ================= */
 const userSchema = new mongoose.Schema(
 {
+  name: String,
+  surname: String,   // 🔥 SHTO
+  address: String,   // 🔥 SHTO
+
   email: { type: String, unique: true, required: true },
   password_hash: String,
 
@@ -305,8 +309,7 @@ const userSchema = new mongoose.Schema(
   email_otp_hash: String,
   email_otp_expires: Date,
 
-}, { timestamps: true }
-);
+}, { timestamps: true });
 
 const User = mongoose.model("User", userSchema);
 
@@ -315,31 +318,39 @@ import bcrypt from "bcrypt";
 const SALT = 10;
 app.post("/user/signup", async (req, res) => {
   try {
-    let { email, password } = req.body;
+    let { name, surname, address, email, password } = req.body;
 
     email = normalizeEmail(email);
 
-    if (!email || !password) {
-      return sendError(res, 400, "MISSING_FIELDS");
+    if (!name || !surname || !address || !email || !password) {
+      return sendError(res, 400, "PLOTESO_TEDHENAT");
+    }
+
+    if (password.length < 6) {
+      return sendError(res, 400, "PASSWORD_SHKURT");
     }
 
     const exists = await User.findOne({ email });
     if (exists) {
-      return sendError(res, 409, "EMAIL_EXISTS");
+      return sendError(res, 409, "EMAIL_EKZISTON");
     }
 
     const hash = await bcrypt.hash(password, SALT);
 
     const user = await User.create({
+      name,
+      surname,
+      address,
       email,
       password_hash: hash,
-      credits: 3 // ✅ FIX (jo 1)
+      credits: 3
     });
 
     return res.json({
       success: true,
       user: {
         id: user._id,
+        name: user.name,
         email: user.email,
         credits: user.credits
       }
@@ -350,7 +361,6 @@ app.post("/user/signup", async (req, res) => {
     return sendError(res, 500, "SERVER_ERROR");
   }
 });
-
 /* ================== USER LOGIN ======================= */
 
 app.post("/user/login", async (req, res) => {

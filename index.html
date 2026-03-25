@@ -528,9 +528,10 @@ async function loginUser() {
       return;
     }
 
-    localStorage.setItem("easyfix_user", JSON.stringify({
-      email: data.user.email
-    }));
+   localStorage.setItem("easyfix_user", JSON.stringify({
+  id: data.user.id,
+  email: data.user.email
+}));
 
     updateAuthUI();
     updateCreditsUI(data.user.credits);
@@ -544,7 +545,9 @@ async function loginUser() {
 }
 
 // 🔗 lidh button
-loginBtn.addEventListener("click", loginUser);
+loginBtn.addEventListener("click", () => {
+  window.location.href = "/auth.html";
+});
 
 
 // 🔥 CONTACT (FINAL)
@@ -552,9 +555,9 @@ async function handleGetContact(phone, firmEmail) {
   const user = getUser();
 
   if (!user) {
-    alert("Duhet me u kyç fillimisht");
-    return;
-  }
+  window.location.href = "/auth.html";
+  return;
+}
 
   try {
     const res = await fetch(`${API_URL}/contact`, {
@@ -563,9 +566,9 @@ async function handleGetContact(phone, firmEmail) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        email: user.email,
-        firmEmail
-      })
+     userId: user.id,
+     firmEmail
+     })
     });
 
     const data = await res.json();

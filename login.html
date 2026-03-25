@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family:sans-serif; text-align:center; padding:40px;">
+
+<h2>Login / Signup</h2>
+
+<input id="email" placeholder="Email"><br><br>
+<input id="password" type="password" placeholder="Password"><br><br>
+
+<button onclick="login()">Login</button>
+<button onclick="signup()">Signup</button>
+
+<script>
+const API_URL = "https://easyfix-dev-1.onrender.com";
+
+async function login() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const res = await fetch(`${API_URL}/user/login`, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ email, password })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert("Gabim login");
+    return;
+  }
+
+  localStorage.setItem("easyfix_user", JSON.stringify({
+    id: data.user.id,
+    email: data.user.email
+  }));
+
+  window.location.href = "/";
+}
+
+async function signup() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const res = await fetch(`${API_URL}/user/signup`, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ email, password })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert("Gabim signup");
+    return;
+  }
+
+  // 🔥 AUTO LOGIN
+  localStorage.setItem("easyfix_user", JSON.stringify({
+    id: data.user.id,
+    email: data.user.email
+  }));
+
+  alert("U krijua account dhe u kyçe automatikisht");
+
+  window.location.href = "/";
+}
+</script>
+
+</body>
+</html>

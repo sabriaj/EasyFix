@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<body style="text-align:center; padding:40px; font-family:sans-serif;">
+
+<h2>Nuk ke kredi</h2>
+
+<button onclick="buy()">Blej 5 kredi</button>
+
+<script>
+const API_URL = "https://easyfix-dev-1.onrender.com";
+
+function getUser() {
+  return JSON.parse(localStorage.getItem("easyfix_user"));
+}
+
+async function buy() {
+  const user = getUser();
+
+  await fetch(`${API_URL}/credits/buy`, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      userId: user.id,
+      amount: 5
+    })
+  });
+
+  alert("Kredi u shtuan");
+  window.location.href = "/";
+}
+</script>
+
+</body>
+</html>

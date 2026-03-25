@@ -313,7 +313,6 @@ const User = mongoose.model("User", userSchema);
 /* ================= USER SINGUP ================= */
 import bcrypt from "bcrypt";
 const SALT = 10;
-
 app.post("/user/signup", async (req, res) => {
   try {
     let { email, password } = req.body;
@@ -334,17 +333,24 @@ app.post("/user/signup", async (req, res) => {
     const user = await User.create({
       email,
       password_hash: hash,
-      credits: 1 // 🎯 BONUS: japim 1 credit free
+      credits: 1
     });
 
-    return res.json({ success: true });
+    // 🔥 KJO ESHTE FIXI
+    return res.json({
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        credits: user.credits
+      }
+    });
 
   } catch (err) {
     errorWithTime("USER SIGNUP ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }
 });
-
 
 /* ================== USER LOGIN ======================= */
 
@@ -403,13 +409,13 @@ app.post("/credits/buy", async (req, res) => {
  // ====================== CONTACT SYSTEM =======================//
 app.post("/contact", async (req, res) => {
   try {
-    const { email, firmEmail } = req.body;
+    const { userId, firmEmail } = req.body;
 
-    if (!email || !firmEmail) {
+    if (!userId || !firmEmail) {
       return sendError(res, 400, "MISSING_FIELDS");
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findById(userId);
     if (!user) return sendError(res, 404, "USER_NOT_FOUND");
 
     if (user.credits <= 0) {
@@ -429,7 +435,6 @@ app.post("/contact", async (req, res) => {
     });
 
   } catch (err) {
-    errorWithTime("CONTACT ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }
 });

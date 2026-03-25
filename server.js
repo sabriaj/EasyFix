@@ -7,7 +7,7 @@ import crypto from "crypto";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { Resend } from "resend";
-
+import bcrypt from "bcrypt";
 dotenv.config();
 
 const app = express();
@@ -292,162 +292,6 @@ const trialUsageSchema = new mongoose.Schema(
   { timestamps: true }
 );
 const TrialUsage = mongoose.model("TrialUsage", trialUsageSchema);
-
-/* ================= USERS ================= */
-const userSchema = new mongoose.Schema(
-{
-  name: String,
-  surname: String,   // 🔥 SHTO
-  address: String,   // 🔥 SHTO
-
-  email: { type: String, unique: true, required: true },
-  password_hash: String,
-
-  credits: { type: Number, default: 0 },
-
-  email_verified: { type: Boolean, default: false },
-  email_otp_hash: String,
-  email_otp_expires: Date,
-
-}, { timestamps: true });
-
-const User = mongoose.model("User", userSchema);
-
-/* ================= USER SINGUP ================= */
-import bcrypt from "bcrypt";
-const SALT = 10;
-app.post("/user/signup", async (req, res) => {
-  try {
-    let { name, surname, address, email, password } = req.body;
-
-    email = normalizeEmail(email);
-
-    if (!name || !surname || !address || !email || !password) {
-      return sendError(res, 400, "PLOTESO_TEDHENAT");
-    }
-
-    if (password.length < 6) {
-      return sendError(res, 400, "PASSWORD_SHKURT");
-    }
-
-    const exists = await User.findOne({ email });
-    if (exists) {
-      return sendError(res, 409, "EMAIL_EKZISTON");
-    }
-
-    const hash = await bcrypt.hash(password, SALT);
-
-    const user = await User.create({
-      name,
-      surname,
-      address,
-      email,
-      password_hash: hash,
-      credits: 3
-    });
-
-    return res.json({
-      success: true,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        credits: user.credits
-      }
-    });
-
-  } catch (err) {
-    console.error(err);
-    return sendError(res, 500, "SERVER_ERROR");
-  }
-});
-/* ================== USER LOGIN ======================= */
-
-app.post("/user/login", async (req, res) => {
-  try {
-    let { email, password } = req.body;
-
-    email = normalizeEmail(email);
-
-    const user = await User.findOne({ email });
-    if (!user) return sendError(res, 400, "INVALID_CREDENTIALS");
-
-    const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) return sendError(res, 400, "INVALID_CREDENTIALS");
-
-    return res.json({
-      success: true,
-      user: {
-        id: user._id,
-        email: user.email,
-        credits: user.credits
-      }
-    });
-
-  } catch (err) {
-    errorWithTime("USER LOGIN ERROR:", err);
-    return sendError(res, 500, "SERVER_ERROR");
-  }
-});
-
-
-
-/*====================== BUY CREDITS ======================= */
-app.post("/credits/buy", async (req, res) => {
-  try {
-    const { userId, amount } = req.body;
-
-    const user = await User.findById(userId);
-    if (!user) return sendError(res, 404, "USER_NOT_FOUND");
-
-    // fake payment (për tani)
-    user.credits += amount;
-
-    await user.save();
-
-    return res.json({
-      success: true,
-      credits: user.credits
-    });
-
-  } catch (err) {
-    return sendError(res, 500, "SERVER_ERROR");
-  }
-});
-
- // ====================== CONTACT SYSTEM =======================//
-app.post("/contact", async (req, res) => {
-  try {
-    const { userId, firmEmail } = req.body;
-
-    if (!userId || !firmEmail) {
-      return sendError(res, 400, "MISSING_FIELDS");
-    }
-
-    const user = await User.findById(userId);
-    if (!user) return sendError(res, 404, "USER_NOT_FOUND");
-
-    if (user.credits <= 0) {
-      return sendError(res, 402, "NO_CREDITS");
-    }
-
-    const firm = await Firma.findOne({ email: firmEmail });
-    if (!firm) return sendError(res, 404, "FIRM_NOT_FOUND");
-
-    user.credits -= 1;
-    await user.save();
-
-    return res.json({
-      success: true,
-      phone: firm.phone,
-      credits: user.credits
-    });
-
-  } catch (err) {
-    return sendError(res, 500, "SERVER_ERROR");
-  }
-});
-
 
 /* ================= PLAN RULES ================= */
 const planPhotoLimit = { basic: 0, standard: 3, premium: 8 };
@@ -915,6 +759,163 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 /* ================= JSON (AFTER WEBHOOK) ================= */
 app.use(express.json());
 
+
+
+
+/* ================= USERS ================= */
+const userSchema = new mongoose.Schema(
+{
+  name: String,
+  surname: String,   // 🔥 SHTO
+  address: String,   // 🔥 SHTO
+
+  email: { type: String, unique: true, required: true },
+  password_hash: String,
+
+  credits: { type: Number, default: 0 },
+
+  email_verified: { type: Boolean, default: false },
+  email_otp_hash: String,
+  email_otp_expires: Date,
+
+}, { timestamps: true });
+
+const User = mongoose.model("User", userSchema);
+
+/* ================= USER SINGUP ================= */
+
+const SALT = 10;
+app.post("/user/signup", async (req, res) => {
+  try {
+    let { name, surname, address, email, password } = req.body;
+
+    email = normalizeEmail(email);
+
+    if (!name || !surname || !address || !email || !password) {
+      return sendError(res, 400, "PLOTESO_TEDHENAT");
+    }
+
+    if (password.length < 6) {
+      return sendError(res, 400, "PASSWORD_SHKURT");
+    }
+
+    const exists = await User.findOne({ email });
+    if (exists) {
+      return sendError(res, 409, "EMAIL_EKZISTON");
+    }
+
+    const hash = await bcrypt.hash(password, SALT);
+
+    const user = await User.create({
+      name,
+      surname,
+      address,
+      email,
+      password_hash: hash,
+      credits: 3
+    });
+
+    return res.json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        credits: user.credits
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+/* ================== USER LOGIN ======================= */
+
+app.post("/user/login", async (req, res) => {
+  try {
+    let { email, password } = req.body;
+
+    email = normalizeEmail(email);
+
+    const user = await User.findOne({ email });
+    if (!user) return sendError(res, 400, "INVALID_CREDENTIALS");
+
+    const ok = await bcrypt.compare(password, user.password_hash);
+    if (!ok) return sendError(res, 400, "INVALID_CREDENTIALS");
+
+    return res.json({
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        credits: user.credits
+      }
+    });
+
+  } catch (err) {
+    errorWithTime("USER LOGIN ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+
+
+/*====================== BUY CREDITS ======================= */
+app.post("/credits/buy", async (req, res) => {
+  try {
+    const { userId, amount } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) return sendError(res, 404, "USER_NOT_FOUND");
+
+    // fake payment (për tani)
+    user.credits += amount;
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      credits: user.credits
+    });
+
+  } catch (err) {
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+ // ====================== CONTACT SYSTEM =======================//
+app.post("/contact", async (req, res) => {
+  try {
+    const { userId, firmEmail } = req.body;
+
+    if (!userId || !firmEmail) {
+      return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return sendError(res, 404, "USER_NOT_FOUND");
+
+    if (user.credits <= 0) {
+      return sendError(res, 402, "NO_CREDITS");
+    }
+
+    const firm = await Firma.findOne({ email: firmEmail });
+    if (!firm) return sendError(res, 404, "FIRM_NOT_FOUND");
+
+    user.credits -= 1;
+    await user.save();
+
+    return res.json({
+      success: true,
+      phone: firm.phone,
+      credits: user.credits
+    });
+
+  } catch (err) {
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
 
 /* ================= OWNER MANAGE ================= */
 

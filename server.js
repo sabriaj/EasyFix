@@ -333,10 +333,9 @@ app.post("/user/signup", async (req, res) => {
     const user = await User.create({
       email,
       password_hash: hash,
-      credits: 1
+      credits: 3 // ✅ FIX (jo 1)
     });
 
-    // 🔥 KJO ESHTE FIXI
     return res.json({
       success: true,
       user: {
@@ -347,7 +346,7 @@ app.post("/user/signup", async (req, res) => {
     });
 
   } catch (err) {
-    errorWithTime("USER SIGNUP ERROR:", err);
+    console.error(err);
     return sendError(res, 500, "SERVER_ERROR");
   }
 });

@@ -17,6 +17,11 @@ async function login() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
+  if (!email || !password) {
+    alert("Plotëso fushat");
+    return;
+  }
+
   const res = await fetch(`${API_URL}/user/login`, {
     method: "POST",
     headers: {"Content-Type":"application/json"},
@@ -26,7 +31,7 @@ async function login() {
   const data = await res.json();
 
   if (!res.ok) {
-    alert("Gabim login");
+    alert(data.error || "Gabim login");
     return;
   }
 
@@ -42,6 +47,11 @@ async function signup() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
+  if (!email || !password) {
+    alert("Plotëso fushat");
+    return;
+  }
+
   const res = await fetch(`${API_URL}/user/signup`, {
     method: "POST",
     headers: {"Content-Type":"application/json"},
@@ -51,17 +61,18 @@ async function signup() {
   const data = await res.json();
 
   if (!res.ok) {
-    alert("Gabim signup");
+    alert(data.error || "Gabim signup"); // ✅ FIX
+    console.log(data);
     return;
   }
 
-  // 🔥 AUTO LOGIN
+  // ✅ AUTO LOGIN
   localStorage.setItem("easyfix_user", JSON.stringify({
     id: data.user.id,
     email: data.user.email
   }));
 
-  alert("U krijua account dhe u kyçe automatikisht");
+  alert("Account u krijua dhe u kyçe");
 
   window.location.href = "/";
 }

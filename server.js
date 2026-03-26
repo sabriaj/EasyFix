@@ -997,6 +997,58 @@ app.get("/user/me/:id", async (req, res) => {
 });
 
 
+/* ================= UPDATE USER PROFILE ================= */
+app.put("/user/me/:id", async (req, res) => {
+  try {
+    const userId = String(req.params.id || "").trim();
+    let { name, surname, address } = req.body || {};
+
+    name = String(name || "").trim();
+    surname = String(surname || "").trim();
+    address = String(address || "").trim();
+
+    if (!userId) {
+      return sendError(res, 400, "MISSING_USER_ID");
+    }
+
+    if (!name || !surname || !address) {
+      return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          name,
+          surname,
+          address
+        }
+      },
+      { new: true }
+    ).lean();
+
+    if (!updatedUser) {
+      return sendError(res, 404, "USER_NOT_FOUND");
+    }
+
+    return res.json({
+      success: true,
+      user: {
+        id: String(updatedUser._id),
+        name: updatedUser.name,
+        surname: updatedUser.surname,
+        address: updatedUser.address,
+        email: updatedUser.email,
+        credits: updatedUser.credits
+      }
+    });
+  } catch (err) {
+    errorWithTime("USER UPDATE ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+
 /* ================= BUY CREDITS ================= */
 app.post("/credits/buy", async (req, res) => {
   try {

@@ -5,75 +5,71 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Account - EasyFix</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
 </head>
 <body class="bg-gray-100 min-h-screen">
 
-  <header class="bg-white border-b border-gray-200 shadow-sm">
-    <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-      <a href="/" class="text-2xl font-black text-blue-600">EasyFix</a>
-      <a href="/" class="text-sm font-bold text-gray-700 hover:text-blue-600">Kthehu te faqja kryesore</a>
-    </div>
-  </header>
-
-  <main class="max-w-4xl mx-auto p-4 md:p-8">
-    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-      
-      <div class="bg-blue-600 text-white p-6 md:p-8">
-        <h1 class="text-3xl font-extrabold">Account</h1>
-        <p class="text-blue-100 mt-1">Menaxho profilin dhe kreditet tua</p>
+  <div class="max-w-2xl mx-auto p-6">
+    <div class="bg-white rounded-2xl shadow-xl p-8 mt-10">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-3xl font-extrabold text-gray-900">Llogaria ime</h1>
+        <a href="/" class="text-blue-600 font-bold hover:underline">← Kthehu</a>
       </div>
 
-      <div class="p-6 md:p-8">
-        <div id="loadingBox" class="text-gray-500 font-medium">
-          Duke i ngarkuar të dhënat...
+      <div id="loadingBox" class="text-gray-500 text-sm mb-4">
+        Duke ngarkuar të dhënat...
+      </div>
+
+      <div id="accountBox" class="hidden space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Emri</label>
+            <input id="name" type="text" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Mbiemri</label>
+            <input id="surname" type="text" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+            <input id="email" type="text" disabled class="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-gray-500">
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Adresa</label>
+            <input id="address" type="text" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+
+          <div class="md:col-span-2 bg-blue-50 rounded-xl p-4 border border-blue-200">
+            <div class="text-xs text-blue-600 mb-1">Kreditë aktuale</div>
+            <div id="credits" class="text-3xl font-extrabold text-blue-700">0</div>
+          </div>
         </div>
 
-        <div id="errorBox" class="hidden bg-red-50 text-red-700 border border-red-200 rounded-xl p-4 font-semibold"></div>
+        <p id="status" class="text-sm font-semibold"></p>
 
-        <div id="accountBox" class="hidden">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <div class="rounded-xl border border-gray-200 p-4">
-              <div class="text-xs uppercase tracking-wide text-gray-400 font-bold mb-1">Emri</div>
-              <div id="userName" class="text-lg font-bold text-gray-900">-</div>
-            </div>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button id="saveBtn"
+            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold">
+            Ruaj ndryshimet
+          </button>
 
-            <div class="rounded-xl border border-gray-200 p-4">
-              <div class="text-xs uppercase tracking-wide text-gray-400 font-bold mb-1">Mbiemri</div>
-              <div id="userSurname" class="text-lg font-bold text-gray-900">-</div>
-            </div>
+          <a href="/buy-credits.html"
+             class="flex-1 bg-green-600 hover:bg-green-700 text-white text-center py-3 rounded-xl font-bold">
+            Blej kredi
+          </a>
 
-            <div class="rounded-xl border border-gray-200 p-4">
-              <div class="text-xs uppercase tracking-wide text-gray-400 font-bold mb-1">Email</div>
-              <div id="userEmail" class="text-lg font-bold text-gray-900 break-all">-</div>
-            </div>
-
-            <div class="rounded-xl border border-gray-200 p-4">
-              <div class="text-xs uppercase tracking-wide text-gray-400 font-bold mb-1">Adresa</div>
-              <div id="userAddress" class="text-lg font-bold text-gray-900">-</div>
-            </div>
-          </div>
-
-          <div class="rounded-2xl bg-blue-50 border border-blue-200 p-6 mb-8 text-center">
-            <div class="text-sm uppercase tracking-wide text-blue-500 font-bold mb-2">Kreditë tua</div>
-            <div id="userCredits" class="text-4xl font-black text-blue-700">0</div>
-          </div>
-
-          <div class="flex flex-col sm:flex-row gap-3">
-            <a href="/buy-credits.html"
-              class="flex-1 text-center bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold">
-              Blej Kredi
-            </a>
-
-            <button id="logoutBtn"
-              class="flex-1 bg-gray-900 hover:bg-black text-white py-3 rounded-xl font-bold">
-              Logout
-            </button>
-          </div>
+          <button id="logoutBtn"
+            class="flex-1 bg-gray-900 hover:bg-black text-white py-3 rounded-xl font-bold">
+            Logout
+          </button>
         </div>
       </div>
+
+      <div id="errorBox" class="hidden text-red-600 text-sm font-semibold mt-4"></div>
     </div>
-  </main>
+  </div>
 
 <script>
 const API_URL = "https://easyfix-dev-1.onrender.com";
@@ -82,31 +78,39 @@ function getUser() {
   return JSON.parse(localStorage.getItem("easyfix_user"));
 }
 
-function showError(message) {
-  document.getElementById("loadingBox").classList.add("hidden");
-  const errorBox = document.getElementById("errorBox");
-  errorBox.classList.remove("hidden");
-  errorBox.textContent = message;
+function setUser(user) {
+  localStorage.setItem("easyfix_user", JSON.stringify(user));
 }
 
-function fillUserUI(user) {
-  document.getElementById("userName").innerText = user.name || "-";
-  document.getElementById("userSurname").innerText = user.surname || "-";
-  document.getElementById("userEmail").innerText = user.email || "-";
-  document.getElementById("userAddress").innerText = user.address || "-";
-  document.getElementById("userCredits").innerText = user.credits ?? 0;
+function showError(msg) {
+  const errorBox = document.getElementById("errorBox");
+  const loadingBox = document.getElementById("loadingBox");
+  const accountBox = document.getElementById("accountBox");
+
+  loadingBox.classList.add("hidden");
+  accountBox.classList.add("hidden");
+  errorBox.classList.remove("hidden");
+  errorBox.innerText = msg;
+}
+
+function showStatus(msg, isError = false) {
+  const el = document.getElementById("status");
+  el.innerText = msg;
+  el.className = isError
+    ? "text-sm font-semibold text-red-600"
+    : "text-sm font-semibold text-green-600";
 }
 
 async function loadAccount() {
-  const savedUser = getUser();
+  const user = getUser();
 
-  if (!savedUser || !savedUser.id) {
+  if (!user || !user.id) {
     window.location.href = "/auth.html";
     return;
   }
 
   try {
-    const res = await fetch(`${API_URL}/user/me/${savedUser.id}`);
+    const res = await fetch(`${API_URL}/user/me/${user.id}`);
     const data = await res.json();
 
     if (!res.ok || !data.success) {
@@ -115,25 +119,79 @@ async function loadAccount() {
       return;
     }
 
-    localStorage.setItem("easyfix_user", JSON.stringify({
+    document.getElementById("name").value = data.user.name || "";
+    document.getElementById("surname").value = data.user.surname || "";
+    document.getElementById("email").value = data.user.email || "";
+    document.getElementById("address").value = data.user.address || "";
+    document.getElementById("credits").innerText = data.user.credits ?? 0;
+
+    setUser({
       id: data.user.id,
-      name: data.user.name,
-      surname: data.user.surname,
-      address: data.user.address,
       email: data.user.email,
       credits: data.user.credits
-    }));
+    });
 
     document.getElementById("loadingBox").classList.add("hidden");
     document.getElementById("accountBox").classList.remove("hidden");
-
-    fillUserUI(data.user);
-
   } catch (err) {
     console.error(err);
-    showError("Gabim gjatë ngarkimit të account-it.");
+    showError("Gabim gjatë ngarkimit të llogarisë.");
   }
 }
+
+async function saveProfile() {
+  const user = getUser();
+
+  if (!user || !user.id) {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  const name = document.getElementById("name").value.trim();
+  const surname = document.getElementById("surname").value.trim();
+  const address = document.getElementById("address").value.trim();
+
+  if (!name || !surname || !address) {
+    showStatus("Plotëso të gjitha fushat.", true);
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/user/me/${user.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        name,
+        surname,
+        address
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      showStatus(data.error_code || "Gabim gjatë ruajtjes.", true);
+      return;
+    }
+
+    setUser({
+      id: data.user.id,
+      email: data.user.email,
+      credits: data.user.credits
+    });
+
+    document.getElementById("credits").innerText = data.user.credits ?? 0;
+
+    showStatus("Të dhënat u ruajtën me sukses.");
+  } catch (err) {
+    console.error(err);
+    showStatus("Gabim serveri.", true);
+  }
+}
+
+document.getElementById("saveBtn").addEventListener("click", saveProfile);
 
 document.getElementById("logoutBtn").addEventListener("click", () => {
   localStorage.removeItem("easyfix_user");

@@ -36,7 +36,7 @@ app.options(/.*/, cors(corsOptions));
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
 const RESEND_FROM = String(process.env.RESEND_FROM || "").trim();
 const RESEND_REPLY_TO = String(process.env.RESEND_REPLY_TO || "").trim();
-const FRONTEND_BASE_URL = String(process.env.FRONTEND_BASE_URL || "https://easyfix.services").replace(/\/+$/, "");
+const FRONTEND_BASE_URL = String(process.env.FRONTEND_BASE_URL || "http://localhost:3000").replace(/\/+$/, "");
 
 const resend = (RESEND_API_KEY && RESEND_FROM) ? new Resend(RESEND_API_KEY) : null;
 
@@ -65,9 +65,16 @@ const VARIANT_BASIC = String(process.env.VARIANT_BASIC || "");
 const VARIANT_STANDARD = String(process.env.VARIANT_STANDARD || "");
 const VARIANT_PREMIUM = String(process.env.VARIANT_PREMIUM || "");
 
+/*===============variantat per credit ============== */
+const VARIANT_CREDITS_1 = String(process.env.VARIANT_CREDITS_1 || "");
+const VARIANT_CREDITS_5 = String(process.env.VARIANT_CREDITS_5 || "");
+const VARIANT_CREDITS_10 = String(process.env.VARIANT_CREDITS_10 || "");
+
+
+
 const FRONTEND_SUCCESS_URL =
   process.env.FRONTEND_SUCCESS_URL ||
-  "https://easyfix.services/success.html";
+  "http://localhost:3000/success.html";
 
 const DELETE_AFTER_DAYS = Number(process.env.DELETE_AFTER_DAYS || 180);
 const CHECK_INTERVAL_MINUTES = Number(process.env.CHECK_INTERVAL_MINUTES || 60);
@@ -358,6 +365,27 @@ function planToVariant(plan) {
   if (plan === "premium") return VARIANT_PREMIUM;
   if (plan === "standard") return VARIANT_STANDARD;
   return VARIANT_BASIC;
+}
+
+/* ================= helper per credit page ================= */
+function creditsPackToVariant(pack) {
+  const p = Number(pack);
+
+  if (p === 1) return VARIANT_CREDITS_1;
+  if (p === 5) return VARIANT_CREDITS_5;
+  if (p === 10) return VARIANT_CREDITS_10;
+
+  return null;
+}
+
+function variantToCredits(variantId) {
+  const v = String(variantId || "");
+
+  if (v === VARIANT_CREDITS_1) return 1;
+  if (v === VARIANT_CREDITS_5) return 5;
+  if (v === VARIANT_CREDITS_10) return 10;
+
+  return 0;
 }
 
 /* ================= ADMIN AUTH ================= */
@@ -711,11 +739,58 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
     const firmId = firmIdRaw ? String(firmIdRaw) : null;
     const detectedPlan = detectPlanFromVariant(variantId);
 
-    log("🔔 Webhook", { event, email, variantId, detectedPlan, firmId });
+    // credits data
+    const userIdRaw =
+      payload?.meta?.custom_data?.userId ||
+      payload?.data?.attributes?.checkout_data?.custom?.userId ||
+      null;
 
-    if (!email && !firmId) return res.status(200).send("No identifier");
+    const creditPackRaw =
+      payload?.meta?.custom_data?.creditPack ||
+      payload?.data?.attributes?.checkout_data?.custom?.creditPack ||
+      null;
+
+    const userId = userIdRaw ? String(userIdRaw) : null;
+    const creditPack = Number(creditPackRaw || 0);
+    const creditAmountFromVariant = variantToCredits(variantId);
+    const finalCreditsToAdd = creditAmountFromVariant || creditPack;
+
+    log("🔔 Webhook", {
+      event,
+      email,
+      variantId,
+      detectedPlan,
+      firmId,
+      userId,
+      finalCreditsToAdd
+    });
 
     if (event === "order_paid" || event === "subscription_payment_success") {
+      // credits payment
+      if (userId && finalCreditsToAdd > 0) {
+        const updatedUser = await User.findByIdAndUpdate(
+          userId,
+          { $inc: { credits: finalCreditsToAdd } },
+          { new: true }
+        );
+
+        if (!updatedUser) {
+          log("⚠️ Credits webhook but user not found", { userId, finalCreditsToAdd });
+        } else {
+          log("✅ Credits added:", {
+            userId: updatedUser._id,
+            email: updatedUser.email,
+            added: finalCreditsToAdd,
+            total: updatedUser.credits
+          });
+        }
+
+        return res.status(200).send("OK");
+      }
+
+      // firm payment
+      if (!email && !firmId) return res.status(200).send("No identifier");
+
       const update = {
         payment_status: "paid",
         paid_at: new Date(),
@@ -725,6 +800,7 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
         paid_reminder_1d_sent_at: null,
         paid_expired_email_sent_at: null,
       };
+
       if (detectedPlan) update.plan = detectedPlan;
 
       let updated = null;
@@ -756,40 +832,42 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
   }
 });
 
+
 /* ================= JSON (AFTER WEBHOOK) ================= */
 app.use(express.json());
 
 
 
-
 /* ================= USERS ================= */
 const userSchema = new mongoose.Schema(
-{
-  name: String,
-  surname: String,   // 🔥 SHTO
-  address: String,   // 🔥 SHTO
-
-  email: { type: String, unique: true, required: true },
-  password_hash: String,
-
-  credits: { type: Number, default: 0 },
-
-  email_verified: { type: Boolean, default: false },
-  email_otp_hash: String,
-  email_otp_expires: Date,
-
-}, { timestamps: true });
+  {
+    name: String,
+    surname: String,
+    address: String,
+    email: { type: String, unique: true, required: true },
+    password_hash: String,
+    credits: { type: Number, default: 0 },
+    email_verified: { type: Boolean, default: false },
+    email_otp_hash: String,
+    email_otp_expires: Date,
+  },
+  { timestamps: true }
+);
 
 const User = mongoose.model("User", userSchema);
 
-/* ================= USER SINGUP ================= */
-
 const SALT = 10;
+
+/* ================= USER SIGNUP ================= */
 app.post("/user/signup", async (req, res) => {
   try {
     let { name, surname, address, email, password } = req.body;
 
     email = normalizeEmail(email);
+    name = String(name || "").trim();
+    surname = String(surname || "").trim();
+    address = String(address || "").trim();
+    password = String(password || "");
 
     if (!name || !surname || !address || !email || !password) {
       return sendError(res, 400, "PLOTESO_TEDHENAT");
@@ -799,7 +877,7 @@ app.post("/user/signup", async (req, res) => {
       return sendError(res, 400, "PASSWORD_SHKURT");
     }
 
-    const exists = await User.findOne({ email });
+    const exists = await User.findOne({ email }).lean();
     if (exists) {
       return sendError(res, 409, "EMAIL_EKZISTON");
     }
@@ -812,79 +890,164 @@ app.post("/user/signup", async (req, res) => {
       address,
       email,
       password_hash: hash,
-      credits: 3
+      credits: 3,
     });
 
     return res.json({
       success: true,
       user: {
-        id: user._id,
+        id: String(user._id),
         name: user.name,
+        surname: user.surname,
+        address: user.address,
         email: user.email,
-        credits: user.credits
-      }
+        credits: user.credits,
+      },
     });
-
   } catch (err) {
-    console.error(err);
+    errorWithTime("USER SIGNUP ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }
 });
-/* ================== USER LOGIN ======================= */
 
+/* ================= USER LOGIN ================= */
 app.post("/user/login", async (req, res) => {
   try {
     let { email, password } = req.body;
 
     email = normalizeEmail(email);
+    password = String(password || "");
+
+    if (!email || !password) {
+      return sendError(res, 400, "MISSING_FIELDS");
+    }
 
     const user = await User.findOne({ email });
     if (!user) return sendError(res, 400, "INVALID_CREDENTIALS");
 
-    const ok = await bcrypt.compare(password, user.password_hash);
+    const ok = await bcrypt.compare(password, user.password_hash || "");
     if (!ok) return sendError(res, 400, "INVALID_CREDENTIALS");
 
     return res.json({
       success: true,
       user: {
-        id: user._id,
+        id: String(user._id),
+        name: user.name,
+        surname: user.surname,
+        address: user.address,
         email: user.email,
-        credits: user.credits
-      }
+        credits: user.credits,
+      },
     });
-
   } catch (err) {
     errorWithTime("USER LOGIN ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }
 });
 
-
-
-/*====================== BUY CREDITS ======================= */
-app.post("/credits/buy", async (req, res) => {
+/* ================= user/me/id ================= */
+app.get("/user/me/:id", async (req, res) => {
   try {
-    const { userId, amount } = req.body;
+    const user = await User.findById(req.params.id).lean();
 
-    const user = await User.findById(userId);
-    if (!user) return sendError(res, 404, "USER_NOT_FOUND");
-
-    // fake payment (për tani)
-    user.credits += amount;
-
-    await user.save();
+    if (!user) {
+      return sendError(res, 404, "USER_NOT_FOUND");
+    }
 
     return res.json({
       success: true,
-      credits: user.credits
+      user: {
+        id: String(user._id),
+        name: user.name,
+        surname: user.surname,
+        address: user.address,
+        email: user.email,
+        credits: user.credits,
+      },
     });
-
   } catch (err) {
+    errorWithTime("USER ME ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }
 });
 
- // ====================== CONTACT SYSTEM =======================//
+
+/* ================= BUY CREDITS ================= */
+app.post("/credits/buy", async (req, res) => {
+  try {
+    const { userId, pack } = req.body;
+
+    if (!userId || !pack) {
+      return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return sendError(res, 404, "USER_NOT_FOUND");
+    }
+
+    const variantId = creditsPackToVariant(pack);
+    if (!variantId) {
+      return sendError(res, 400, "INVALID_CREDIT_PACK");
+    }
+
+    const redirectUrl = `${FRONTEND_BASE_URL}/buy-credits.html?success=1`;
+
+    const payload = {
+      data: {
+        type: "checkouts",
+        attributes: {
+          product_options: {
+            redirect_url: redirectUrl,
+          },
+          checkout_data: {
+            email: user.email,
+            custom: {
+              userId: String(user._id),
+              creditPack: String(pack),
+            },
+          },
+        },
+        relationships: {
+          store: { data: { type: "stores", id: String(LEMON_STORE_ID) } },
+          variant: { data: { type: "variants", id: String(variantId) } },
+        },
+      },
+    };
+
+    const resp = await fetch("https://api.lemonsqueezy.com/v1/checkouts", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LEMON_API_KEY}`,
+        Accept: "application/vnd.api+json",
+        "Content-Type": "application/vnd.api+json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const json = await resp.json().catch(() => ({}));
+
+    if (!resp.ok) {
+      errorWithTime("CREDITS CHECKOUT ERROR:", json);
+      return sendError(res, 500, "CHECKOUT_CREATE_FAILED");
+    }
+
+    const checkoutUrl = json?.data?.attributes?.url;
+    if (!checkoutUrl) {
+      return sendError(res, 500, "CHECKOUT_URL_MISSING");
+    }
+
+    return res.json({
+      success: true,
+      checkoutUrl,
+    });
+  } catch (err) {
+    errorWithTime("BUY CREDITS ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+/* ================= CONTACT SYSTEM ================= */
 app.post("/contact", async (req, res) => {
   try {
     const { userId, firmEmail } = req.body;
@@ -900,7 +1063,7 @@ app.post("/contact", async (req, res) => {
       return sendError(res, 402, "NO_CREDITS");
     }
 
-    const firm = await Firma.findOne({ email: firmEmail });
+    const firm = await Firma.findOne({ email: normalizeEmail(firmEmail) });
     if (!firm) return sendError(res, 404, "FIRM_NOT_FOUND");
 
     user.credits -= 1;
@@ -909,10 +1072,10 @@ app.post("/contact", async (req, res) => {
     return res.json({
       success: true,
       phone: firm.phone,
-      credits: user.credits
+      credits: user.credits,
     });
-
   } catch (err) {
+    errorWithTime("CONTACT ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }
 });

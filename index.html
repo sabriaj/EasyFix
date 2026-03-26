@@ -8,15 +8,12 @@
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
     gtag('config', 'G-CWDYCJ09D8');
-    
   </script>
-
-  
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>EasyFix - Gjej Profesionistë</title>
-  
+
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -43,22 +40,33 @@
     .snap-x { scroll-snap-type: x mandatory; }
     .snap-center { scroll-snap-align: center; }
     .custom-select {
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-        background-position: right 0.5rem center;
-        background-repeat: no-repeat;
-        background-size: 1.5em 1.5em;
-        padding-right: 2.5rem;
-        -webkit-appearance: none;
-        appearance: none;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+      background-position: right 0.5rem center;
+      background-repeat: no-repeat;
+      background-size: 1.5em 1.5em;
+      padding-right: 2.5rem;
+      -webkit-appearance: none;
+      appearance: none;
     }
-    .badge-premium { 
-      background: linear-gradient(90deg, #F59E0B, #D97706); color: white; padding: 3px 8px; border-radius: 6px; 
-      font-size: 0.7rem; font-weight: 800; text-transform: uppercase; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+    .badge-premium {
+      background: linear-gradient(90deg, #F59E0B, #D97706);
+      color: white;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
     }
-    .badge-standard { 
-      background: #EFF6FF; color: #2563eb; border: 1px solid #BFDBFE; padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;
+    .badge-standard {
+      background: #EFF6FF;
+      color: #2563eb;
+      border: 1px solid #BFDBFE;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
     }
-    /* Active Button State */
     .cat-btn.active div { background-color: #2563eb !important; border-color: #2563eb !important; }
     .cat-btn.active i { color: white !important; }
     .cat-btn.active span { color: #2563eb !important; font-weight: 700; }
@@ -75,25 +83,28 @@
           <span class="text-2xl font-black text-brand-600 tracking-tighter">EasyFix</span>
           <span id="countryPill" class="hidden text-[9px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border">MK</span>
         </div>
-        <div class="flex items-center gap-3">
-            <span id="creditBox" class="text-xs font-bold text-gray-600"></span>
-          <div class="relative">
 
-            <button id="loginBtn"
-class="bg-white border border-gray-200 px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-50">
-Login
-</button>
+        <div class="flex items-center gap-3">
+          <span id="creditBox" class="text-xs font-bold text-gray-600"></span>
+
+          <button id="loginBtn"
+            class="bg-white border border-gray-200 px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-50">
+            Login
+          </button>
+
+          <div class="relative">
             <button id="langBtn" class="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-full border border-gray-200 transition-all">
-               <img id="langFlagImg" class="w-5 h-5 rounded-full object-cover shadow-sm">
-               <span id="langLabel" class="text-xs font-bold text-gray-700 hidden sm:inline">SQ</span>
-               <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+              <img id="langFlagImg" class="w-5 h-5 rounded-full object-cover shadow-sm">
+              <span id="langLabel" class="text-xs font-bold text-gray-700 hidden sm:inline">SQ</span>
+              <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
             </button>
             <div id="langMenu" class="hidden absolute right-0 top-full mt-2 w-40 bg-white border border-gray-100 shadow-xl rounded-xl p-1 z-50">
-               <button onclick="changeLang('sq')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/al.png" class="w-4"> Shqip</button>
-               <button onclick="changeLang('mk')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/mk.png" class="w-4"> MKD</button>
-               <button onclick="changeLang('en')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/gb.png" class="w-4"> English</button>
+              <button onclick="changeLang('sq')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/al.png" class="w-4"> Shqip</button>
+              <button onclick="changeLang('mk')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/mk.png" class="w-4"> MKD</button>
+              <button onclick="changeLang('en')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/gb.png" class="w-4"> English</button>
             </div>
           </div>
+
           <a href="register.html" class="hidden md:inline-flex bg-gray-900 hover:bg-black text-white px-5 py-2 rounded-full text-sm font-bold shadow-lg transition-all" data-i18n="nav_register">
             Regjistrohu
           </a>
@@ -110,29 +121,26 @@ Login
         <h1 class="text-3xl md:text-4xl font-extrabold text-center text-white mb-2 tracking-tight" data-i18n="hero">Gjej Mjeshtër</h1>
         <p class="text-blue-100 text-center text-sm md:text-base mb-8 font-medium" data-i18n="hero_sub">Zgjidhje të shpejta për shtëpinë tuaj.</p>
 
-        <!-- Search Bar -->
         <div class="bg-white p-2 rounded-2xl shadow-xl max-w-2xl mx-auto flex flex-col md:flex-row items-center gap-2 transform translate-y-2">
-           <div class="flex items-center w-full gap-2">
-               <div class="bg-gray-50 w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 shrink-0 ml-1"><i class="fas fa-search"></i></div>
-               <input id="searchInput" type="text" data-i18n-placeholder="search_placeholder" placeholder="Kërko (psh. Hidraulik...)" 
-                 class="w-full bg-transparent text-gray-800 text-sm font-semibold placeholder-gray-400 focus:outline-none h-10">
-           </div>
-           <div class="flex items-center w-full md:w-auto gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-2 md:pt-0 md:pl-2">
-               <!-- Dynamic Dropdown (Filled by JS) -->
-               <select id="headerCatSelect" class="custom-select bg-gray-50 text-gray-700 text-sm font-bold rounded-xl px-4 py-2.5 w-full md:w-48 outline-none border border-transparent focus:border-brand-300 transition-all cursor-pointer">
-                   <option value="all" data-i18n="all_categories">Të gjitha</option>
-               </select>
+          <div class="flex items-center w-full gap-2">
+            <div class="bg-gray-50 w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 shrink-0 ml-1"><i class="fas fa-search"></i></div>
+            <input id="searchInput" type="text" data-i18n-placeholder="search_placeholder" placeholder="Kërko (psh. Hidraulik...)"
+              class="w-full bg-transparent text-gray-800 text-sm font-semibold placeholder-gray-400 focus:outline-none h-10">
+          </div>
+          <div class="flex items-center w-full md:w-auto gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-2 md:pt-0 md:pl-2">
+            <select id="headerCatSelect" class="custom-select bg-gray-50 text-gray-700 text-sm font-bold rounded-xl px-4 py-2.5 w-full md:w-48 outline-none border border-transparent focus:border-brand-300 transition-all cursor-pointer">
+              <option value="all" data-i18n="all_categories">Të gjitha</option>
+            </select>
 
-               <button id="nearMeBtn" class="bg-brand-50 hover:bg-brand-100 text-brand-600 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1 border border-brand-200">
-                 <i class="fas fa-location-arrow"></i> <span data-i18n="near_me">Afër</span>
-               </button>
-           </div>
+            <button id="nearMeBtn" class="bg-brand-50 hover:bg-brand-100 text-brand-600 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1 border border-brand-200">
+              <i class="fas fa-location-arrow"></i> <span data-i18n="near_me">Afër</span>
+            </button>
+          </div>
         </div>
+
         <div id="nearMeStatus" class="text-[10px] text-center mt-4 text-blue-200 font-bold uppercase tracking-wider h-4"></div>
 
-        <!-- Dynamic Quick Buttons Container (Filled by JS) -->
         <div id="quickButtonsContainer" class="flex gap-4 mt-6 overflow-x-auto no-scrollbar justify-start md:justify-center px-4 py-2">
-          <!-- Buttons will be injected here automatically -->
         </div>
       </div>
     </section>
@@ -140,8 +148,8 @@ Login
     <!-- Results Section -->
     <section class="container mx-auto px-4 pb-4">
       <div id="loadingGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-         <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 h-64 animate-pulse"></div>
-         <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 h-64 animate-pulse"></div>
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 h-64 animate-pulse"></div>
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 h-64 animate-pulse"></div>
       </div>
       <div id="firmsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 hidden"></div>
       <div id="noResults" class="hidden text-center py-12 opacity-60">
@@ -153,21 +161,21 @@ Login
 
   <!-- Mobile Sticky Footer -->
   <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-3 px-6 flex justify-between items-center z-50 md:hidden shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
-      <div>
-         <div class="text-xs font-bold text-gray-400 uppercase tracking-wide" data-i18n="sticky_are_you_pro">Je Mjeshtër?</div>
-         <div class="text-sm font-bold text-gray-800" data-i18n="sticky_free_reg">Regjistrimi falas</div>
-      </div>
-      <a href="register.html" class="bg-brand-600 text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-lg shadow-brand-200 active:scale-95 transition-transform flex items-center gap-2">
-         <span data-i18n="sticky_btn">Regjistrohu</span> <i class="fas fa-arrow-right"></i>
-      </a>
+    <div>
+      <div class="text-xs font-bold text-gray-400 uppercase tracking-wide" data-i18n="sticky_are_you_pro">Je Mjeshtër?</div>
+      <div class="text-sm font-bold text-gray-800" data-i18n="sticky_free_reg">Regjistrimi falas</div>
+    </div>
+    <a href="register.html" class="bg-brand-600 text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-lg shadow-brand-200 active:scale-95 transition-transform flex items-center gap-2">
+      <span data-i18n="sticky_btn">Regjistrohu</span> <i class="fas fa-arrow-right"></i>
+    </a>
   </div>
 
   <footer class="bg-white border-t border-gray-100 py-8 text-center mt-auto hidden md:block">
     <div class="text-2xl font-black text-gray-200 mb-4 tracking-tighter">EasyFix</div>
     <div class="flex justify-center gap-6 text-xs font-bold text-gray-400">
-       <a href="contact.html" class="hover:text-brand-600" data-i18n="nav_contact">KONTAKT</a>
-       <a href="register.html" class="hover:text-brand-600" data-i18n="nav_register">REGJISTROHU</a>
-       <a href="privacy.html" class="hover:text-brand-600" data-i18n="nav_privacy">PRIVACY</a>
+      <a href="contact.html" class="hover:text-brand-600" data-i18n="nav_contact">KONTAKT</a>
+      <a href="register.html" class="hover:text-brand-600" data-i18n="nav_register">REGJISTROHU</a>
+      <a href="privacy.html" class="hover:text-brand-600" data-i18n="nav_privacy">PRIVACY</a>
     </div>
   </footer>
 
@@ -184,105 +192,109 @@ const { getLang, setLang, t, applyTranslations, normalizeCategoryKey, categoryLa
 const LANG_META = { sq: { flag: "al.png", label: "SQ" }, mk: { flag: "mk.png", label: "MK" }, en: { flag: "gb.png", label: "EN" } };
 
 function updateLangUI() {
-    const lang = getLang() || "sq";
-    document.getElementById("langLabel").innerText = LANG_META[lang].label;
-    document.getElementById("langFlagImg").src = `https://flagcdn.com/w40/${LANG_META[lang].flag}`;
+  const lang = getLang() || "sq";
+  document.getElementById("langLabel").innerText = LANG_META[lang].label;
+  document.getElementById("langFlagImg").src = `https://flagcdn.com/w40/${LANG_META[lang].flag}`;
 }
+
 const langBtn = document.getElementById("langBtn");
 const langMenu = document.getElementById("langMenu");
-langBtn.addEventListener("click", (e) => { e.stopPropagation(); langMenu.classList.toggle("hidden"); });
+
+langBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  langMenu.classList.toggle("hidden");
+});
+
 window.changeLang = (lang) => {
-    setLang(lang); 
-    applyTranslations(); 
-    updateLangUI(); 
-    langMenu.classList.add("hidden"); 
-    // Rifresko kategoritë dhe kërkimin kur ndërrohet gjuha
-    populateCategories(allFirms);
-    filterFirms();
+  setLang(lang);
+  applyTranslations();
+  updateLangUI();
+  langMenu.classList.add("hidden");
+  populateCategories(allFirms);
+  filterFirms();
 };
+
 document.addEventListener("click", () => langMenu.classList.add("hidden"));
 
 /* ================= ICON MAP ================= */
 const CATEGORY_STYLES = {
-    "plumber": { icon: "fa-faucet", color: "text-cyan-400" },
-    "electrician": { icon: "fa-bolt", color: "text-yellow-400" },
-    "painter": { icon: "fa-paint-roller", color: "text-pink-400" },
-    "cleaning": { icon: "fa-broom", color: "text-green-400" },
-    "handyman": { icon: "fa-tools", color: "text-gray-400" },
-    "mason": { icon: "fa-trowel", color: "text-orange-400" },
-    "gardener": { icon: "fa-leaf", color: "text-emerald-400" },
-    "ac": { icon: "fa-snowflake", color: "text-blue-400" },
-    "default": { icon: "fa-hammer", color: "text-brand-400" }
+  "plumber": { icon: "fa-faucet", color: "text-cyan-400" },
+  "electrician": { icon: "fa-bolt", color: "text-yellow-400" },
+  "painter": { icon: "fa-paint-roller", color: "text-pink-400" },
+  "cleaning": { icon: "fa-broom", color: "text-green-400" },
+  "handyman": { icon: "fa-tools", color: "text-gray-400" },
+  "mason": { icon: "fa-trowel", color: "text-orange-400" },
+  "gardener": { icon: "fa-leaf", color: "text-emerald-400" },
+  "ac": { icon: "fa-snowflake", color: "text-blue-400" },
+  "default": { icon: "fa-hammer", color: "text-brand-400" }
 };
 
 /* ================= DYNAMIC CATEGORY LOGIC ================= */
 const headerCatSelect = document.getElementById("headerCatSelect");
 const quickButtonsContainer = document.getElementById("quickButtonsContainer");
-let activeCategory = 'all';
+let activeCategory = "all";
 
 function populateCategories(firms) {
-    const catSet = new Set();
-    firms.forEach(f => (f._catKeys || []).forEach(k => catSet.add(k)));
-    const sortedCats = Array.from(catSet).sort((a,b) => categoryLabel(a).localeCompare(categoryLabel(b)));
+  const catSet = new Set();
+  firms.forEach(f => (f._catKeys || []).forEach(k => catSet.add(k)));
+  const sortedCats = Array.from(catSet).sort((a, b) => categoryLabel(a).localeCompare(categoryLabel(b)));
 
-    headerCatSelect.innerHTML = `<option value="all">${t("all_categories")}</option>`;
-    sortedCats.forEach(catKey => {
-        const opt = document.createElement("option");
-        opt.value = catKey;
-        opt.textContent = categoryLabel(catKey);
-        headerCatSelect.appendChild(opt);
-    });
-    headerCatSelect.value = activeCategory;
+  headerCatSelect.innerHTML = `<option value="all">${t("all_categories")}</option>`;
+  sortedCats.forEach(catKey => {
+    const opt = document.createElement("option");
+    opt.value = catKey;
+    opt.textContent = categoryLabel(catKey);
+    headerCatSelect.appendChild(opt);
+  });
+  headerCatSelect.value = activeCategory;
 
-    quickButtonsContainer.innerHTML = ""; 
-    
-    // Butoni All
-    const allBtn = document.createElement("button");
-    allBtn.className = `cat-btn flex flex-col items-center gap-2 min-w-[70px] group ${activeCategory === 'all' ? 'active' : ''}`;
-    allBtn.onclick = () => quickFilter('all');
-    allBtn.innerHTML = `
-        <div class="w-14 h-14 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm transition-all group-hover:scale-105">
-            <i class="fas fa-th-large text-white text-xl"></i>
-        </div>
-        <span class="text-[10px] font-semibold text-white/90">${t("all_categories")}</span>
+  quickButtonsContainer.innerHTML = "";
+
+  const allBtn = document.createElement("button");
+  allBtn.className = `cat-btn flex flex-col items-center gap-2 min-w-[70px] group ${activeCategory === "all" ? "active" : ""}`;
+  allBtn.onclick = () => quickFilter("all");
+  allBtn.innerHTML = `
+    <div class="w-14 h-14 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm transition-all group-hover:scale-105">
+      <i class="fas fa-th-large text-white text-xl"></i>
+    </div>
+    <span class="text-[10px] font-semibold text-white/90">${t("all_categories")}</span>
+  `;
+  quickButtonsContainer.appendChild(allBtn);
+
+  sortedCats.forEach(catKey => {
+    const style = CATEGORY_STYLES[catKey] || CATEGORY_STYLES["default"];
+    const btn = document.createElement("button");
+    btn.className = `cat-btn flex flex-col items-center gap-2 min-w-[70px] group ${activeCategory === catKey ? "active" : ""}`;
+    btn.id = `btn-${catKey}`;
+    btn.onclick = () => quickFilter(catKey);
+    btn.innerHTML = `
+      <div class="w-14 h-14 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm transition-all group-hover:scale-105">
+        <i class="fas ${style.icon} ${style.color} text-xl"></i>
+      </div>
+      <span class="text-[10px] font-semibold text-white/90 text-center leading-tight px-1">${categoryLabel(catKey)}</span>
     `;
-    quickButtonsContainer.appendChild(allBtn);
-
-    // Butonat e tjerë
-    sortedCats.forEach(catKey => {
-        const style = CATEGORY_STYLES[catKey] || CATEGORY_STYLES["default"];
-        const btn = document.createElement("button");
-        btn.className = `cat-btn flex flex-col items-center gap-2 min-w-[70px] group ${activeCategory === catKey ? 'active' : ''}`;
-        btn.id = `btn-${catKey}`;
-        btn.onclick = () => quickFilter(catKey);
-        btn.innerHTML = `
-            <div class="w-14 h-14 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm transition-all group-hover:scale-105">
-                <i class="fas ${style.icon} ${style.color} text-xl"></i>
-            </div>
-            <span class="text-[10px] font-semibold text-white/90 text-center leading-tight px-1">${categoryLabel(catKey)}</span>
-        `;
-        quickButtonsContainer.appendChild(btn);
-    });
+    quickButtonsContainer.appendChild(btn);
+  });
 }
 
 window.quickFilter = (catKey) => {
-    activeCategory = catKey;
-    headerCatSelect.value = catKey;
-    updateActiveButton();
-    filterFirms();
+  activeCategory = catKey;
+  headerCatSelect.value = catKey;
+  updateActiveButton();
+  filterFirms();
 };
 
 headerCatSelect.addEventListener("change", (e) => {
-    activeCategory = e.target.value;
-    updateActiveButton();
-    filterFirms();
+  activeCategory = e.target.value;
+  updateActiveButton();
+  filterFirms();
 });
 
 function updateActiveButton() {
-    document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
-    const btn = document.getElementById(`btn-${activeCategory}`);
-    if(btn) btn.classList.add('active');
-    else if(activeCategory === 'all' && quickButtonsContainer.firstChild) quickButtonsContainer.firstChild.classList.add('active');
+  document.querySelectorAll(".cat-btn").forEach(btn => btn.classList.remove("active"));
+  const btn = document.getElementById(`btn-${activeCategory}`);
+  if (btn) btn.classList.add("active");
+  else if (activeCategory === "all" && quickButtonsContainer.firstChild) quickButtonsContainer.firstChild.classList.add("active");
 }
 
 /* ================= SMART SEARCH LOGIC ================= */
@@ -290,202 +302,215 @@ const searchInput = document.getElementById("searchInput");
 searchInput.addEventListener("input", filterFirms);
 
 function filterFirms() {
-    const term = searchInput.value.toLowerCase().trim();
-    const results = allFirms.filter(f => {
-        // 1. Kategoria e zgjedhur me buton
-        let matchesCategory = true;
-        if (activeCategory !== 'all') {
-            matchesCategory = (f._catKeys || []).includes(activeCategory);
-        }
+  const term = searchInput.value.toLowerCase().trim();
+  const results = allFirms.filter(f => {
+    let matchesCategory = true;
+    if (activeCategory !== "all") {
+      matchesCategory = (f._catKeys || []).includes(activeCategory);
+    }
 
-        // 2. Kërkimi me tekst (Në 3 Gjuhë)
-        let matchesSearch = true;
-        if (term) {
-            const nameMatch = f.name.toLowerCase().includes(term);
-            
-            // Përdor funksionin e ri nga i18n.js që kontrollon të 3 gjuhët
-            const catMatch = (f._catKeys || []).some(key => {
-                if(key.includes(term)) return true; // match "plumber" directly
-                return checkCategoryMatch(key, term); // match "vodovod", "hidraulik", etj.
-            });
-            
-            matchesSearch = nameMatch || catMatch;
-        }
+    let matchesSearch = true;
+    if (term) {
+      const nameMatch = f.name.toLowerCase().includes(term);
+      const catMatch = (f._catKeys || []).some(key => {
+        if (key.includes(term)) return true;
+        return checkCategoryMatch(key, term);
+      });
+      matchesSearch = nameMatch || catMatch;
+    }
 
-        return matchesCategory && matchesSearch;
-    });
-    renderFirms(results);
+    return matchesCategory && matchesSearch;
+  });
+
+  renderFirms(results);
 }
 
 /* ================= RENDER LOGIC ================= */
 function renderFirms(firms) {
-    autoScrollIntervals.forEach(clearInterval);
-    autoScrollIntervals = [];
+  autoScrollIntervals.forEach(clearInterval);
+  autoScrollIntervals = [];
 
-    const container = document.getElementById("firmsContainer");
-    container.innerHTML = "";
-    
-    if (firms.length === 0) {
-        document.getElementById("noResults").classList.remove("hidden");
-        return;
+  const container = document.getElementById("firmsContainer");
+  container.innerHTML = "";
+
+  if (firms.length === 0) {
+    document.getElementById("noResults").classList.remove("hidden");
+    return;
+  }
+  document.getElementById("noResults").classList.add("hidden");
+
+  firms.forEach(f => {
+    const plan = (f.plan || "basic").toLowerCase();
+    const isPremium = plan === "premium";
+    const photos = plan !== "basic" ? (f.photos || []) : [];
+    const logo = f.logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+
+    let badge = "";
+    if (isPremium) badge = `<span class="badge-premium"><i class="fas fa-crown"></i> PRO</span>`;
+    else if (plan === "standard") badge = `<span class="badge-standard">STANDARD</span>`;
+
+    let mediaHtml = "";
+    const sliderId = `slider-${Math.random().toString(36).substr(2, 9)}`;
+
+    if (photos.length > 0) {
+      const slides = photos.map(src => `
+        <div class="snap-center shrink-0 w-full h-48 bg-gray-100 relative">
+          <img src="${src}" class="w-full h-full object-cover pointer-events-none">
+        </div>
+      `).join("");
+
+      mediaHtml = `
+        <div class="relative w-full h-48 overflow-hidden rounded-t-xl group">
+          <div id="${sliderId}" class="flex overflow-x-auto snap-x no-scrollbar w-full h-full scroll-smooth">
+            ${slides}
+          </div>
+          <div class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-md border border-white/10">
+            <i class="fas fa-images"></i> ${photos.length}
+          </div>
+        </div>
+      `;
+      if (photos.length > 1) setTimeout(() => startAutoScroll(sliderId), 100);
     }
-    document.getElementById("noResults").classList.add("hidden");
 
-    firms.forEach(f => {
-        const plan = (f.plan || "basic").toLowerCase();
-        const isPremium = plan === "premium";
-        const photos = plan !== "basic" ? (f.photos || []) : [];
-        const logo = f.logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
-        
-        let badge = "";
-        if (isPremium) badge = `<span class="badge-premium"><i class="fas fa-crown"></i> PRO</span>`;
-        else if (plan === "standard") badge = `<span class="badge-standard">STANDARD</span>`;
+    const card = document.createElement("div");
+    card.className = "bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1";
+    const catLabels = (f._catKeys || []).map(k => categoryLabel(k)).join(", ");
+    card.dataset.email = (f.email || "").toLowerCase();
 
-        let mediaHtml = "";
-        const sliderId = `slider-${Math.random().toString(36).substr(2, 9)}`;
-        
-        if (photos.length > 0) {
-            const slides = photos.map(src => `
-                <div class="snap-center shrink-0 w-full h-48 bg-gray-100 relative">
-                    <img src="${src}" class="w-full h-full object-cover pointer-events-none"> 
-                </div>
-            `).join("");
+    card.innerHTML = `
+      ${mediaHtml}
+      <div class="p-4">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            ${badge ? `<div class="mb-1">${badge}</div>` : ""}
+            <h3 class="text-lg font-bold text-gray-900 leading-tight">${f.name}</h3>
+            <p class="text-xs text-brand-600 font-bold uppercase tracking-wide mt-0.5">${catLabels}</p>
+          </div>
+          ${(plan !== "basic") ? `<img src="${logo}" class="w-10 h-10 rounded-full border border-gray-100 shadow-sm object-cover">` : ""}
+        </div>
 
-            mediaHtml = `
-                <div class="relative w-full h-48 overflow-hidden rounded-t-xl group">
-                    <div id="${sliderId}" class="flex overflow-x-auto snap-x no-scrollbar w-full h-full scroll-smooth">
-                        ${slides}
-                    </div>
-                    <div class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-md border border-white/10">
-                       <i class="fas fa-images"></i> ${photos.length}
-                    </div>
-                </div>
-            `;
-            if(photos.length > 1) setTimeout(() => startAutoScroll(sliderId, photos.length), 100);
-        }
+        <div class="flex items-start gap-2 text-xs text-gray-500 font-medium mb-4">
+          <i class="fas fa-map-marker-alt mt-0.5 text-gray-400"></i>
+          <span>${f.city || f.address}</span>
+        </div>
 
-        const card = document.createElement("div");
-        card.className = "bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1";
-        const catLabels = (f._catKeys || []).map(k => categoryLabel(k)).join(", ");
+        <div class="flex gap-2 mt-auto">
+          <button onclick="handleGetContact('${f.phone}', '${f.email}')"
+            class="flex-1 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-bold">
+            Shfaq Kontaktin
+          </button>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
 
-        // SHTUAR: ID për Focus (Highlight)
-        card.dataset.email = (f.email || "").toLowerCase();
-
-        card.innerHTML = `
-            ${mediaHtml}
-            <div class="p-4">
-                <div class="flex justify-between items-start mb-2">
-                   <div>
-                      ${badge ? `<div class="mb-1">${badge}</div>` : ''}
-                      <h3 class="text-lg font-bold text-gray-900 leading-tight">${f.name}</h3>
-                      <p class="text-xs text-brand-600 font-bold uppercase tracking-wide mt-0.5">${catLabels}</p>
-                   </div>
-                   ${(plan !== 'basic') ? `<img src="${logo}" class="w-10 h-10 rounded-full border border-gray-100 shadow-sm object-cover">` : ''}
-                </div>
-                
-                <!-- NDRYSHUAR: Shfaq Qytetin -->
-                <div class="flex items-start gap-2 text-xs text-gray-500 font-medium mb-4">
-                   <i class="fas fa-map-marker-alt mt-0.5 text-gray-400"></i> <span>${f.city || f.address}</span>
-                   
-                </div>
-
-                <div class="flex gap-2 mt-auto">
-  <button onclick="handleGetContact('${f.phone}', '${f.email}')"
-  class="flex-1 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-bold">
-    Shfaq Kontaktin
-  </button>
-</div>
-
-        `;
-        container.appendChild(card);
-    });
-    applyTranslations(container); 
+  applyTranslations(container);
 }
 
-function startAutoScroll(elementId, photoCount) {
-    const el = document.getElementById(elementId);
-    if(!el) return;
-    let direction = 1;
-    const interval = setInterval(() => {
-        if(!el) return clearInterval(interval);
-        if(el.matches(':hover') || el.matches(':active')) return;
-        const width = el.offsetWidth;
-        const scrollPos = el.scrollLeft;
-        const maxScroll = el.scrollWidth - width;
-        if (scrollPos >= maxScroll - 5) direction = -1;
-        if (scrollPos <= 0) direction = 1;
-        if(direction === 1) el.scrollLeft += width;
-        else el.scrollLeft = 0;
-    }, 3500);
-    autoScrollIntervals.push(interval);
+function startAutoScroll(elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+
+  let direction = 1;
+  const interval = setInterval(() => {
+    if (!el) return clearInterval(interval);
+    if (el.matches(":hover") || el.matches(":active")) return;
+
+    const width = el.offsetWidth;
+    const scrollPos = el.scrollLeft;
+    const maxScroll = el.scrollWidth - width;
+
+    if (scrollPos >= maxScroll - 5) direction = -1;
+    if (scrollPos <= 0) direction = 1;
+
+    if (direction === 1) el.scrollLeft += width;
+    else el.scrollLeft = 0;
+  }, 3500);
+
+  autoScrollIntervals.push(interval);
 }
 
 document.getElementById("nearMeBtn").addEventListener("click", () => {
-    if(nearMode) { window.location.reload(); return; }
-    if (!navigator.geolocation) return alert(t("near_me_error"));
-    const btn = document.getElementById("nearMeBtn");
-    const status = document.getElementById("nearMeStatus");
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
-    status.innerText = t("near_me_fetching");
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-        try {
-            const res = await fetch(`${API_URL}/firms/near?country=MK&lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&radius_km=${NEAR_RADIUS_KM}`);
-            const data = await res.json();
-            allFirms = data.map(normalizeCategories).sort(sortFirms);
-            nearMode = true;
-            btn.innerHTML = `<i class="fas fa-check"></i> ${t("near_me_active", {km: NEAR_RADIUS_KM})}`;
-            btn.classList.add("bg-green-100", "text-green-700");
-            status.innerText = "";
-            populateCategories(allFirms);
-            activeCategory = 'all'; updateActiveButton(); filterFirms();
-        } catch(e) { status.innerText = t("near_me_error"); }
-    }, () => status.innerText = t("near_me_error"));
+  if (nearMode) {
+    window.location.reload();
+    return;
+  }
+
+  if (!navigator.geolocation) return alert(t("near_me_error"));
+
+  const btn = document.getElementById("nearMeBtn");
+  const status = document.getElementById("nearMeStatus");
+  btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+  status.innerText = t("near_me_fetching");
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    try {
+      const res = await fetch(`${API_URL}/firms/near?country=MK&lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&radius_km=${NEAR_RADIUS_KM}`);
+      const data = await res.json();
+      allFirms = data.map(normalizeCategories).sort(sortFirms);
+      nearMode = true;
+      btn.innerHTML = `<i class="fas fa-check"></i> ${t("near_me_active", {km: NEAR_RADIUS_KM})}`;
+      btn.classList.add("bg-green-100", "text-green-700");
+      status.innerText = "";
+      populateCategories(allFirms);
+      activeCategory = "all";
+      updateActiveButton();
+      filterFirms();
+    } catch (e) {
+      status.innerText = t("near_me_error");
+    }
+  }, () => status.innerText = t("near_me_error"));
 });
 
 function normalizeCategories(f) {
-    const arr = Array.isArray(f.categories) ? f.categories : (f.category ? [f.category] : []);
-    f._catKeys = arr.map(k => normalizeCategoryKey(k)).filter(Boolean);
-    return f;
+  const arr = Array.isArray(f.categories) ? f.categories : (f.category ? [f.category] : []);
+  f._catKeys = arr.map(k => normalizeCategoryKey(k)).filter(Boolean);
+  return f;
 }
+
 function sortFirms(a, b) {
-    const score = p => p === 'premium' ? 1 : p === 'standard' ? 2 : 3;
-    return score((a.plan || '').toLowerCase()) - score((b.plan || '').toLowerCase());
+  const score = p => p === "premium" ? 1 : p === "standard" ? 2 : 3;
+  return score((a.plan || "").toLowerCase()) - score((b.plan || "").toLowerCase());
 }
 
-// --- FUNKSIONI I RI PER FOCUS (HIGHLIGHT) ---
 function focusFirmFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    const focusEmail = params.get("focus"); 
+  const params = new URLSearchParams(window.location.search);
+  const focusEmail = params.get("focus");
 
-    if (focusEmail) {
-        const targetCard = document.querySelector(`[data-email="${focusEmail.toLowerCase()}"]`);
-        if (targetCard) {
-            targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
-            targetCard.classList.add("ring-4", "ring-brand-500", "scale-105", "z-10");
-            setTimeout(() => {
-                targetCard.classList.remove("ring-4", "ring-brand-500", "scale-105", "z-10");
-            }, 3000);
-        }
+  if (focusEmail) {
+    const targetCard = document.querySelector(`[data-email="${focusEmail.toLowerCase()}"]`);
+    if (targetCard) {
+      targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+      targetCard.classList.add("ring-4", "ring-brand-500", "scale-105", "z-10");
+      setTimeout(() => {
+        targetCard.classList.remove("ring-4", "ring-brand-500", "scale-105", "z-10");
+      }, 3000);
     }
+  }
 }
 
 async function init() {
-    applyTranslations(); updateLangUI();
-    try {
-        const res = await fetch(`${API_URL}/firms?country=MK`);
-        const data = await res.json();
-        allFirms = data.map(normalizeCategories).sort(sortFirms);
-        document.getElementById("loadingGrid").classList.add("hidden");
-        document.getElementById("firmsContainer").classList.remove("hidden");
-        
-        populateCategories(allFirms);
-        renderFirms(allFirms);
+  applyTranslations();
+  updateLangUI();
 
-        // THIRRJA E FOCUS PAS MBUSHJES SË FAQES
-        setTimeout(focusFirmFromUrl, 500);
+  try {
+    const res = await fetch(`${API_URL}/firms?country=MK`);
+    const data = await res.json();
+    allFirms = data.map(normalizeCategories).sort(sortFirms);
+    document.getElementById("loadingGrid").classList.add("hidden");
+    document.getElementById("firmsContainer").classList.remove("hidden");
 
-    } catch(e) { console.error(e); }
+    populateCategories(allFirms);
+    renderFirms(allFirms);
+
+    setTimeout(focusFirmFromUrl, 500);
+  } catch (e) {
+    console.error(e);
+  }
 }
+
+/* ================= AUTH / USER ================= */
 function getUser() {
   return JSON.parse(localStorage.getItem("easyfix_user"));
 }
@@ -494,70 +519,45 @@ const loginBtn = document.getElementById("loginBtn");
 
 function updateAuthUI() {
   const user = getUser();
-  if (user) {
-    loginBtn.innerText = "Account";
-  } else {
-    loginBtn.innerText = "Login";
-  }
+  loginBtn.innerText = user ? "Account" : "Login";
 }
 
-updateAuthUI();
-init();
+async function loadCredits() {
+  const user = getUser();
+  const el = document.getElementById("creditBox");
 
-
-// 🔥 LOGIN REAL (ME PASSWORD)
-async function loginUser() {
-  const email = prompt("Email:");
-  const password = prompt("Password:");
-
-  if (!email || !password) return;
+  if (!user || !el) {
+    if (el) el.innerText = "";
+    return;
+  }
 
   try {
-    const res = await fetch(`${API_URL}/user/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ email, password })
-    });
-
+    const res = await fetch(`${API_URL}/user/me/${user.id}`);
     const data = await res.json();
 
     if (!res.ok) {
-      alert("Login gabim");
+      el.innerText = "";
       return;
     }
 
-   localStorage.setItem("easyfix_user", JSON.stringify({
-  id: data.user.id,
-  email: data.user.email
-}));
-
-    updateAuthUI();
-    updateCreditsUI(data.user.credits);
-
-    alert("U kyçe me sukses");
-
-  } catch (err) {
-    console.error(err);
-    alert("Gabim serveri");
+    el.innerText = `Kredi: ${data.user.credits}`;
+  } catch {
+    el.innerText = "";
   }
 }
 
-// 🔗 lidh button
 loginBtn.addEventListener("click", () => {
   window.location.href = "/auth.html";
 });
 
-
-// 🔥 CONTACT (FINAL)
+/* ================= CONTACT ================= */
 async function handleGetContact(phone, firmEmail) {
   const user = getUser();
 
   if (!user) {
-  window.location.href = "/auth.html";
-  return;
-}
+    window.location.href = "/auth.html";
+    return;
+  }
 
   try {
     const res = await fetch(`${API_URL}/contact`, {
@@ -566,21 +566,32 @@ async function handleGetContact(phone, firmEmail) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-     userId: user.id,
-     firmEmail
-     })
+        userId: user.id,
+        firmEmail
+      })
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      alert(data.error || "Gabim");
+      if (data.error_code === "NO_CREDITS") {
+        window.location.href = "/buy-credits.html";
+        return;
+      }
+
+      if (data.error_code === "USER_NOT_FOUND") {
+        localStorage.removeItem("easyfix_user");
+        window.location.href = "/auth.html";
+        return;
+      }
+
+      alert(data.error_code || "Gabim");
       return;
     }
 
     alert(`Numri: ${data.phone}`);
-
-    updateCreditsUI(data.credits);
+    const el = document.getElementById("creditBox");
+    if (el) el.innerText = `Kredi: ${data.credits}`;
 
   } catch (err) {
     console.error(err);
@@ -588,19 +599,9 @@ async function handleGetContact(phone, firmEmail) {
   }
 }
 
-
-// 🔥 UI KREDITE
-function updateCreditsUI(credits) {
-  const el = document.getElementById("creditBox");
-  const user = getUser();
-
-  if (!user) {
-    el.innerText = "";
-    return;
-  }
-
-  el.innerText = `Kredi: ${credits}`;
-}
+updateAuthUI();
+init();
+loadCredits();
 </script>
 </body>
 </html>

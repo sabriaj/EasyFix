@@ -1,10 +1,45 @@
 <!DOCTYPE html>
-<html>
-<body style="text-align:center; padding:40px; font-family:sans-serif;">
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blej Kredi - EasyFix</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
 
-<h2>Nuk ke kredi</h2>
+  <div class="bg-white w-full max-w-xl rounded-2xl shadow-xl p-8">
+    <h1 class="text-3xl font-extrabold text-center text-gray-900 mb-2">Blej Kredi</h1>
+    <p class="text-center text-gray-600 mb-8">Zgjidh paketën që dëshiron.</p>
 
-<button onclick="buy()">Blej 5 kredi</button>
+    <div id="userBox" class="mb-6 text-center text-sm font-semibold text-gray-700"></div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <button onclick="buyCredits(1)"
+        class="rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 p-6 text-center shadow-sm">
+        <div class="text-2xl font-black text-blue-600 mb-2">1</div>
+        <div class="font-bold text-gray-900">1 Kredi</div>
+      </button>
+
+      <button onclick="buyCredits(5)"
+        class="rounded-2xl border-2 border-blue-600 bg-blue-50 hover:bg-blue-100 p-6 text-center shadow-sm">
+        <div class="text-2xl font-black text-blue-700 mb-2">5</div>
+        <div class="font-bold text-gray-900">5 Kredi</div>
+      </button>
+
+      <button onclick="buyCredits(10)"
+        class="rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 p-6 text-center shadow-sm">
+        <div class="text-2xl font-black text-blue-600 mb-2">10</div>
+        <div class="font-bold text-gray-900">10 Kredi</div>
+      </button>
+    </div>
+
+    <p id="status" class="text-center text-sm text-gray-600 mt-6"></p>
+
+    <div class="mt-8 text-center">
+      <a href="/" class="inline-block text-blue-600 font-bold hover:underline">Kthehu mbrapa</a>
+    </div>
+  </div>
 
 <script>
 const API_URL = "https://easyfix-dev-1.onrender.com";
@@ -13,22 +48,82 @@ function getUser() {
   return JSON.parse(localStorage.getItem("easyfix_user"));
 }
 
-async function buy() {
+function showStatus(msg, isError = false) {
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  el.className = isError
+    ? "text-center text-sm text-red-600 mt-6"
+    : "text-center text-sm text-gray-600 mt-6";
+}
+
+async function loadUser() {
   const user = getUser();
 
-  await fetch(`${API_URL}/credits/buy`, {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({
-      userId: user.id,
-      amount: 5
-    })
-  });
+  if (!user || !user.id) {
+    window.location.href = "/auth.html";
+    return;
+  }
 
-  alert("Kredi u shtuan");
-  window.location.href = "/";
+  try {
+    const res = await fetch(`${API_URL}/user/me/${user.id}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      localStorage.removeItem("easyfix_user");
+      window.location.href = "/auth.html";
+      return;
+    }
+
+    document.getElementById("userBox").innerText =
+      `I kyçur si: ${data.user.email} • Kreditë aktuale: ${data.user.credits}`;
+  } catch (err) {
+    console.error(err);
+    showStatus("Gabim gjatë ngarkimit të user-it", true);
+  }
 }
-</script>
 
+async function buyCredits(pack) {
+  const user = getUser();
+
+  if (!user || !user.id) {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  showStatus("Duke u lidhur me pagesën...");
+
+  try {
+    const res = await fetch(`${API_URL}/credits/buy`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        userId: user.id,
+        pack: pack
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      showStatus(data.error_code || "Gabim gjatë krijimit të pagesës", true);
+      return;
+    }
+
+    if (!data.checkoutUrl) {
+      showStatus("Nuk u kthye checkout link", true);
+      return;
+    }
+
+    window.location.href = data.checkoutUrl;
+  } catch (err) {
+    console.error(err);
+    showStatus("Gabim serveri", true);
+  }
+}
+
+loadUser();
+</script>
 </body>
 </html>

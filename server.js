@@ -1123,8 +1123,19 @@ app.post("/credits/buy", async (req, res) => {
           product_options: {
             redirect_url: redirectUrl,
           },
+          checkout_options: {
+            embed: true,
+            media: false,
+            logo: true,
+            desc: false,
+            discount: false,
+            locale: "en",
+            button_color: "#2563eb",
+            button_text_color: "#ffffff"
+          },
           checkout_data: {
             email: user.email,
+            name: `${user.name || ""} ${user.surname || ""}`.trim(),
             custom: {
               userId: String(user._id),
               creditPack: String(pack),
@@ -1168,7 +1179,6 @@ app.post("/credits/buy", async (req, res) => {
     errorWithTime("BUY CREDITS ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }
-
 });
 
 /* ================= CONTACT SYSTEM ================= */

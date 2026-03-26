@@ -72,6 +72,12 @@
     .cat-btn.active div { background-color: #2563eb !important; border-color: #2563eb !important; }
     .cat-btn.active i { color: white !important; }
     .cat-btn.active span { color: #2563eb !important; font-weight: 700; }
+
+    .credit-pack-btn.active {
+  border-color: #2563eb !important;
+  background-color: #eff6ff !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
+}
   </style>
 </head>
 
@@ -398,9 +404,9 @@ function renderFirms(firms) {
 
         <div class="flex gap-2 mt-auto">
           <button onclick="handleGetContact('${f.phone}', '${f.email}')"
-            class="flex-1 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-bold">
-            Shfaq Kontaktin
-          </button>
+  class="flex-1 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-bold">
+  Shfaq Kontaktin (-1 kredi)
+</button>
         </div>
       </div>
     `;
@@ -586,12 +592,89 @@ function setCreditsModalStatus(message, isError = false) {
     : "text-sm text-gray-500 mt-4";
 }
 
-async function buyCreditsOverlay(pack) {
+let selectedCreditPack = 5;
+let buyingCreditsNow = false;
+
+function updateCreditPackUI() {
+  [1, 5, 10].forEach(pack => {
+    const btn = document.getElementById(`packBtn${pack}`);
+    if (!btn) return;
+    btn.classList.toggle("active", selectedCreditPack === pack);
+  });
+
+  const label = document.getElementById("selectedPackLabel");
+  if (label) {
+    label.innerText = `${selectedCreditPack} Kredi`;
+  }
+}
+
+function selectCreditPack(pack) {
+  selectedCreditPack = Number(pack);
+  updateCreditPackUI();
+  setCreditsModalStatus("");
+}
+
+function openCreditsModal(defaultPack = 5) {
+  selectedCreditPack = Number(defaultPack || 5);
+  const modal = document.getElementById("creditsModal");
+  if (!modal) return;
+
+  modal.classList.remove("hidden");
+  updateCreditPackUI();
+  setCreditsModalStatus("");
+}
+
+function closeCreditsModal() {
+  const modal = document.getElementById("creditsModal");
+  if (!modal) return;
+
+  modal.classList.add("hidden");
+  buyingCreditsNow = false;
+
+  const btn = document.getElementById("continuePaymentBtn");
+  if (btn) {
+    btn.disabled = false;
+    btn.innerText = "Vazhdo me pagesë";
+  }
+
+  setCreditsModalStatus("");
+}
+
+function showMessage(msg) {
+  const textEl = document.getElementById("msgText");
+  const modalEl = document.getElementById("msgModal");
+  if (!textEl || !modalEl) return;
+
+  textEl.innerText = msg || "";
+  modalEl.classList.remove("hidden");
+}
+
+function closeMsgModal() {
+  const modalEl = document.getElementById("msgModal");
+  if (!modalEl) return;
+  modalEl.classList.add("hidden");
+}
+
+async function continueCreditsPayment() {
   const user = getUser();
 
   if (!user || !user.id) {
     window.location.href = "/auth.html";
     return;
+  }
+
+  if (!selectedCreditPack) {
+    setCreditsModalStatus("Zgjidh një paketë.", true);
+    return;
+  }
+
+  if (buyingCreditsNow) return;
+  buyingCreditsNow = true;
+
+  const btn = document.getElementById("continuePaymentBtn");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "Duke u përgatitur...";
   }
 
   try {
@@ -604,7 +687,7 @@ async function buyCreditsOverlay(pack) {
       },
       body: JSON.stringify({
         userId: user.id,
-        pack
+        pack: selectedCreditPack
       })
     });
 
@@ -620,11 +703,17 @@ async function buyCreditsOverlay(pack) {
       return;
     }
 
-    setCreditsModalStatus("Checkout u hap. Pasi ta kryesh pagesën, kreditë do rifreskohen automatikisht.");
+    setCreditsModalStatus("Po hapet pagesa...");
     await window.EASYFIX_LEMON.openCheckout(data.checkoutUrl);
   } catch (err) {
     console.error(err);
     setCreditsModalStatus("Gabim serveri", true);
+  } finally {
+    buyingCreditsNow = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "Vazhdo me pagesë";
+    }
   }
 }
 
@@ -636,6 +725,14 @@ async function handleGetContact(phone, firmEmail) {
     window.location.href = "/auth.html";
     return;
   }
+
+  if (!firmEmail) {
+    showMessage("Kontakti nuk është i disponueshëm.");
+    return;
+  }
+
+  if (window.__loadingContact) return;
+  window.__loadingContact = true;
 
   try {
     const res = await fetch(`${API_URL}/contact`, {
@@ -653,9 +750,10 @@ async function handleGetContact(phone, firmEmail) {
 
     if (!res.ok) {
       if (data.error_code === "NO_CREDITS") {
-        openCreditsModal();
-        return;
-      }
+  openCreditsModal(5);
+  setCreditsModalStatus("Nuk ke kredi. Zgjidh paketën dhe vazhdo me pagesë.");
+  return;
+}
 
       if (data.error_code === "USER_NOT_FOUND") {
         localStorage.removeItem("easyfix_user");
@@ -663,24 +761,24 @@ async function handleGetContact(phone, firmEmail) {
         return;
       }
 
-      alert(data.error_code || "Gabim");
+      showMessage("Ndodhi një problem. Provo përsëri.");
       return;
     }
-
-    alert(`Numri: ${data.phone}`);
 
     localStorage.setItem("easyfix_user", JSON.stringify({
       ...user,
       credits: data.credits
     }));
 
-    loadCredits();
+    await loadCredits();
+    showMessage(`Numri: ${data.phone}`);
   } catch (err) {
     console.error(err);
-    alert("Gabim serveri");
+    showMessage("Gabim serveri. Provo më vonë.");
+  } finally {
+    window.__loadingContact = false;
   }
 }
-
 window.addEventListener("focus", () => {
   loadCredits();
 });
@@ -694,37 +792,110 @@ document.addEventListener("visibilitychange", () => {
 updateAuthUI();
 loadCredits(); // para init
 init();
+updateCreditPackUI();
 </script>
 
 <!-- BUY CREDITS MODAL -->
 <div id="creditsModal" class="hidden fixed inset-0 z-[100]">
-  <div class="absolute inset-0 bg-black/50" onclick="closeCreditsModal()"></div>
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeCreditsModal()"></div>
 
   <div class="relative z-[101] flex items-center justify-center min-h-screen p-4">
-    <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6">
-      <div class="flex items-start justify-between mb-4">
-        <div>
-          <h3 class="text-xl font-extrabold text-gray-900">Blej kredi</h3>
-          <p class="text-sm text-gray-500 mt-1">Zgjidh paketën që dëshiron.</p>
+    <div class="w-full max-w-lg bg-white rounded-[28px] shadow-2xl overflow-hidden">
+      
+      <div class="bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-5 text-white">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-2xl font-extrabold">Blej kredi</h3>
+            <p class="text-blue-100 text-sm mt-1">Zhblloko kontaktet e mjeshtrave pa dalë nga EasyFix.</p>
+          </div>
+          <button onclick="closeCreditsModal()" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
         </div>
-        <button onclick="closeCreditsModal()" class="text-gray-400 hover:text-gray-700 text-xl leading-none">&times;</button>
       </div>
 
-      <div class="grid grid-cols-1 gap-3">
-        <button onclick="buyCreditsOverlay(1)" class="w-full rounded-xl border border-gray-200 p-4 text-left hover:bg-gray-50">
-          <div class="font-bold text-gray-900">1 Kredi</div>
+      <div class="p-6">
+        <div class="grid grid-cols-1 gap-3">
+          
+          <button type="button" onclick="selectCreditPack(1)"
+            id="packBtn1"
+            class="credit-pack-btn group w-full rounded-2xl border border-gray-200 bg-white px-5 py-4 text-left transition hover:border-brand-500 hover:shadow-sm">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <div class="text-lg font-extrabold text-gray-900">1 Kredi</div>
+                <div class="text-sm text-gray-500 mt-1">Për një kontakt të shpejtë</div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-bold text-gray-900">Paketa Mini</div>
+              </div>
+            </div>
+          </button>
+
+          <button type="button" onclick="selectCreditPack(5)"
+            id="packBtn5"
+            class="credit-pack-btn group relative w-full rounded-2xl border border-gray-200 bg-white px-5 py-4 text-left transition hover:border-brand-500 hover:shadow-sm">
+            <div class="absolute -top-2 right-4 bg-brand-600 text-white text-[11px] font-extrabold px-3 py-1 rounded-full shadow">
+              MË E PREFERUARA
+            </div>
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <div class="text-lg font-extrabold text-gray-900">5 Kredi</div>
+                <div class="text-sm text-gray-500 mt-1">Për disa kontakte pa u ndal</div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-bold text-gray-900">Vlerë e mirë</div>
+              </div>
+            </div>
+          </button>
+
+          <button type="button" onclick="selectCreditPack(10)"
+            id="packBtn10"
+            class="credit-pack-btn group w-full rounded-2xl border border-gray-200 bg-white px-5 py-4 text-left transition hover:border-brand-500 hover:shadow-sm">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <div class="text-lg font-extrabold text-gray-900">10 Kredi</div>
+                <div class="text-sm text-gray-500 mt-1">Paketë për përdorim serioz</div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-bold text-gray-900">Më shumë vlerë</div>
+              </div>
+            </div>
+          </button>
+
+        </div>
+
+        <div class="mt-5 rounded-2xl bg-gray-50 border border-gray-100 px-4 py-3">
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-500 font-medium">Paketa e zgjedhur</span>
+            <span id="selectedPackLabel" class="font-extrabold text-gray-900">5 Kredi</span>
+          </div>
+        </div>
+
+        <button id="continuePaymentBtn" type="button"
+          onclick="continueCreditsPayment()"
+          class="w-full mt-5 bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-2xl font-extrabold text-base transition shadow-lg shadow-brand-100">
+          Vazhdo me pagesë
         </button>
 
-        <button onclick="buyCreditsOverlay(5)" class="w-full rounded-xl border-2 border-brand-600 bg-brand-50 p-4 text-left hover:bg-brand-100">
-          <div class="font-bold text-gray-900">5 Kredi</div>
-        </button>
+        <p class="text-xs text-gray-400 text-center mt-3">
+          Pagesa përpunohet në mënyrë të sigurt përmes Lemon Squeezy.
+        </p>
 
-        <button onclick="buyCreditsOverlay(10)" class="w-full rounded-xl border border-gray-200 p-4 text-left hover:bg-gray-50">
-          <div class="font-bold text-gray-900">10 Kredi</div>
-        </button>
+        <p id="creditsModalStatus" class="text-sm text-gray-500 mt-4 text-center"></p>
       </div>
+    </div>
+  </div>
+</div>
+<!-- GLOBAL MESSAGE MODAL -->
+<div id="msgModal" class="hidden fixed inset-0 z-[110]">
+  <div class="absolute inset-0 bg-black/50" onclick="closeMsgModal()"></div>
 
-      <p id="creditsModalStatus" class="text-sm text-gray-500 mt-4"></p>
+  <div class="relative z-[111] flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 text-center">
+      <p id="msgText" class="text-gray-800 font-semibold"></p>
+
+      <button onclick="closeMsgModal()"
+        class="mt-4 bg-brand-600 text-white px-6 py-2 rounded-xl font-bold">
+        OK
+      </button>
     </div>
   </div>
 </div>

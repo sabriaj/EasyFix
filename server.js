@@ -1048,6 +1048,52 @@ app.put("/user/me/:id", async (req, res) => {
   }
 });
 
+/* ================= CHANGE USER PASSWORD ================= */
+app.put("/user/password/:id", async (req, res) => {
+  try {
+    const userId = String(req.params.id || "").trim();
+    let { currentPassword, newPassword } = req.body || {};
+
+    currentPassword = String(currentPassword || "");
+    newPassword = String(newPassword || "");
+
+    if (!userId || !currentPassword || !newPassword) {
+      return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    if (newPassword.length < 6) {
+      return sendError(res, 400, "PASSWORD_TOO_SHORT");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return sendError(res, 404, "USER_NOT_FOUND");
+    }
+
+    const ok = await bcrypt.compare(currentPassword, user.password_hash || "");
+    if (!ok) {
+      return sendError(res, 400, "INVALID_CURRENT_PASSWORD");
+    }
+
+    const samePassword = await bcrypt.compare(newPassword, user.password_hash || "");
+    if (samePassword) {
+      return sendError(res, 400, "PASSWORD_SAME_AS_OLD");
+    }
+
+    const newHash = await bcrypt.hash(newPassword, SALT);
+
+    user.password_hash = newHash;
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: "PASSWORD_UPDATED"
+    });
+  } catch (err) {
+    errorWithTime("USER PASSWORD CHANGE ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
 
 /* ================= BUY CREDITS ================= */
 app.post("/credits/buy", async (req, res) => {

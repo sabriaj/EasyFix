@@ -45,6 +45,37 @@
             <div class="text-xs text-blue-600 mb-1">Kreditë aktuale</div>
             <div id="credits" class="text-3xl font-extrabold text-blue-700">0</div>
           </div>
+          <div class="border-t pt-6">
+  <h2 class="text-xl font-bold text-gray-900 mb-4">Ndrysho Password</h2>
+
+  <div class="grid grid-cols-1 gap-4">
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-2">Password aktual</label>
+      <input id="currentPassword" type="password"
+        class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-2">Password i ri</label>
+      <input id="newPassword" type="password"
+        class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-2">Konfirmo password</label>
+      <input id="confirmNewPassword" type="password"
+        class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+  </div>
+
+  <button id="changePasswordBtn"
+    class="mt-4 w-full bg-gray-900 hover:bg-black text-white py-3 rounded-xl font-bold">
+    Ndrysho Password
+  </button>
+
+  <p id="passwordStatus" class="text-sm font-semibold mt-3"></p>
+</div>
+
         </div>
 
         <p id="status" class="text-sm font-semibold"></p>
@@ -191,13 +222,78 @@ async function saveProfile() {
   }
 }
 
+function showPasswordStatus(msg, isError = false) {
+  const el = document.getElementById("passwordStatus");
+  el.innerText = msg;
+  el.className = isError
+    ? "text-sm font-semibold mt-3 text-red-600"
+    : "text-sm font-semibold mt-3 text-green-600";
+}
+
+async function changePassword() {
+  const user = getUser();
+
+  if (!user || !user.id) {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  const currentPassword = document.getElementById("currentPassword").value.trim();
+  const newPassword = document.getElementById("newPassword").value.trim();
+  const confirmNewPassword = document.getElementById("confirmNewPassword").value.trim();
+
+  if (!currentPassword || !newPassword || !confirmNewPassword) {
+    showPasswordStatus("Plotëso të gjitha fushat.", true);
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    showPasswordStatus("Password i ri duhet të ketë të paktën 6 karaktere.", true);
+    return;
+  }
+
+  if (newPassword !== confirmNewPassword) {
+    showPasswordStatus("Password-at nuk përputhen.", true);
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/user/password/${user.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        currentPassword,
+        newPassword
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      showPasswordStatus(data.error_code || "Gabim gjatë ndryshimit të password-it.", true);
+      return;
+    }
+
+    document.getElementById("currentPassword").value = "";
+    document.getElementById("newPassword").value = "";
+    document.getElementById("confirmNewPassword").value = "";
+
+    showPasswordStatus("Password u ndryshua me sukses.");
+  } catch (err) {
+    console.error(err);
+    showPasswordStatus("Gabim serveri.", true);
+  }
+}
+
 document.getElementById("saveBtn").addEventListener("click", saveProfile);
 
 document.getElementById("logoutBtn").addEventListener("click", () => {
   localStorage.removeItem("easyfix_user");
   window.location.href = "/auth.html";
 });
-
+document.getElementById("changePasswordBtn").addEventListener("click", changePassword);
 loadAccount();
 </script>
 

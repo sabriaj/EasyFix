@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Blej Kredi - EasyFix</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
 
@@ -76,6 +77,11 @@ async function loadUser() {
 
     document.getElementById("userBox").innerText =
       `I kyçur si: ${data.user.email} • Kreditë aktuale: ${data.user.credits}`;
+
+    if (window.location.search.includes("success=1")) {
+      showStatus("Nëse pagesa u krye me sukses, kreditë do të përditësohen pas pak.");
+      setTimeout(loadUser, 2500);
+    }
   } catch (err) {
     console.error(err);
     showStatus("Gabim gjatë ngarkimit të user-it", true);

@@ -1,15 +1,44 @@
-<!-- auth.html -->
 <!DOCTYPE html>
-<html>
+<html lang="sq">
 <head>
-  <title>EasyFix Auth</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyFix - Zgjidh llogarinë</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
 </head>
-<body style="font-family:sans-serif; text-align:center; padding:40px;">
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
 
-<h2>Zgjidh llogarinë</h2>
+  <div class="w-full max-w-3xl bg-white rounded-3xl shadow-xl p-8 md:p-10">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900">EasyFix</h1>
+      <p class="text-gray-600 mt-2 text-sm md:text-base">Zgjidh si dëshiron të vazhdosh</p>
+    </div>
 
-<button onclick="goVisitor()">Jam Klient</button>
-<button onclick="goPro()">Jam Mjeshtër</button>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <button onclick="goVisitor()"
+        class="text-left rounded-2xl border border-gray-200 p-6 hover:shadow-lg hover:border-blue-300 transition bg-white">
+        <div class="text-4xl mb-4">👤</div>
+        <h2 class="text-xl font-bold text-gray-900 mb-2">Jam Klient</h2>
+        <p class="text-sm text-gray-600">
+          Krijo llogari ose bëj login për me kontaktu mjeshtrat dhe me përdor kreditë.
+        </p>
+      </button>
+
+      <button onclick="goPro()"
+        class="text-left rounded-2xl border border-gray-200 p-6 hover:shadow-lg hover:border-blue-300 transition bg-white">
+        <div class="text-4xl mb-4">🛠️</div>
+        <h2 class="text-xl font-bold text-gray-900 mb-2">Jam Mjeshtër</h2>
+        <p class="text-sm text-gray-600">
+          Regjistro listing-un tënd si profesionist në EasyFix.
+        </p>
+      </button>
+    </div>
+
+    <div class="text-center mt-8">
+      <a href="/" class="text-blue-600 font-bold hover:underline">Kthehu mbrapa</a>
+    </div>
+  </div>
 
 <script>
 function goVisitor() {

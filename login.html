@@ -1,90 +1,194 @@
 <!DOCTYPE html>
-<html>
-<body style="font-family:sans-serif; text-align:center; padding:40px;">
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyFix - Login / Signup</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
 
-<h2 id="title">Login</h2>
+  <div class="w-full max-w-md bg-white rounded-3xl shadow-xl p-8">
+    <div class="text-center mb-6">
+      <h1 class="text-3xl font-extrabold text-gray-900">EasyFix</h1>
+      <p id="subtitle" class="text-sm text-gray-600 mt-2">Hyr në llogarinë tënde</p>
+    </div>
 
-<!-- SIGNUP EXTRA -->
-<div id="signupFields" style="display:none;">
-  <input id="name" placeholder="Emri"><br><br>
-  <input id="surname" placeholder="Mbiemri"><br><br>
-  <input id="address" placeholder="Adresa"><br><br>
-</div>
+    <h2 id="title" class="text-2xl font-bold text-center text-gray-900 mb-6">Login</h2>
 
-<input id="email" placeholder="Email"><br><br>
-<input id="password" type="password" placeholder="Password"><br><br>
+    <div id="statusBox" class="hidden mb-4 rounded-xl px-4 py-3 text-sm font-semibold"></div>
 
-<div id="confirmBox" style="display:none;">
-  <input id="confirm" type="password" placeholder="Konfirmo Password"><br><br>
-</div>
+    <form id="authForm" class="space-y-4">
+      <div id="signupFields" class="hidden space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Emri</label>
+          <input id="name" type="text" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Emri">
+        </div>
 
-<button onclick="submitForm()">Vazhdo</button>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Mbiemri</label>
+          <input id="surname" type="text" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Mbiemri">
+        </div>
 
-<br><br>
-<a href="#" onclick="toggleMode()">Kaloni në Signup / Login</a>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Adresa</label>
+          <input id="address" type="text" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Adresa">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+        <input id="email" type="email" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Email">
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Password</label>
+        <input id="password" type="password" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Password">
+      </div>
+
+      <div id="confirmBox" class="hidden">
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Konfirmo Password</label>
+        <input id="confirm" type="password" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Konfirmo Password">
+      </div>
+
+      <button type="submit" id="submitBtn"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 font-bold transition">
+        Login
+      </button>
+    </form>
+
+    <div class="text-center mt-5">
+      <button id="toggleBtn" class="text-blue-600 font-bold hover:underline">
+        Nuk ke account? Krijo një
+      </button>
+    </div>
+
+    <div class="text-center mt-4">
+      <a href="/auth.html" class="text-sm text-gray-500 hover:text-gray-700">Kthehu mbrapa</a>
+    </div>
+  </div>
 
 <script>
 const API_URL = "https://easyfix-dev-1.onrender.com";
-
 let mode = "login";
 
-function toggleMode() {
-  mode = mode === "login" ? "signup" : "login";
+function showStatus(msg, type = "error") {
+  const box = document.getElementById("statusBox");
+  box.classList.remove("hidden");
 
-  document.getElementById("title").innerText = mode === "login" ? "Login" : "Signup";
+  if (type === "success") {
+    box.className = "mb-4 rounded-xl px-4 py-3 text-sm font-semibold bg-green-100 text-green-700";
+  } else if (type === "info") {
+    box.className = "mb-4 rounded-xl px-4 py-3 text-sm font-semibold bg-blue-100 text-blue-700";
+  } else {
+    box.className = "mb-4 rounded-xl px-4 py-3 text-sm font-semibold bg-red-100 text-red-700";
+  }
 
-  document.getElementById("signupFields").style.display =
-    mode === "signup" ? "block" : "none";
-
-  document.getElementById("confirmBox").style.display =
-    mode === "signup" ? "block" : "none";
+  box.textContent = msg;
 }
 
-async function submitForm() {
-  const email = document.getElementById("email").value;
+function setMode(newMode) {
+  mode = newMode;
+
+  const isSignup = mode === "signup";
+
+  document.getElementById("title").innerText = isSignup ? "Signup" : "Login";
+  document.getElementById("subtitle").innerText = isSignup
+    ? "Krijo llogarinë tënde si klient"
+    : "Hyr në llogarinë tënde";
+
+  document.getElementById("signupFields").classList.toggle("hidden", !isSignup);
+  document.getElementById("confirmBox").classList.toggle("hidden", !isSignup);
+
+  document.getElementById("submitBtn").innerText = isSignup ? "Krijo account" : "Login";
+  document.getElementById("toggleBtn").innerText = isSignup
+    ? "Ke account? Bëj login"
+    : "Nuk ke account? Krijo një";
+
+  document.getElementById("statusBox").classList.add("hidden");
+}
+
+document.getElementById("toggleBtn").addEventListener("click", () => {
+  setMode(mode === "login" ? "signup" : "login");
+});
+
+document.getElementById("authForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const email = document.getElementById("email").value.trim().toLowerCase();
   const password = document.getElementById("password").value;
 
+  if (!email || !password) {
+    showStatus("Plotëso email dhe password.");
+    return;
+  }
+
   if (mode === "login") {
-    // LOGIN
-    const res = await fetch(`${API_URL}/user/login`, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ email, password })
-    });
+    try {
+      showStatus("Duke u kyçur...", "info");
 
-    const data = await res.json();
+      const res = await fetch(`${API_URL}/user/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
 
-    if (!res.ok) {
-      alert(data.error || "Gabim login");
-      return;
+      const data = await res.json();
+
+      if (!res.ok) {
+        showStatus(data.error_code || "Gabim login");
+        return;
+      }
+
+      localStorage.setItem("easyfix_user", JSON.stringify({
+        id: data.user.id,
+        name: data.user.name,
+        surname: data.user.surname,
+        address: data.user.address,
+        email: data.user.email,
+        credits: data.user.credits
+      }));
+
+      showStatus("Login me sukses.", "success");
+
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 700);
+    } catch (err) {
+      console.error(err);
+      showStatus("Gabim serveri");
     }
 
-    localStorage.setItem("easyfix_user", JSON.stringify({
-      id: data.user.id,
-      email: data.user.email
-    }));
+    return;
+  }
 
-    window.location.href = "/";
-  } else {
-    // SIGNUP
-    const name = document.getElementById("name").value;
-    const surname = document.getElementById("surname").value;
-    const address = document.getElementById("address").value;
-    const confirm = document.getElementById("confirm").value;
+  const name = document.getElementById("name").value.trim();
+  const surname = document.getElementById("surname").value.trim();
+  const address = document.getElementById("address").value.trim();
+  const confirm = document.getElementById("confirm").value;
 
-    if (!name || !surname || !address || !email || !password || !confirm) {
-      alert("Plotëso të gjitha fushat");
-      return;
-    }
+  if (!name || !surname || !address || !email || !password || !confirm) {
+    showStatus("Plotëso të gjitha fushat.");
+    return;
+  }
 
-    if (password !== confirm) {
-      alert("Password nuk përputhen");
-      return;
-    }
+  if (password.length < 6) {
+    showStatus("Password duhet me pas të paktën 6 karaktere.");
+    return;
+  }
+
+  if (password !== confirm) {
+    showStatus("Password nuk përputhen.");
+    return;
+  }
+
+  try {
+    showStatus("Duke krijuar account...", "info");
 
     const res = await fetch(`${API_URL}/user/signup`, {
       method: "POST",
-      headers: {"Content-Type":"application/json"},
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name,
         surname,
@@ -97,20 +201,31 @@ async function submitForm() {
     const data = await res.json();
 
     if (!res.ok) {
-      alert(data.error || "Gabim signup");
+      showStatus(data.error_code || "Gabim signup");
       return;
     }
 
     localStorage.setItem("easyfix_user", JSON.stringify({
       id: data.user.id,
-      email: data.user.email
+      name: data.user.name,
+      surname: data.user.surname,
+      address: data.user.address,
+      email: data.user.email,
+      credits: data.user.credits
     }));
 
-    alert("Account u krijua");
+    showStatus("Account u krijua me sukses.", "success");
 
-    window.location.href = "/";
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 700);
+  } catch (err) {
+    console.error(err);
+    showStatus("Gabim serveri");
   }
-}
+});
+
+setMode("login");
 </script>
 
 </body>

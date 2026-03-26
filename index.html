@@ -519,7 +519,18 @@ const loginBtn = document.getElementById("loginBtn");
 
 function updateAuthUI() {
   const user = getUser();
-  loginBtn.innerText = user ? "Account" : "Login";
+
+  if (user) {
+    loginBtn.innerText = "Account";
+    loginBtn.onclick = () => {
+      window.location.href = "/account.html";
+    };
+  } else {
+    loginBtn.innerText = "Login";
+    loginBtn.onclick = () => {
+      window.location.href = "/auth.html";
+    };
+  }
 }
 
 async function loadCredits() {
@@ -540,15 +551,18 @@ async function loadCredits() {
       return;
     }
 
+    // 🔥 UPDATE localStorage gjithashtu
+    localStorage.setItem("easyfix_user", JSON.stringify({
+      ...user,
+      credits: data.user.credits
+    }));
+
     el.innerText = `Kredi: ${data.user.credits}`;
   } catch {
     el.innerText = "";
   }
 }
 
-loginBtn.addEventListener("click", () => {
-  window.location.href = "/auth.html";
-});
 
 /* ================= CONTACT ================= */
 async function handleGetContact(phone, firmEmail) {
@@ -590,8 +604,14 @@ async function handleGetContact(phone, firmEmail) {
     }
 
     alert(`Numri: ${data.phone}`);
-    const el = document.getElementById("creditBox");
-    if (el) el.innerText = `Kredi: ${data.credits}`;
+
+// 🔥 update UI + storage
+localStorage.setItem("easyfix_user", JSON.stringify({
+  ...user,
+  credits: data.credits
+}));
+
+loadCredits();
 
   } catch (err) {
     console.error(err);
@@ -600,8 +620,8 @@ async function handleGetContact(phone, firmEmail) {
 }
 
 updateAuthUI();
+loadCredits(); // para init
 init();
-loadCredits();
 </script>
 </body>
 </html>

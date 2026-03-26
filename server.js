@@ -1109,6 +1109,12 @@ app.post("/credits/buy", async (req, res) => {
       return sendError(res, 404, "USER_NOT_FOUND");
     }
 
+    log("USER BUY INTENT:", {
+  userId: String(user._id),
+  email: user.email,
+  pack: Number(pack)
+});
+
     const variantId = creditsPackToVariant(pack);
     if (!variantId) {
       return sendError(res, 400, "INVALID_CREDIT_PACK");

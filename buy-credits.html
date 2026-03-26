@@ -59,6 +59,49 @@ function showStatus(msg, isError = false) {
     : "text-center text-sm text-gray-600 mt-6";
 }
 
+function updateCreditsUI(credits) {
+  const user = getUser();
+  if (!user) return;
+
+  localStorage.setItem("easyfix_user", JSON.stringify({
+    ...user,
+    credits
+  }));
+}
+
+async function handleSuccessReturn() {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get("success") !== "1") return;
+
+  const user = getUser();
+  if (!user || !user.id) return;
+
+  showStatus("Duke rifreskuar kreditë...");
+
+  setTimeout(async () => {
+    try {
+      const res = await fetch(`${API_URL}/user/me/${user.id}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        showStatus("Pagesa u krye, por kreditë s’u rifreskuan ende.", true);
+        return;
+      }
+
+      updateCreditsUI(data.user.credits);
+
+      document.getElementById("userBox").innerText =
+        `I kyçur si: ${data.user.email} • Kreditë aktuale: ${data.user.credits}`;
+
+      showStatus("Pagesa u krye me sukses ✅");
+    } catch (err) {
+      console.error(err);
+      showStatus("Gabim gjatë rifreskimit të kredive.", true);
+    }
+  }, 1500);
+}
+
 async function loadUser() {
   const user = getUser();
 
@@ -132,6 +175,7 @@ async function buyCredits(pack) {
 }
 
 loadUser();
+handleSuccessReturn();
 </script>
 </body>
 </html>

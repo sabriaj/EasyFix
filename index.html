@@ -523,6 +523,27 @@ function getUser() {
   return JSON.parse(localStorage.getItem("easyfix_user"));
 }
 
+function updateCreditsUI(credits) {
+  const el = document.getElementById("creditBox");
+  const user = getUser();
+
+  if (!el) return;
+
+  if (!user) {
+    el.innerText = "";
+    return;
+  }
+
+  const safeCredits = Number(credits || 0);
+
+  if (safeCredits <= 0) {
+    el.innerHTML = `<span class="text-red-500 font-extrabold">0 kredi</span>`;
+    return;
+  }
+
+  el.innerHTML = `<span class="text-gray-700 font-extrabold">Kredi: ${safeCredits}</span>`;
+}
+
 const loginBtn = document.getElementById("loginBtn");
 
 function updateAuthUI() {
@@ -543,10 +564,9 @@ function updateAuthUI() {
 
 async function loadCredits() {
   const user = getUser();
-  const el = document.getElementById("creditBox");
 
-  if (!user || !el) {
-    if (el) el.innerText = "";
+  if (!user || !user.id) {
+    updateCreditsUI(0);
     return;
   }
 
@@ -555,32 +575,23 @@ async function loadCredits() {
     const data = await res.json();
 
     if (!res.ok) {
-      el.innerText = "";
+      updateCreditsUI(0);
       return;
     }
 
-    // 🔥 UPDATE localStorage gjithashtu
     localStorage.setItem("easyfix_user", JSON.stringify({
       ...user,
       credits: data.user.credits
     }));
 
-    el.innerText = `Kredi: ${data.user.credits}`;
-  } catch {
-    el.innerText = "";
+    updateCreditsUI(data.user.credits);
+  } catch (err) {
+    console.error(err);
+    updateCreditsUI(0);
   }
 }
 
 
-function openCreditsModal() {
-  document.getElementById("creditsModal")?.classList.remove("hidden");
-}
-
-function closeCreditsModal() {
-  document.getElementById("creditsModal")?.classList.add("hidden");
-  const status = document.getElementById("creditsModalStatus");
-  if (status) status.innerText = "";
-}
 
 function setCreditsModalStatus(message, isError = false) {
   const el = document.getElementById("creditsModalStatus");

@@ -18,6 +18,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="i18n.js"></script>
+  <script src="https://app.lemonsqueezy.com/js/lemon.js" defer></script>
+  <script src="lemon.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
   <meta name="theme-color" content="#2563eb">
 
@@ -564,6 +566,68 @@ async function loadCredits() {
 }
 
 
+function openCreditsModal() {
+  document.getElementById("creditsModal")?.classList.remove("hidden");
+}
+
+function closeCreditsModal() {
+  document.getElementById("creditsModal")?.classList.add("hidden");
+  const status = document.getElementById("creditsModalStatus");
+  if (status) status.innerText = "";
+}
+
+function setCreditsModalStatus(message, isError = false) {
+  const el = document.getElementById("creditsModalStatus");
+  if (!el) return;
+
+  el.innerText = message || "";
+  el.className = isError
+    ? "text-sm text-red-600 mt-4"
+    : "text-sm text-gray-500 mt-4";
+}
+
+async function buyCreditsOverlay(pack) {
+  const user = getUser();
+
+  if (!user || !user.id) {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  try {
+    setCreditsModalStatus("Duke u përgatitur pagesa...");
+
+    const res = await fetch(`${API_URL}/credits/buy`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        userId: user.id,
+        pack
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setCreditsModalStatus(data.error_code || "Gabim gjatë krijimit të pagesës", true);
+      return;
+    }
+
+    if (!data.checkoutUrl) {
+      setCreditsModalStatus("Nuk u kthye checkout link", true);
+      return;
+    }
+
+    setCreditsModalStatus("Checkout u hap. Pasi ta kryesh pagesën, kreditë do rifreskohen automatikisht.");
+    await window.EASYFIX_LEMON.openCheckout(data.checkoutUrl);
+  } catch (err) {
+    console.error(err);
+    setCreditsModalStatus("Gabim serveri", true);
+  }
+}
+
 /* ================= CONTACT ================= */
 async function handleGetContact(phone, firmEmail) {
   const user = getUser();
@@ -589,7 +653,7 @@ async function handleGetContact(phone, firmEmail) {
 
     if (!res.ok) {
       if (data.error_code === "NO_CREDITS") {
-        window.location.href = "/buy-credits.html";
+        openCreditsModal();
         return;
       }
 
@@ -605,23 +669,65 @@ async function handleGetContact(phone, firmEmail) {
 
     alert(`Numri: ${data.phone}`);
 
-// 🔥 update UI + storage
-localStorage.setItem("easyfix_user", JSON.stringify({
-  ...user,
-  credits: data.credits
-}));
+    localStorage.setItem("easyfix_user", JSON.stringify({
+      ...user,
+      credits: data.credits
+    }));
 
-loadCredits();
-
+    loadCredits();
   } catch (err) {
     console.error(err);
     alert("Gabim serveri");
   }
 }
 
+window.addEventListener("focus", () => {
+  loadCredits();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    loadCredits();
+  }
+});
+
 updateAuthUI();
 loadCredits(); // para init
 init();
 </script>
+
+<!-- BUY CREDITS MODAL -->
+<div id="creditsModal" class="hidden fixed inset-0 z-[100]">
+  <div class="absolute inset-0 bg-black/50" onclick="closeCreditsModal()"></div>
+
+  <div class="relative z-[101] flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <h3 class="text-xl font-extrabold text-gray-900">Blej kredi</h3>
+          <p class="text-sm text-gray-500 mt-1">Zgjidh paketën që dëshiron.</p>
+        </div>
+        <button onclick="closeCreditsModal()" class="text-gray-400 hover:text-gray-700 text-xl leading-none">&times;</button>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3">
+        <button onclick="buyCreditsOverlay(1)" class="w-full rounded-xl border border-gray-200 p-4 text-left hover:bg-gray-50">
+          <div class="font-bold text-gray-900">1 Kredi</div>
+        </button>
+
+        <button onclick="buyCreditsOverlay(5)" class="w-full rounded-xl border-2 border-brand-600 bg-brand-50 p-4 text-left hover:bg-brand-100">
+          <div class="font-bold text-gray-900">5 Kredi</div>
+        </button>
+
+        <button onclick="buyCreditsOverlay(10)" class="w-full rounded-xl border border-gray-200 p-4 text-left hover:bg-gray-50">
+          <div class="font-bold text-gray-900">10 Kredi</div>
+        </button>
+      </div>
+
+      <p id="creditsModalStatus" class="text-sm text-gray-500 mt-4"></p>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

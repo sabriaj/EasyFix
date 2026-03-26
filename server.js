@@ -755,6 +755,31 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
     const creditAmountFromVariant = variantToCredits(variantId);
     const finalCreditsToAdd = creditAmountFromVariant || creditPack;
 
+    // KJO PJES EDHT PER CREDITET
+    
+  if (event === "order_created") {
+  if (userId && finalCreditsToAdd > 0) {
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $inc: { credits: finalCreditsToAdd } },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      log("⚠️ Credits webhook but user not found", { userId, finalCreditsToAdd });
+    } else {
+      log("✅ Credits added:", {
+        userId: updatedUser._id,
+        email: updatedUser.email,
+        added: finalCreditsToAdd,
+        total: updatedUser.credits
+      });
+    }
+
+    return res.status(200).send("OK");
+  }
+}
+
     log("🔔 Webhook", {
       event,
       email,
@@ -1045,6 +1070,7 @@ app.post("/credits/buy", async (req, res) => {
     errorWithTime("BUY CREDITS ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }
+
 });
 
 /* ================= CONTACT SYSTEM ================= */

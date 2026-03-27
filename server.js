@@ -255,6 +255,9 @@ const firmaSchema = new mongoose.Schema(
     address: String,
     city: String,
 
+    owner_user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
+    description: { type: String, default: "" },
+
     categories: { type: [String], default: undefined },
     category: String,
 
@@ -265,15 +268,19 @@ const firmaSchema = new mongoose.Schema(
       coordinates: { type: [Number], default: undefined }, // [lng, lat]
     },
 
-    plan: { type: String, default: "basic" },
-    payment_status: { type: String, default: "pending", index: true },
+    plan: { type: String, default: "free", index: true }, // free | premium
+is_boosted: { type: Boolean, default: false, index: true },
+boost_expires_at: Date,
 
-    logoUrl: String,
-    photos: [String],
+payment_status: { type: String, default: "active", index: true }, // active | expired
 
-    paid_at: Date,
-    expires_at: Date,
-    deleted_at: Date,
+
+logoUrl: String,
+photos: [String],
+
+paid_at: Date,
+expires_at: Date,
+deleted_at: Date,
   },
   { timestamps: true }
 );
@@ -301,8 +308,8 @@ const trialUsageSchema = new mongoose.Schema(
 const TrialUsage = mongoose.model("TrialUsage", trialUsageSchema);
 
 /* ================= PLAN RULES ================= */
-const planPhotoLimit = { basic: 0, standard: 3, premium: 8 };
-const planCategoryLimit = { basic: 1, standard: 2, premium: 7 };
+const planPhotoLimit = { free: 3, premium: 10 };
+const planCategoryLimit = { free: 2, premium: 7 };
 
 /* ================= CATEGORY HELPERS ================= */
 function normalizeCategoryKey(raw) {
@@ -355,16 +362,13 @@ function applyCategoryPlanLimit(categories, plan) {
 
 function detectPlanFromVariant(variantId) {
   const v = String(variantId || "");
-  if (v && v === VARIANT_BASIC) return "basic";
-  if (v && v === VARIANT_STANDARD) return "standard";
   if (v && v === VARIANT_PREMIUM) return "premium";
   return null;
 }
 
 function planToVariant(plan) {
   if (plan === "premium") return VARIANT_PREMIUM;
-  if (plan === "standard") return VARIANT_STANDARD;
-  return VARIANT_BASIC;
+  return null;
 }
 
 /* ================= helper per credit page ================= */
@@ -864,14 +868,25 @@ app.use(express.json());
 
 
 /* ================= USERS ================= */
+/* ================= USERS ================= */
 const userSchema = new mongoose.Schema(
   {
     name: String,
     surname: String,
     address: String,
-    email: { type: String, unique: true, required: true },
+
+    email: { type: String, unique: true, required: true, index: true },
     password_hash: String,
+
+    role: {
+      type: String,
+      enum: ["client", "pro"],
+      default: "client",
+      index: true
+    },
+
     credits: { type: Number, default: 0 },
+
     email_verified: { type: Boolean, default: false },
     email_otp_hash: String,
     email_otp_expires: Date,
@@ -883,7 +898,8 @@ const User = mongoose.model("User", userSchema);
 
 const SALT = 10;
 
-/* ================= USER SIGNUP ================= */
+
+/* ================= USER SIGNUP (CLIENT) ================= */
 app.post("/user/signup", async (req, res) => {
   try {
     let { name, surname, address, email, password } = req.body;
@@ -915,6 +931,7 @@ app.post("/user/signup", async (req, res) => {
       address,
       email,
       password_hash: hash,
+      role: "client",
       credits: 3,
     });
 
@@ -926,11 +943,73 @@ app.post("/user/signup", async (req, res) => {
         surname: user.surname,
         address: user.address,
         email: user.email,
+        role: user.role,
         credits: user.credits,
       },
     });
   } catch (err) {
     errorWithTime("USER SIGNUP ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+
+/* ================= PRO SIGNUP ================= */
+app.post("/pro/signup", async (req, res) => {
+  try {
+    let {
+      name,
+      surname,
+      address,
+      email,
+      password
+    } = req.body;
+
+    email = normalizeEmail(email);
+    name = String(name || "").trim();
+    surname = String(surname || "").trim();
+    address = String(address || "").trim();
+    password = String(password || "");
+
+    if (!name || !surname || !address || !email || !password) {
+      return sendError(res, 400, "PLOTESO_TEDHENAT");
+    }
+
+    if (password.length < 6) {
+      return sendError(res, 400, "PASSWORD_SHKURT");
+    }
+
+    const exists = await User.findOne({ email }).lean();
+    if (exists) {
+      return sendError(res, 409, "EMAIL_EKZISTON");
+    }
+
+    const hash = await bcrypt.hash(password, SALT);
+
+    const user = await User.create({
+      name,
+      surname,
+      address,
+      email,
+      password_hash: hash,
+      role: "pro",
+      credits: 0,
+    });
+
+    return res.json({
+      success: true,
+      user: {
+        id: String(user._id),
+        name: user.name,
+        surname: user.surname,
+        address: user.address,
+        email: user.email,
+        role: user.role,
+        credits: user.credits,
+      },
+    });
+  } catch (err) {
+    errorWithTime("PRO SIGNUP ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }
 });
@@ -961,6 +1040,7 @@ app.post("/user/login", async (req, res) => {
         surname: user.surname,
         address: user.address,
         email: user.email,
+        role: user.role,
         credits: user.credits,
       },
     });
@@ -1595,6 +1675,7 @@ app.get("/health", (req, res) => {
 });
 
 /* ================= REGISTER (multipart) ================= */
+/* ================= REGISTER (FREE PRO LISTING) ================= */
 app.post(
   "/register",
   upload.fields([
@@ -1603,35 +1684,43 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      let { name, email, phone, address, city, category, categories, plan, country } = req.body;
+      let {
+        owner_user_id,
+        name,
+        email,
+        phone,
+        address,
+        city,
+        category,
+        categories,
+        country,
+        description
+      } = req.body;
 
       email = normalizeEmail(email);
       const phoneNorm = normalizePhone(phone);
       const countryNorm = normalizeCountry(country);
       const cityNorm = String(city || "").trim();
+      const descriptionNorm = String(description || "").trim().slice(0, 1000);
+
+      const freePlan = "free";
 
       const parsedCats = parseCategoriesFromBody({ category, categories });
-      const catsLimited = applyCategoryPlanLimit(parsedCats, plan);
+      const catsLimited = applyCategoryPlanLimit(parsedCats, freePlan);
       const primaryCategory = catsLimited[0] || null;
 
-      if (!name || !email || !phoneNorm || !address || !cityNorm || !primaryCategory || !plan) {
+      if (!name || !email || !phoneNorm || !address || !cityNorm || !primaryCategory) {
         return sendError(res, 400, "MISSING_FIELDS");
-      }
-      if (!["basic", "standard", "premium"].includes(plan)) {
-        return sendError(res, 400, "INVALID_PLAN");
       }
 
       const existing = await Firma.findOne({ email })
-        .select("_id name deleted_at email_verified payment_status")
+        .select("_id name deleted_at email_verified")
         .lean();
 
-      if (!existing) {
+      if (!existing || !existing.email_verified) {
         return sendError(res, 403, "EMAIL_NOT_VERIFIED");
       }
-      if (!existing.email_verified) {
-        return sendError(res, 403, "EMAIL_NOT_VERIFIED");
-      }
-      // Active real firm exists => block
+
       if (existing?.name && !existing.deleted_at) {
         return sendError(res, 409, "EMAIL_EXISTS");
       }
@@ -1646,130 +1735,74 @@ app.post(
         return sendError(res, 400, "GEO_NOT_FOUND");
       }
 
+      const files = req.files || {};
+
       let logoUrl = null;
+      if (files.logo?.[0]) {
+        logoUrl = await uploadBufferToCloudinary(files.logo[0].buffer, "easyfix/logos");
+      }
+
       let photos = [];
+      const picked = (files.photos || []).slice(0, planPhotoLimit.free);
 
-      if (plan === "standard" || plan === "premium") {
-        const files = req.files || {};
-        if (files.logo?.[0]) {
-          logoUrl = await uploadBufferToCloudinary(files.logo[0].buffer, "easyfix/logos");
-        }
-
-        const maxPhotos = planPhotoLimit[plan] || 0;
-        const picked = (files.photos || []).slice(0, maxPhotos);
-
-        for (const f of picked) {
-          const url = await uploadBufferToCloudinary(f.buffer, "easyfix/photos");
-          photos.push(url);
-        }
+      for (const f of picked) {
+        const url = await uploadBufferToCloudinary(f.buffer, "easyfix/photos");
+        photos.push(url);
       }
 
-      if (plan === "basic") {
-        logoUrl = null;
-        photos = [];
-      }
-
-      // ✅ Trial once per email (even if firm doc is deleted later)
-      const trialUsed = await TrialUsage.exists({ email });
-
-      const nowD = new Date();
-
-      // Always update firm base profile (so admin has correct data)
-      const baseSet = {
-        is_stub: false, // ✅ this is a real firm profile now
-        name,
-        phone: phoneNorm,
-        phone_verified: false,
-        phone_verified_at: null,
-        address,
-        city: cityNorm,
-        categories: catsLimited,
-        category: primaryCategory,
-        country: countryNorm,
-        location: {
-          type: "Point",
-          coordinates: [geo.lng, geo.lat],
-        },
-        plan,
-        deleted_at: null,
-      };
-
-      if (!trialUsed) {
-        const trialEnds = new Date(nowD);
-        trialEnds.setMonth(trialEnds.getMonth() + 4);
-
-        const firma = await Firma.findOneAndUpdate(
-          { email },
-          {
-            $set: {
-              ...baseSet,
-              payment_status: "trial",
-              trial_started_at: nowD,
-              trial_ends_at: trialEnds,
-              expires_at: trialEnds,
-
-              logoUrl,
-              photos,
-
-              trial_reminder_7d_sent_at: null,
-              trial_reminder_1d_sent_at: null,
-              trial_expired_email_sent_at: null,
-            }
-          },
-          { new: true }
-        );
-
-        // mark trial usage
-        await TrialUsage.updateOne(
-          { email },
-          { $setOnInsert: { email, used_at: nowD, first_firm_id: firma?._id } },
-          { upsert: true }
-        );
-
-        const successUrl = `${FRONTEND_SUCCESS_URL}?email=${encodeURIComponent(email)}&trial=1`;
-
-        return res.json({
-          success: true,
-          message: "Regjistrimi u ruajt. Trial-i u aktivizua.",
-          checkoutUrl: successUrl,
-          firmId: String(firma?._id || ""),
-        });
-      }
-
-      // Trial already used => require payment immediately
       const firma = await Firma.findOneAndUpdate(
         { email },
         {
           $set: {
-            ...baseSet,
-            payment_status: "pending",
-            paid_at: null,
-            expires_at: null,
+            is_stub: false,
+            name,
+            email,
+            phone: phoneNorm,
+            phone_verified: false,
+            phone_verified_at: null,
+            address,
+            city: cityNorm,
+            owner_user_id: owner_user_id ? String(owner_user_id) : null,
+            description: descriptionNorm,
+            categories: catsLimited,
+            category: primaryCategory,
+            country: countryNorm,
+           
 
-            // clear trial fields (optional, but keeps it clean)
-            trial_started_at: null,
-            trial_ends_at: null,
+            location: {
+              type: "Point",
+              coordinates: [geo.lng, geo.lat],
+            },
+
+            plan: "free",
+            is_boosted: false,
+            boost_expires_at: null,
+            payment_status: "active",
 
             logoUrl,
             photos,
+
+            deleted_at: null,
+
+            paid_at: null,
+            expires_at: null,
+            trial_started_at: null,
+            trial_ends_at: null,
+            paid_reminder_7d_sent_at: null,
+            paid_reminder_1d_sent_at: null,
+            paid_expired_email_sent_at: null,
+            trial_reminder_7d_sent_at: null,
+            trial_reminder_1d_sent_at: null,
+            trial_expired_email_sent_at: null,
           }
         },
         { new: true }
       );
 
-      const variantId = planToVariant(plan);
-      const checkoutUrl = await createLemonCheckout({
-        variantId,
-        email,
-        firmId: String(firma?._id || ""),
-      });
-
       return res.json({
         success: true,
-        message: "Trial është përdorur më herët. Duhet pagesë për aktivizim.",
-        checkoutUrl,
-        firmId: String(firma?._id || ""),
-        trial_used: true,
+        message: "Regjistrimi u krye me sukses.",
+        firmId: String(firma?._id || "")
       });
     } catch (err) {
       errorWithTime("REGISTER ERROR:", err);
@@ -1778,35 +1811,32 @@ app.post(
   }
 );
 
+
 /* ================= PUBLIC ================= */
 app.get("/firms", async (req, res) => {
   try {
     res.setHeader("Cache-Control", "no-store");
 
     const qCountry = String(req.query.country || "").trim().toUpperCase();
-    const nowD = new Date();
 
     const notDeleted = {
       $or: [{ deleted_at: { $exists: false } }, { deleted_at: null }],
     };
 
-    const paidOrActiveTrial = {
+    const activeOnly = {
       $and: [
         notDeleted,
-        {
-          $or: [
-            { payment_status: "paid" },
-            { payment_status: "trial", trial_ends_at: { $gt: nowD } },
-          ],
-        }
+        { payment_status: "active" }
       ],
     };
 
+    let query = activeOnly;
+
     if (/^[A-Z]{2}$/.test(qCountry)) {
       if (qCountry === "MK") {
-        const firms = await Firma.find({
+        query = {
           $and: [
-            paidOrActiveTrial,
+            activeOnly,
             {
               $or: [
                 { country: "MK" },
@@ -1816,35 +1846,218 @@ app.get("/firms", async (req, res) => {
               ],
             },
           ],
-        })
-          .select("-__v")
-          .sort({ createdAt: -1 })
-          .lean();
-
-        return res.json(firms);
+        };
+      } else {
+        query = {
+          $and: [activeOnly, { country: qCountry }],
+        };
       }
-
-      const firms = await Firma.find({
-        $and: [paidOrActiveTrial, { country: qCountry }],
-      })
-        .select("-__v")
-        .sort({ createdAt: -1 })
-        .lean();
-
-      return res.json(firms);
     }
 
-    const firms = await Firma.find(paidOrActiveTrial)
+    const firms = await Firma.find(query)
       .select("-__v")
-      .sort({ createdAt: -1 })
+      .sort({ is_boosted: -1, createdAt: -1 })
       .lean();
 
-    return res.json(firms);
+    const normalized = firms.map(f => {
+      const safePhotos = Array.isArray(f.photos) ? f.photos : [];
+      const visiblePhotos = f.plan === "premium"
+        ? safePhotos.slice(0, planPhotoLimit.premium)
+        : safePhotos.slice(0, planPhotoLimit.free);
+
+      return {
+        ...f,
+        photos: visiblePhotos
+      };
+    });
+
+    return res.json(normalized);
   } catch (err) {
     errorWithTime("FIRMS ERROR:", err);
     return res.status(500).send("Server error");
   }
 });
+
+
+/* ================= GET PRO FIRM BY USER ================= */
+app.get("/pro/firma/me/:userId", async (req, res) => {
+  try {
+    const userId = String(req.params.userId || "").trim();
+
+    if (!userId) {
+      return sendError(res, 400, "MISSING_USER_ID");
+    }
+
+    const firm = await Firma.findOne({ owner_user_id: userId })
+      .select("-__v")
+      .lean();
+
+    if (!firm) {
+      return sendError(res, 404, "FIRM_NOT_FOUND");
+    }
+
+    return res.json({
+      success: true,
+      firm
+    });
+  } catch (err) {
+    errorWithTime("GET PRO FIRM ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+/* ================= UPDATE PRO FIRM ================= */
+app.put("/pro/firma/:id", async (req, res) => {
+  try {
+    const firmId = String(req.params.id || "").trim();
+
+    let {
+      owner_user_id,
+      name,
+      phone,
+      address,
+      city,
+      category,
+      categories,
+      country,
+      description
+    } = req.body || {};
+
+    if (!firmId) {
+      return sendError(res, 400, "MISSING_FIRM_ID");
+    }
+
+    owner_user_id = String(owner_user_id || "").trim();
+    name = String(name || "").trim();
+    address = String(address || "").trim();
+    city = String(city || "").trim();
+    description = String(description || "").trim().slice(0, 1000);
+    country = normalizeCountry(country);
+
+    const phoneNorm = normalizePhone(phone);
+
+    const existing = await Firma.findById(firmId).select("_id owner_user_id plan").lean();
+    if (!existing) {
+      return sendError(res, 404, "FIRM_NOT_FOUND");
+    }
+
+    if (!owner_user_id || String(existing.owner_user_id || "") !== owner_user_id) {
+      return sendError(res, 403, "FORBIDDEN");
+    }
+
+    const parsedCats = parseCategoriesFromBody({ category, categories });
+    const effectivePlan = String(existing.plan || "free").toLowerCase();
+    const catsLimited = applyCategoryPlanLimit(parsedCats, effectivePlan);
+    const primaryCategory = catsLimited[0] || null;
+
+    if (!name || !phoneNorm || !address || !city || !primaryCategory) {
+      return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    const geo = await geocodeNominatim({
+      address,
+      city,
+      countryIso2: country
+    });
+
+    if (!geo) {
+      return sendError(res, 400, "GEO_NOT_FOUND");
+    }
+
+    const updated = await Firma.findByIdAndUpdate(
+      firmId,
+      {
+        $set: {
+          name,
+          phone: phoneNorm,
+          address,
+          city,
+          description,
+          categories: catsLimited,
+          category: primaryCategory,
+          country,
+          location: {
+            type: "Point",
+            coordinates: [geo.lng, geo.lat]
+          }
+        }
+      },
+      { new: true }
+    ).select("-__v").lean();
+
+    return res.json({
+      success: true,
+      firm: updated
+    });
+  } catch (err) {
+    errorWithTime("UPDATE PRO FIRM ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+/* ================= UPDATE PRO FIRM MEDIA ================= */
+app.put(
+  "/pro/firma/:id/media",
+  upload.fields([
+    { name: "logo", maxCount: 1 },
+    { name: "photos", maxCount: 10 },
+  ]),
+  async (req, res) => {
+    try {
+      const firmId = String(req.params.id || "").trim();
+      const owner_user_id = String(req.body?.owner_user_id || "").trim();
+
+      if (!firmId) {
+        return sendError(res, 400, "MISSING_FIRM_ID");
+      }
+
+      const firm = await Firma.findById(firmId).select("_id owner_user_id plan photos logoUrl").lean();
+      if (!firm) {
+        return sendError(res, 404, "FIRM_NOT_FOUND");
+      }
+
+      if (!owner_user_id || String(firm.owner_user_id || "") !== owner_user_id) {
+        return sendError(res, 403, "FORBIDDEN");
+      }
+
+      const files = req.files || {};
+      const updateSet = {};
+
+      if (files.logo?.[0]) {
+        const logoUrl = await uploadBufferToCloudinary(files.logo[0].buffer, "easyfix/logos");
+        updateSet.logoUrl = logoUrl;
+      }
+
+      if (files.photos?.length) {
+        const maxPhotos = planPhotoLimit[String(firm.plan || "free").toLowerCase()] || 3;
+        const picked = files.photos.slice(0, maxPhotos);
+
+        const uploaded = [];
+        for (const f of picked) {
+          const url = await uploadBufferToCloudinary(f.buffer, "easyfix/photos");
+          uploaded.push(url);
+        }
+
+        updateSet.photos = uploaded;
+      }
+
+      const updated = await Firma.findByIdAndUpdate(
+        firmId,
+        { $set: updateSet },
+        { new: true }
+      ).select("-__v").lean();
+
+      return res.json({
+        success: true,
+        firm: updated
+      });
+    } catch (err) {
+      errorWithTime("UPDATE PRO FIRM MEDIA ERROR:", err);
+      return sendError(res, 500, "SERVER_ERROR");
+    }
+  }
+);
+
 
 /* ================= NEAR ME ================= */
 app.get("/firms/near", async (req, res) => {
@@ -1873,21 +2086,14 @@ app.get("/firms/near", async (req, res) => {
       },
     };
 
-    const nowD = new Date();
-
     const notDeleted = {
       $or: [{ deleted_at: { $exists: false } }, { deleted_at: null }],
     };
 
-    const basePaid = {
+    const activeOnly = {
       $and: [
         notDeleted,
-        {
-          $or: [
-            { payment_status: "paid" },
-            { payment_status: "trial", trial_ends_at: { $gt: nowD } },
-          ],
-        }
+        { payment_status: "active" }
       ],
     };
 
@@ -1897,7 +2103,7 @@ app.get("/firms/near", async (req, res) => {
       if (qCountry === "MK") {
         query = {
           $and: [
-            basePaid,
+            activeOnly,
             geoClause,
             {
               $or: [
@@ -1910,34 +2116,32 @@ app.get("/firms/near", async (req, res) => {
           ],
         };
       } else {
-        query = { $and: [basePaid, geoClause, { country: qCountry }] };
+        query = { $and: [activeOnly, geoClause, { country: qCountry }] };
       }
     } else {
-      query = { $and: [basePaid, geoClause] };
+      query = { $and: [activeOnly, geoClause] };
     }
 
     const firms = await Firma.find(query)
       .select("-__v")
+      .sort({ is_boosted: -1, createdAt: -1 })
       .lean();
 
-    return res.json(firms);
+    const normalized = firms.map(f => {
+      const safePhotos = Array.isArray(f.photos) ? f.photos : [];
+      const visiblePhotos = f.plan === "premium"
+        ? safePhotos.slice(0, planPhotoLimit.premium)
+        : safePhotos.slice(0, planPhotoLimit.free);
+
+      return {
+        ...f,
+        photos: visiblePhotos
+      };
+    });
+
+    return res.json(normalized);
   } catch (err) {
     errorWithTime("FIRMS NEAR ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-app.get("/check-status", async (req, res) => {
-  try {
-    const email = normalizeEmail(req.query.email);
-    if (!email) return res.status(400).json({ success: false, error: "Missing email" });
-
-    const f = await Firma.findOne({ email }).select("-__v").lean();
-    if (!f) return res.status(404).json({ success: false, error: "Not found" });
-
-    return res.json({ success: true, firma: f });
-  } catch (err) {
-    errorWithTime("CHECK-STATUS ERROR:", err);
     return res.status(500).json({ success: false, error: "Server error" });
   }
 });

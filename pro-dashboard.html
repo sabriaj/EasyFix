@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyFix - Pro Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800">
+
+  <div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="flex items-center justify-between mb-6">
+      <a href="/" class="text-sm font-bold text-blue-600 hover:underline">← Kthehu te faqja kryesore</a>
+      <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-bold">
+        Logout
+      </button>
+    </div>
+
+    <div id="loadingBox" class="bg-white rounded-3xl shadow-xl p-8 text-center font-semibold text-gray-500">
+      Duke ngarkuar dashboard-in...
+    </div>
+
+    <div id="errorBox" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-2xl px-5 py-4 font-semibold"></div>
+
+    <div id="dashboardBox" class="hidden space-y-6">
+      <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-3xl shadow-xl overflow-hidden">
+        <div class="px-6 py-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <p class="text-blue-100 text-sm font-semibold uppercase tracking-wider">EasyFix Pro</p>
+            <h1 id="heroBusinessName" class="text-3xl md:text-4xl font-extrabold mt-1">Dashboard</h1>
+            <p id="heroEmail" class="text-blue-100 mt-2"></p>
+          </div>
+
+          <div class="bg-white/15 border border-white/20 rounded-2xl px-5 py-4 min-w-[220px]">
+            <div class="text-xs uppercase tracking-wider text-blue-100 font-bold">Statusi i listing-ut</div>
+            <div id="planBadge" class="text-2xl font-extrabold mt-1">FREE</div>
+            <div id="boostInfo" class="text-sm text-blue-100 mt-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="statusBox" class="hidden rounded-2xl px-4 py-3 text-sm font-semibold"></div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-6">
+          <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+            <div class="flex items-center justify-between mb-5">
+              <div>
+                <h2 class="text-2xl font-extrabold text-gray-900">Profili i listing-ut</h2>
+                <p class="text-sm text-gray-500 mt-1">Ndrysho informacionet që shfaqen në EasyFix.</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Emri i biznesit / profilit</label>
+                <input id="businessName" type="text"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                <input id="email" type="text" disabled
+                  class="w-full bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 text-gray-500">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Telefoni</label>
+                <input id="phone" type="text"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Qyteti</label>
+                <input id="city" type="text"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Kategoria</label>
+                <select id="category"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 bg-white">
+                  <option value="">Zgjidh kategorinë</option>
+                  <option value="plumber">Hidraulik</option>
+                  <option value="electrician">Elektricist</option>
+                  <option value="painter">Bojaxhi</option>
+                  <option value="cleaning">Pastrim</option>
+                  <option value="handyman">Mjeshtër i përgjithshëm</option>
+                  <option value="mason">Murator</option>
+                  <option value="gardener">Kopshtar</option>
+                  <option value="ac">Klima / Ngrohje</option>
+                </select>
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Adresa</label>
+                <input id="address" type="text"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Përshkrimi</label>
+                <textarea id="description" rows="5" maxlength="1000"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+                  placeholder="Përshkruaj shërbimet që ofron..."></textarea>
+                <p class="text-xs text-gray-400 mt-1">Maksimumi 1000 karaktere</p>
+              </div>
+            </div>
+
+            <div class="mt-5">
+              <button id="saveListingBtn"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-blue-100 transition">
+                Ruaj ndryshimet
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+            <div class="mb-5">
+              <h2 class="text-2xl font-extrabold text-gray-900">Logo dhe foto</h2>
+              <p class="text-sm text-gray-500 mt-1">FREE lejon deri 3 foto. PREMIUM lejon më shumë.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Ndrysho logon</label>
+                <input id="newLogo" type="file" accept="image/*"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Shto foto të reja</label>
+                <input id="newPhotos" type="file" accept="image/*" multiple
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white">
+              </div>
+            </div>
+
+            <div class="mt-5">
+              <button id="saveMediaBtn"
+                class="bg-gray-900 hover:bg-black text-white px-6 py-3 rounded-2xl font-bold shadow-lg transition">
+                Ruaj media
+              </button>
+            </div>
+
+            <div class="mt-6">
+              <h3 class="text-lg font-extrabold text-gray-900 mb-3">Fotot aktuale</h3>
+              <div id="photosGrid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <div class="bg-white rounded-3xl shadow-xl p-6">
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider">Plani aktual</div>
+            <div id="sidePlanName" class="text-2xl font-extrabold text-gray-900 mt-2">FREE</div>
+            <p class="text-sm text-gray-500 mt-2">
+              FREE të mban në listim. PREMIUM të jep boost, badge dhe më shumë foto.
+            </p>
+
+            <button id="boostBtn"
+              class="mt-5 w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-2xl font-bold shadow-lg shadow-green-100 transition">
+              Kaloni në Premium
+            </button>
+          </div>
+
+          <div class="bg-white rounded-3xl shadow-xl p-6">
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider">Përmbledhje</div>
+
+            <div class="mt-4 space-y-4">
+              <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+                <div class="text-xs text-gray-400 font-bold uppercase">Email i verifikuar</div>
+                <div id="emailVerifiedBox" class="text-base font-extrabold text-gray-900 mt-1">Po</div>
+              </div>
+
+              <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+                <div class="text-xs text-gray-400 font-bold uppercase">Numri i fotove</div>
+                <div id="photoCountBox" class="text-base font-extrabold text-gray-900 mt-1">0</div>
+              </div>
+
+              <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+                <div class="text-xs text-gray-400 font-bold uppercase">Listing status</div>
+                <div id="listingStatusBox" class="text-base font-extrabold text-gray-900 mt-1">Aktiv</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-3xl shadow-xl p-6">
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider">Ndihmë</div>
+            <p class="text-sm text-gray-500 mt-2">
+              Më vonë këtu mund të shtojmë statistika, boost history dhe menaxhim më të avancuar.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const API_URL = "https://easyfix-dev-1.onrender.com";
+let currentFirm = null;
+
+function getUser() {
+  return JSON.parse(localStorage.getItem("easyfix_user"));
+}
+
+function showError(msg) {
+  const loadingBox = document.getElementById("loadingBox");
+  const errorBox = document.getElementById("errorBox");
+  const dashboardBox = document.getElementById("dashboardBox");
+
+  loadingBox.classList.add("hidden");
+  dashboardBox.classList.add("hidden");
+  errorBox.classList.remove("hidden");
+  errorBox.innerText = msg;
+}
+
+function showStatus(msg, type = "error") {
+  const box = document.getElementById("statusBox");
+  box.classList.remove("hidden");
+
+  if (type === "success") {
+    box.className = "rounded-2xl px-4 py-3 text-sm font-semibold bg-green-100 text-green-700";
+  } else if (type === "info") {
+    box.className = "rounded-2xl px-4 py-3 text-sm font-semibold bg-blue-100 text-blue-700";
+  } else {
+    box.className = "rounded-2xl px-4 py-3 text-sm font-semibold bg-red-100 text-red-700";
+  }
+
+  box.textContent = msg;
+}
+
+function renderPhotos(photos = []) {
+  const grid = document.getElementById("photosGrid");
+  grid.innerHTML = "";
+
+  if (!photos.length) {
+    grid.innerHTML = `<div class="col-span-full text-sm text-gray-500">Nuk ka foto ende.</div>`;
+    return;
+  }
+
+  photos.forEach(src => {
+    const wrap = document.createElement("div");
+    wrap.className = "rounded-2xl overflow-hidden border border-gray-200 bg-gray-50";
+    wrap.innerHTML = `<img src="${src}" class="w-full h-32 object-cover">`;
+    grid.appendChild(wrap);
+  });
+}
+
+function fillDashboard(firm) {
+  currentFirm = firm;
+
+  document.getElementById("businessName").value = firm.name || "";
+  document.getElementById("email").value = firm.email || "";
+  document.getElementById("phone").value = firm.phone || "";
+  document.getElementById("city").value = firm.city || "";
+  document.getElementById("address").value = firm.address || "";
+  document.getElementById("category").value = firm.category || "";
+  document.getElementById("description").value = firm.description || "";
+
+  document.getElementById("heroBusinessName").innerText = firm.name || "Dashboard";
+  document.getElementById("heroEmail").innerText = firm.email || "";
+
+  const premium = firm.plan === "premium";
+  document.getElementById("planBadge").innerText = premium ? "PREMIUM" : "FREE";
+  document.getElementById("sidePlanName").innerText = premium ? "PREMIUM" : "FREE";
+
+  document.getElementById("boostInfo").innerText = premium
+    ? "Listing-u yt ka përparësi në renditje."
+    : "Mund ta boost-osh listing-un për më shumë shikueshmëri.";
+
+  document.getElementById("emailVerifiedBox").innerText = firm.email_verified ? "Po" : "Jo";
+  document.getElementById("photoCountBox").innerText = Array.isArray(firm.photos) ? firm.photos.length : 0;
+  document.getElementById("listingStatusBox").innerText =
+    firm.payment_status === "active" ? "Aktiv" : (firm.payment_status || "Aktiv");
+
+  renderPhotos(Array.isArray(firm.photos) ? firm.photos : []);
+}
+
+async function loadDashboard() {
+  const user = getUser();
+
+  if (!user || !user.id || user.role !== "pro") {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/pro/firma/me/${user.id}`);
+    const data = await res.json();
+
+    if (!res.ok || !data.success || !data.firm) {
+      showError(data.error_code || "Nuk u gjet listing-u i mjeshtrit.");
+      return;
+    }
+
+    fillDashboard(data.firm);
+
+    document.getElementById("loadingBox").classList.add("hidden");
+    document.getElementById("dashboardBox").classList.remove("hidden");
+  } catch (err) {
+    console.error(err);
+    showError("Gabim gjatë ngarkimit të dashboard-it.");
+  }
+}
+
+async function saveListing() {
+  const user = getUser();
+
+  if (!user || !user.id || user.role !== "pro" || !currentFirm?._id) {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  const businessName = document.getElementById("businessName").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  const city = document.getElementById("city").value.trim();
+  const address = document.getElementById("address").value.trim();
+  const category = document.getElementById("category").value;
+  const description = document.getElementById("description").value.trim();
+
+  if (!businessName || !phone || !city || !address || !category) {
+    showStatus("Plotëso të gjitha fushat kryesore.");
+    return;
+  }
+
+  const btn = document.getElementById("saveListingBtn");
+  btn.disabled = true;
+  btn.innerText = "Duke ruajtur...";
+
+  try {
+    const res = await fetch(`${API_URL}/pro/firma/${currentFirm._id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        owner_user_id: user.id,
+        name: businessName,
+        phone,
+        city,
+        address,
+        category,
+        country: currentFirm.country || "MK",
+        description
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success || !data.firm) {
+      showStatus(data.error_code || "Gabim gjatë ruajtjes.");
+      return;
+    }
+
+    fillDashboard(data.firm);
+    showStatus("Ndryshimet u ruajtën me sukses.", "success");
+  } catch (err) {
+    console.error(err);
+    showStatus("Gabim serveri.");
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Ruaj ndryshimet";
+  }
+}
+
+async function saveMedia() {
+  const user = getUser();
+
+  if (!user || !user.id || user.role !== "pro" || !currentFirm?._id) {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  const logoFile = document.getElementById("newLogo").files[0] || null;
+  const photoFiles = Array.from(document.getElementById("newPhotos").files || []);
+
+  if (!logoFile && photoFiles.length === 0) {
+    showStatus("Zgjidh logon ose fotot që dëshiron me i ndryshu.");
+    return;
+  }
+
+  const btn = document.getElementById("saveMediaBtn");
+  btn.disabled = true;
+  btn.innerText = "Duke ruajtur...";
+
+  try {
+    const formData = new FormData();
+    formData.append("owner_user_id", user.id);
+
+    if (logoFile) {
+      formData.append("logo", logoFile);
+    }
+
+    photoFiles.forEach(file => {
+      formData.append("photos", file);
+    });
+
+    const res = await fetch(`${API_URL}/pro/firma/${currentFirm._id}/media`, {
+      method: "PUT",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success || !data.firm) {
+      showStatus(data.error_code || "Gabim gjatë ruajtjes së mediave.");
+      return;
+    }
+
+    document.getElementById("newLogo").value = "";
+    document.getElementById("newPhotos").value = "";
+
+    fillDashboard(data.firm);
+    showStatus("Media u ruajt me sukses.", "success");
+  } catch (err) {
+    console.error(err);
+    showStatus("Gabim serveri.");
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Ruaj media";
+  }
+}
+
+document.getElementById("saveListingBtn").addEventListener("click", saveListing);
+document.getElementById("saveMediaBtn").addEventListener("click", saveMedia);
+
+document.getElementById("boostBtn").addEventListener("click", () => {
+  showStatus("Hapi tjetër: premium boost checkout për mjeshtrat.", "info");
+});
+
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  localStorage.removeItem("easyfix_user");
+  window.location.href = "/auth.html";
+});
+
+loadDashboard();
+</script>
+</body>
+</html>

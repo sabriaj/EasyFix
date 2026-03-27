@@ -147,13 +147,18 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
         surname: data.user.surname,
         address: data.user.address,
         email: data.user.email,
+        role: data.user.role,
         credits: data.user.credits
       }));
 
       showStatus("Login me sukses.", "success");
 
       setTimeout(() => {
-        window.location.href = "/";
+        if (data.user.role === "pro") {
+          window.location.href = "/pro-dashbord.html";
+        } else {
+          window.location.href = "/";
+        }
       }, 700);
     } catch (err) {
       console.error(err);
@@ -211,13 +216,18 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
       surname: data.user.surname,
       address: data.user.address,
       email: data.user.email,
+      role: data.user.role,
       credits: data.user.credits
     }));
 
     showStatus("Account u krijua me sukses.", "success");
 
     setTimeout(() => {
-      window.location.href = "/";
+      if (data.user.role === "pro") {
+        window.location.href = "/pro-dashbord.html";
+      } else {
+        window.location.href = "/";
+      }
     }, 700);
   } catch (err) {
     console.error(err);

@@ -1,337 +1,183 @@
 <!DOCTYPE html>
 <html lang="sq">
 <head>
-
-  <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-CWDYCJ09D8"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-CWDYCJ09D8');
-</script>
-
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EasyFix - Регистрирај се како мајстор – бесплатно</title>
-
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
-  <!-- intl-tel-input (flags + dial code) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/css/intlTelInput.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/intlTelInput.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/utils.js"></script>
-
-  <!-- i18n (NEW) -->
-  <script defer src="i18n.js"></script>
-
-  <!-- app script -->
-  <script defer src="code.js"></script>
-
-  <!-- logo per tabs -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyFix - Regjistrohu si Mjeshtër</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
-  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-16.png" sizes="16x16">
-  <link rel="apple-touch-icon" href="easyfix-icons-pack/apple-touch-icon.png">
-  <meta name="theme-color" content="#1d4ed8">
-  <!-- /logo per tabs -->
-
-  <style>
-    .plan-btn.active { border: 3px solid #2563eb; background: #dbeafe; }
-    .iti { width: 100%; }
-    .iti__tel-input { width: 100%; }
-  </style>
 </head>
+<body class="bg-gray-100 min-h-screen text-gray-800">
 
-<body class="bg-gray-100 min-h-screen">
-
-  <header class="bg-blue-700 text-white py-6 shadow-md">
-    <div class="container mx-auto px-4 flex justify-between items-center">
-      <div class="flex items-center gap-3">
-        <h1 class="text-3xl font-extrabold">EasyFix</h1>
-      </div>
-
-      <nav>
-        <ul class="flex space-x-6 text-lg">
-          <li>
-            <a href="index.html" class="hover:underline">
-              <i class="fas fa-arrow-left mr-2"></i><span data-i18n="back">Kthehu mbrapa</span>
-            </a>
-          </li>
-        </ul>
-      </nav>
-    </div>
-  </header>
-
-  <section class="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-xl mt-10">
-    <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center" data-i18n="reg_title">Regjistrimi i Firmës</h1>
-
-    <!-- FREE TRIAL HERO (NEW) -->
-    <div class="mb-7 p-5 rounded-2xl border border-green-200 bg-green-50">
-      <div class="flex items-start gap-3">
-        <div class="mt-1 text-green-700 text-xl">
-          <i class="fas fa-gift"></i>
-        </div>
-        <div class="flex-1">
-          <div class="text-xl font-extrabold text-green-800 leading-tight" data-i18n="trial_banner_title">
-            4 muaj FALAS — pa pagesë sot
-          </div>
-          <div class="text-sm text-green-700 mt-1" data-i18n="trial_banner_desc">
-            Regjistrohu sot dhe shfaq listing-un për 4 muaj falas. Pagesa fillon vetëm pas mbarimit të trial-it.
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-            <div class="p-3 rounded-xl bg-white border border-green-100">
-              <div class="text-xs text-gray-500" data-i18n="trial_card_1_title">Sot</div>
-              <div class="font-bold text-gray-800" data-i18n="trial_card_1_value">0€</div>
-            </div>
-            <div class="p-3 rounded-xl bg-white border border-green-100">
-              <div class="text-xs text-gray-500" data-i18n="trial_card_2_title">Trial</div>
-              <div class="font-bold text-gray-800" data-i18n="trial_card_2_value">4 muaj falas</div>
-            </div>
-            <div class="p-3 rounded-xl bg-white border border-green-100">
-              <div class="text-xs text-gray-500" data-i18n="trial_card_3_title">Pas trial</div>
-              <div class="font-bold text-gray-800" data-i18n="trial_card_3_value">Plan mujor (opsional)</div>
-            </div>
-          </div>
-
-          <div class="text-xs text-gray-600 mt-3" data-i18n="trial_micro_note">
-            Zgjedh planin tani për renditje/foto, por aktivizimi është falas për 4 muaj.
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- /FREE TRIAL HERO -->
-
-    <h2 class="text-xl font-semibold mb-3" data-i18n="choose_plan">Zgjidh Planin</h2>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
-      <button data-plan="basic" id="planBasic" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
-        <h3 class="text-lg font-bold mb-1" data-i18n="plan_basic_title">Basic – 15€/muaj</h3>
-        <ul class="text-sm text-gray-600 space-y-1">
-          <li data-i18n="plan_basic_l1">• Listim bazë në EasyFix</li>
-          <li data-i18n="plan_basic_l2">• Të dhënat e kontaktit</li>
-          <li data-i18n="plan_basic_l3">• Shfaqje standard në kategori</li>
-        </ul>
-      </button>
-
-      <button data-plan="standard" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
-        <h3 class="text-lg font-bold mb-1" data-i18n="plan_standard_title">Standard – 20€/muaj</h3>
-        <ul class="text-sm text-gray-600 space-y-1">
-          <li data-i18n="plan_standard_l1">• Gjithë Basic +</li>
-          <li data-i18n="plan_standard_l2">• Logo e kompanisë</li>
-          <li data-i18n="plan_standard_l3">• Deri në 3 foto të shërbimeve</li>
-          <li data-i18n="plan_standard_l4">• Pozicion më i mirë në listë</li>
-        </ul>
-      </button>
-
-      <button data-plan="premium" class="plan-btn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
-        <h3 class="text-lg font-bold mb-1" data-i18n="plan_premium_title">Premium – 30€/muaj</h3>
-        <ul class="text-sm text-gray-600 space-y-1">
-          <li data-i18n="plan_premium_l1">• Gjithë Standard +</li>
-          <li data-i18n="plan_premium_l2">• Brandim më i fortë</li>
-          <li data-i18n="plan_premium_l3">• Pozicion Top</li>
-          <li data-i18n="plan_premium_l4">• Deri 8 foto</li>
-        </ul>
-      </button>
+  <div class="max-w-5xl mx-auto px-4 py-8 md:py-10">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900">Regjistrohu si Mjeshtër</h1>
+      <p class="text-gray-600 mt-2 max-w-2xl mx-auto">
+        Krijo account-in tënd profesional në EasyFix. Regjistrimi është falas. Premium/boost e shton më vonë nga dashboard-i yt.
+      </p>
     </div>
 
-    <!-- NOTE UNDER PLANS (NEW) -->
-    <div class="mb-4 text-sm text-gray-700">
-      <span class="font-semibold text-green-700" data-i18n="trial_note_strong">S’ka pagesë sot.</span>
-      <span data-i18n="trial_note_rest">Çmimet vlejnë vetëm pas 4 muajve falas.</span>
-    </div>
-
-    <input type="hidden" id="selectedPlan">
-
-    <div id="uploadSection" class="hidden mt-6 p-4 border rounded-xl bg-gray-50">
-      <h3 class="font-semibold mb-3 text-gray-800" data-i18n="upload_title">Ngarko Logo dhe Foto</h3>
-
-      <label class="block mb-2 font-medium" data-i18n="company_logo">Logo e Kompanisë</label>
-      <input type="file" id="logoUpload" accept="image/*" class="mb-4 w-full">
-
-      <label class="block mb-2 font-medium" id="photosLabel" data-i18n="service_photos">Foto të Shërbimeve</label>
-      <input type="file" id="photoUpload" accept="image/*" multiple class="w-full">
-      <p class="text-xs text-gray-500 mt-1" id="photosHint"></p>
-    </div>
-
-    <form id="registerForm" class="grid grid-cols-1 gap-4 mt-6">
-
-      <div>
-        <label class="font-semibold" data-i18n="company_name">Emri i Firmës</label>
-        <input id="emri" type="text" class="w-full border p-2 rounded" required>
-      </div>
-
-      <div>
-        <label class="font-semibold" data-i18n="address">Adresa</label>
-        <input id="adresa" type="text" class="w-full border p-2 rounded" required>
-      </div>
-
-      <div>
-        <label class="font-semibold" data-i18n="city">Qyteti</label>
-        <input
-          id="qyteti"
-          type="text"
-          class="w-full border p-2 rounded"
-          required
-          data-i18n-placeholder="city_placeholder"
-          placeholder="p.sh. Shkup"
-        >
-      </div>
-
-      <div>
-        <label class="font-semibold" data-i18n="phone_with_country">Telefoni (me shtet)</label>
-        <input id="telefoni" type="tel" class="w-full border p-2 rounded" inputmode="tel" placeholder="Numri i telefonit" required>
-        <p class="text-xs text-gray-500 mt-1" data-i18n="phone_help">
-          Zgjidh shtetin (flamuri), pastaj shkruaj numrin. Prefiksi (+389, +49, +1…) vendoset vet.
+    <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
+      <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-6 text-white">
+        <h2 class="text-2xl font-extrabold">Account + Listing</h2>
+        <p class="text-blue-100 mt-1 text-sm">
+          Plotëso të dhënat personale dhe të biznesit. Mund të shtosh logo dhe deri 3 foto falas.
         </p>
-        <p id="phoneHint" class="text-xs mt-1 text-gray-600"></p>
       </div>
 
-      <div>
-        <label class="font-semibold" data-i18n="email">Email</label>
-        <input id="emaili" type="email" class="w-full border p-2 rounded" required>
+      <div class="p-6 md:p-8">
+        <div id="statusBox" class="hidden mb-6 rounded-2xl px-4 py-3 text-sm font-semibold"></div>
 
-        <!-- EMAIL OTP BAR (shows after valid email) -->
-        <div id="emailOtpBox" class="mt-4 p-4 border rounded-xl bg-gray-50 hidden">
-          <h3 id="otpTitle" class="font-semibold text-gray-800 mb-3" data-i18n="verify_email_title">Verifiko Emailin</h3>
+        <form id="registerForm" class="space-y-8">
+          <!-- Account -->
+          <section>
+            <h3 class="text-xl font-extrabold text-gray-900 mb-4">1. Të dhënat e account-it</h3>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <button id="sendOtpBtn"
-              type="button"
-              class="bg-blue-700 hover:bg-blue-800 text-white py-2 px-4 rounded-lg font-semibold"
-              data-i18n="send_code_btn">
-              Dërgo kodin
-            </button>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Emri</label>
+                <input id="ownerName" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Emri">
+              </div>
 
-            <input id="otpCode"
-              type="text"
-              inputmode="numeric"
-              maxlength="6"
-              class="w-full border p-2 rounded"
-              data-i18n-placeholder="code_placeholder"
-              placeholder="Kodi 6-shifror">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Mbiemri</label>
+                <input id="ownerSurname" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Mbiemri">
+              </div>
 
-            <button id="verifyOtpBtn"
-              type="button"
-              class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-semibold"
-              data-i18n="verify_btn">
-              Verifiko
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Adresa personale</label>
+                <input id="ownerAddress" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Adresa personale">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                <input id="email" type="email" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Email">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+                <input id="password" type="password" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Minimum 6 karaktere">
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Konfirmo password-in</label>
+                <input id="confirmPassword" type="password" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Konfirmo password-in">
+              </div>
+            </div>
+          </section>
+
+          <!-- OTP -->
+          <section>
+            <h3 class="text-xl font-extrabold text-gray-900 mb-4">2. Verifiko email-in</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-end">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Kodi OTP</label>
+                <input id="otpCode" type="text" maxlength="6" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Shkruaj kodin 6-shifror">
+              </div>
+
+              <button type="button" id="sendOtpBtn"
+                class="bg-gray-900 hover:bg-black text-white px-5 py-3 rounded-2xl font-bold transition">
+                Dërgo kodin
+              </button>
+            </div>
+
+            <div class="mt-3">
+              <button type="button" id="verifyOtpBtn"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-2xl font-bold transition">
+                Verifiko email-in
+              </button>
+            </div>
+
+            <p id="otpInfo" class="text-sm text-gray-500 mt-3"></p>
+          </section>
+
+          <!-- Business -->
+          <section>
+            <h3 class="text-xl font-extrabold text-gray-900 mb-4">3. Të dhënat e listing-ut</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Emri i biznesit / profilit</label>
+                <input id="businessName" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" placeholder="P.sh. Elektro Fix Arbeni">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Telefoni</label>
+                <input id="phone" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" placeholder="+389...">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Qyteti</label>
+                <input id="city" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Shkup">
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Adresa e biznesit</label>
+                <input id="businessAddress" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Adresa e biznesit">
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Kategoria</label>
+                <select id="category" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 bg-white">
+                  <option value="">Zgjidh kategorinë</option>
+                  <option value="plumber">Hidraulik</option>
+                  <option value="electrician">Elektricist</option>
+                  <option value="painter">Bojaxhi</option>
+                  <option value="cleaning">Pastrim</option>
+                  <option value="handyman">Mjeshtër i përgjithshëm</option>
+                  <option value="mason">Murator</option>
+                  <option value="gardener">Kopshtar</option>
+                  <option value="ac">Klima / Ngrohje</option>
+                </select>
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Përshkrimi</label>
+                <textarea id="description" rows="5" maxlength="1000"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+                  placeholder="Përshkruaj shkurt shërbimet që ofron..."></textarea>
+                <p class="text-xs text-gray-400 mt-1">Maksimumi 1000 karaktere</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- Media -->
+          <section>
+            <h3 class="text-xl font-extrabold text-gray-900 mb-4">4. Logo dhe foto</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Logo</label>
+                <input id="logo" type="file" accept="image/*"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white">
+                <p class="text-xs text-gray-400 mt-2">Një logo opsionale për profilin tënd.</p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Foto (max 3 falas)</label>
+                <input id="photos" type="file" accept="image/*" multiple
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white">
+                <p class="text-xs text-gray-400 mt-2">Mund të zgjedhësh deri në 3 foto.</p>
+              </div>
+            </div>
+          </section>
+
+          <div class="pt-2">
+            <button type="submit" id="submitBtn"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-extrabold text-lg transition shadow-lg shadow-blue-100">
+              Krijo account dhe listing
             </button>
           </div>
+        </form>
 
-          <p id="otpHint" class="text-xs text-gray-500 mt-2" data-i18n="verify_email_hint">
-            Duhet me verifiku emailin para regjistrimit.
-          </p>
-
-          <p id="otpStatus" class="text-sm mt-2"></p>
+        <div class="text-center mt-6">
+          <a href="/auth.html" class="text-sm text-gray-500 hover:text-gray-700">Kthehu mbrapa</a>
         </div>
       </div>
-
-      <!-- ✅ MULTI-CATEGORY (NEW) -->
-      <div>
-        <label class="font-semibold" data-i18n="category">Kategoria</label>
-
-        <div id="categoriesBox" class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
-            <input type="checkbox" name="categories" value="electrician" class="h-4 w-4">
-            <span data-i18n="cat_electrician">Elektricist</span>
-          </label>
-
-          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
-            <input type="checkbox" name="categories" value="plumber" class="h-4 w-4">
-            <span data-i18n="cat_plumber">Hidraulik</span>
-          </label>
-
-          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
-            <input type="checkbox" name="categories" value="mason" class="h-4 w-4">
-            <span data-i18n="cat_mason">Murator</span>
-          </label>
-
-          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
-            <input type="checkbox" name="categories" value="cleaning" class="h-4 w-4">
-            <span data-i18n="cat_cleaning">Pastrim profesional</span>
-          </label>
-
-          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
-            <input type="checkbox" name="categories" value="ac" class="h-4 w-4">
-            <span data-i18n="cat_ac">Klimë</span>
-          </label>
-
-          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
-            <input type="checkbox" name="categories" value="tiler" class="h-4 w-4">
-            <span data-i18n="cat_tiler">Pllaka / Keramikë</span>
-          </label>
-
-          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
-            <input type="checkbox" name="categories" value="gardener" class="h-4 w-4">
-            <span data-i18n="cat_gardener">Kopshtar</span>
-          </label>
-
-          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
-            <input type="checkbox" name="categories" value="parquet" class="h-4 w-4">
-            <span data-i18n="cat_parquet">Salltim i parketit</span>
-          </label>
-
-          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
-            <input type="checkbox" name="categories" value="gypsum" class="h-4 w-4">
-            <span data-i18n="cat_gypsum">Punime me gips</span>
-          </label>
-
-          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
-            <input type="checkbox" name="categories" value="facade" class="h-4 w-4">
-            <span data-i18n="cat_facade">Punime fasade</span>
-          </label>
-
-          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
-            <input type="checkbox" name="categories" value="painter" class="h-4 w-4">
-            <span data-i18n="cat_painter">Bojaxhi</span>
-          </label>
-
-          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
-            <input type="checkbox" name="categories" value="heating_cooling" class="h-4 w-4">
-            <span data-i18n="cat_heating_cooling">Instalime ngrohje/Ftohje</span>
-          </label>
-
-          <label class="flex items-center gap-2 p-2 border rounded-lg bg-white">
-            <input type="checkbox" name="categories" value="doors_windows" class="h-4 w-4">
-            <span data-i18n="cat_doors_windows">Dyer/Dritare</span>
-          </label>
-        </div>
-
-        <p id="categoriesHint" class="text-xs text-gray-500 mt-2"></p>
-      </div>
-      <!-- /MULTI-CATEGORY -->
-
-      <!-- FIXED: data-i18n key -->
-      <button id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-lg" data-i18n="activate_trial_btn">
-        Aktivizo 4 muaj falas
-      </button>
-
-      <!-- STATUS BAR -->
-      <div id="statusBox" class="hidden mt-4 p-3 rounded-lg text-sm font-semibold"></div>
-
-
-    </form>
-
-    <div class="text-sm text-gray-600 mt-3">
-      <label class="flex items-start gap-2">
-        <input id="agreePrivacy" type="checkbox" class="mt-1" required>
-        <span data-i18n="privacy_agree_html">
-          I agree to the <a href="privacy.html" class="text-blue-700 underline font-semibold">Privacy Policy</a>.
-        </span>
-      </label>
     </div>
+  </div>
 
-  </section>
-
-  <script>
-    window.addEventListener("DOMContentLoaded", () => {
-      const { applyTranslations } = window.EASYFIX_I18N;
-      applyTranslations();
-    });
-  </script>
-
+  <script src="code.js"></script>
 </body>
 </html>

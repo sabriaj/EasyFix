@@ -527,10 +527,16 @@ function updateCreditsUI(credits) {
   const el = document.getElementById("creditBox");
   const user = getUser();
 
+
   if (!el) return;
 
   if (!user) {
     el.innerText = "";
+    return;
+  }
+
+  if (user.role === "pro") {
+    el.innerText =  "";
     return;
   }
 
@@ -571,6 +577,11 @@ async function loadCredits() {
   const user = getUser();
 
   if (!user || !user.id) {
+    updateCreditsUI(0);
+    return;
+  }
+  
+  if (user.role === "pro") {
     updateCreditsUI(0);
     return;
   }
@@ -737,10 +748,16 @@ async function continueCreditsPayment() {
 async function handleGetContact(phone, firmEmail) {
   const user = getUser();
 
+
   if (!user) {
     window.location.href = "/auth.html";
     return;
   }
+
+  if (user && user.role === "pro") {
+  alert("Llogaria e mjeshtrit nuk mund të kontaktojë mjeshtra të tjerë.");
+  return;
+}
 
   if (!firmEmail) {
     showMessage("Kontakti nuk është i disponueshëm.");

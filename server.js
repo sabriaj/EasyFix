@@ -1188,6 +1188,9 @@ app.post("/credits/buy", async (req, res) => {
     if (!user) {
       return sendError(res, 404, "USER_NOT_FOUND");
     }
+    if (user.role !== "client") {
+      return sendError(res, 403, "ONLY_CLIENTS_CAN_BUY_CREDITS")
+    }
 
     log("USER BUY INTENT:", {
   userId: String(user._id),
@@ -1278,6 +1281,11 @@ app.post("/contact", async (req, res) => {
 
     const user = await User.findById(userId);
     if (!user) return sendError(res, 404, "USER_NOT_FOUND");
+
+    if (user.role !== "client"){
+      return sendError(res, 403, "ONLY_CLIENTS_CAN_CONTACT");
+    }
+
 
     if (user.credits <= 0) {
       return sendError(res, 402, "NO_CREDITS");

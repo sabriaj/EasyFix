@@ -73,6 +73,9 @@
 const API_URL = "https://easyfix-dev-1.onrender.com";
 let mode = "login";
 
+const params = new URLSearchParams(window.location.search);
+const requiredRole = params.get("role") || null;
+
 function showStatus(msg, type = "error") {
   const box = document.getElementById("statusBox");
   box.classList.remove("hidden");
@@ -167,6 +170,17 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
 
     return;
   }
+
+
+  if (requiredRole && data.user.role !== requiredRole) {
+  showStatus(
+    requiredRole === "pro"
+      ? "Ky account nuk është account i mjeshtrit."
+      : "Ky account nuk është account i klientit."
+  );
+  return;
+}
+
 
   const name = document.getElementById("name").value.trim();
   const surname = document.getElementById("surname").value.trim();

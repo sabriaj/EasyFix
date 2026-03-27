@@ -110,6 +110,11 @@ async function loadUser() {
     return;
   }
 
+  if (user.role !== "client") {
+    window.location.href = "/";
+    return;
+  }
+
   try {
     const res = await fetch(`${API_URL}/user/me/${user.id}`);
     const data = await res.json();

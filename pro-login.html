@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyFix - Login Mjeshtër</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
+
+  <div class="w-full max-w-md bg-white rounded-3xl shadow-xl p-8">
+    <div class="text-center mb-6">
+      <h1 class="text-3xl font-extrabold text-gray-900">EasyFix</h1>
+      <p class="text-sm text-gray-600 mt-2">Hyr në dashboard-in tënd profesional</p>
+    </div>
+
+    <h2 class="text-2xl font-bold text-center text-gray-900 mb-6">Login si Mjeshtër</h2>
+
+    <div id="statusBox" class="hidden mb-4 rounded-xl px-4 py-3 text-sm font-semibold"></div>
+
+    <form id="authForm" class="space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+        <input id="email" type="email" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Email">
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Password</label>
+        <input id="password" type="password" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Password">
+      </div>
+
+      <button type="submit"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 font-bold transition">
+        Login
+      </button>
+    </form>
+
+    <div class="text-center mt-5">
+      <a href="/register.html" class="text-blue-600 font-bold hover:underline">
+        Nuk ke account? Regjistrohu si mjeshtër
+      </a>
+    </div>
+
+    <div class="text-center mt-4">
+      <a href="/auth.html" class="text-sm text-gray-500 hover:text-gray-700">Kthehu mbrapa</a>
+    </div>
+  </div>
+
+<script>
+const API_URL = "https://easyfix-dev-1.onrender.com";
+
+function showStatus(msg, type = "error") {
+  const box = document.getElementById("statusBox");
+  box.classList.remove("hidden");
+
+  if (type === "success") {
+    box.className = "hidden mb-4 rounded-xl px-4 py-3 text-sm font-semibold bg-green-100 text-green-700";
+  } else if (type === "info") {
+    box.className = "mb-4 rounded-xl px-4 py-3 text-sm font-semibold bg-blue-100 text-blue-700";
+  } else {
+    box.className = "mb-4 rounded-xl px-4 py-3 text-sm font-semibold bg-red-100 text-red-700";
+  }
+
+  box.textContent = msg;
+}
+
+document.getElementById("authForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const email = document.getElementById("email").value.trim().toLowerCase();
+  const password = document.getElementById("password").value;
+
+  if (!email || !password) {
+    showStatus("Plotëso email dhe password.");
+    return;
+  }
+
+  try {
+    showStatus("Duke u kyçur si mjeshtër...", "info");
+
+    const res = await fetch(`${API_URL}/user/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      showStatus(data.error_code || "Gabim login");
+      return;
+    }
+
+    if (data.user.role !== "pro") {
+      showStatus("Ky account nuk është account i mjeshtrit.");
+      return;
+    }
+
+    localStorage.setItem("easyfix_user", JSON.stringify({
+      id: data.user.id,
+      name: data.user.name,
+      surname: data.user.surname,
+      address: data.user.address,
+      email: data.user.email,
+      role: data.user.role,
+      credits: data.user.credits
+    }));
+
+    showStatus("Login me sukses.", "success");
+
+    setTimeout(() => {
+      window.location.href = "/pro-dashboard.html";
+    }, 700);
+  } catch (err) {
+    console.error(err);
+    showStatus("Gabim serveri");
+  }
+});
+</script>
+
+</body>
+</html>

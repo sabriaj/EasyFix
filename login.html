@@ -71,10 +71,11 @@
 
 <script>
 const API_URL = "https://easyfix-dev-1.onrender.com";
-let mode = "login";
 
 const params = new URLSearchParams(window.location.search);
-const requiredRole = params.get("role") || null;
+const requiredRole = params.get("role") || "client";
+
+let mode = "login";
 
 function showStatus(msg, type = "error") {
   const box = document.getElementById("statusBox");
@@ -91,28 +92,52 @@ function showStatus(msg, type = "error") {
   box.textContent = msg;
 }
 
-function setMode(newMode) {
-  mode = newMode;
-
+function updateTexts() {
+  const isPro = requiredRole === "pro";
   const isSignup = mode === "signup";
 
-  document.getElementById("title").innerText = isSignup ? "Signup" : "Login";
-  document.getElementById("subtitle").innerText = isSignup
+  const title = document.getElementById("title");
+  const subtitle = document.getElementById("subtitle");
+  const signupFields = document.getElementById("signupFields");
+  const confirmBox = document.getElementById("confirmBox");
+  const submitBtn = document.getElementById("submitBtn");
+  const toggleBtn = document.getElementById("toggleBtn");
+
+  if (isPro) {
+    title.innerText = "Login si Mjeshtër";
+    subtitle.innerText = "Hyr në dashboard-in tënd profesional";
+    signupFields.classList.add("hidden");
+    confirmBox.classList.add("hidden");
+    submitBtn.innerText = "Login";
+    toggleBtn.innerText = "Nuk ke account? Regjistrohu si mjeshtër";
+    return;
+  }
+
+  title.innerText = isSignup ? "Signup" : "Login";
+  subtitle.innerText = isSignup
     ? "Krijo llogarinë tënde si klient"
-    : "Hyr në llogarinë tënde";
+    : "Hyr në llogarinë tënde si klient";
 
-  document.getElementById("signupFields").classList.toggle("hidden", !isSignup);
-  document.getElementById("confirmBox").classList.toggle("hidden", !isSignup);
-
-  document.getElementById("submitBtn").innerText = isSignup ? "Krijo account" : "Login";
-  document.getElementById("toggleBtn").innerText = isSignup
+  signupFields.classList.toggle("hidden", !isSignup);
+  confirmBox.classList.toggle("hidden", !isSignup);
+  submitBtn.innerText = isSignup ? "Krijo account" : "Login";
+  toggleBtn.innerText = isSignup
     ? "Ke account? Bëj login"
     : "Nuk ke account? Krijo një";
+}
 
+function setMode(newMode) {
+  mode = newMode;
+  updateTexts();
   document.getElementById("statusBox").classList.add("hidden");
 }
 
 document.getElementById("toggleBtn").addEventListener("click", () => {
+  if (requiredRole === "pro") {
+    window.location.href = "/register.html";
+    return;
+  }
+
   setMode(mode === "login" ? "signup" : "login");
 });
 
@@ -127,6 +152,53 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
     return;
   }
 
+  // PRO LOGIN
+  if (requiredRole === "pro") {
+    try {
+      showStatus("Duke u kyçur si mjeshtër...", "info");
+
+      const res = await fetch(`${API_URL}/user/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        showStatus(data.error_code || "Gabim login");
+        return;
+      }
+
+      if (data.user.role !== "pro") {
+        showStatus("Ky account nuk është account i mjeshtrit.");
+        return;
+      }
+
+      localStorage.setItem("easyfix_user", JSON.stringify({
+        id: data.user.id,
+        name: data.user.name,
+        surname: data.user.surname,
+        address: data.user.address,
+        email: data.user.email,
+        role: data.user.role,
+        credits: data.user.credits
+      }));
+
+      showStatus("Login me sukses.", "success");
+
+      setTimeout(() => {
+        window.location.href = "/pro-dashboard.html";
+      }, 700);
+    } catch (err) {
+      console.error(err);
+      showStatus("Gabim serveri");
+    }
+
+    return;
+  }
+
+  // CLIENT LOGIN
   if (mode === "login") {
     try {
       showStatus("Duke u kyçur...", "info");
@@ -144,6 +216,11 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
         return;
       }
 
+      if (data.user.role !== "client") {
+        showStatus("Ky account nuk është account i klientit.");
+        return;
+      }
+
       localStorage.setItem("easyfix_user", JSON.stringify({
         id: data.user.id,
         name: data.user.name,
@@ -157,11 +234,7 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
       showStatus("Login me sukses.", "success");
 
       setTimeout(() => {
-        if (data.user.role === "pro") {
-          window.location.href = "/pro-dashboard.html";
-        } else {
-          window.location.href = "/";
-        }
+        window.location.href = "/";
       }, 700);
     } catch (err) {
       console.error(err);
@@ -171,17 +244,7 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
     return;
   }
 
-
-  if (requiredRole && data.user.role !== requiredRole) {
-  showStatus(
-    requiredRole === "pro"
-      ? "Ky account nuk është account i mjeshtrit."
-      : "Ky account nuk është account i klientit."
-  );
-  return;
-}
-
-
+  // CLIENT SIGNUP
   const name = document.getElementById("name").value.trim();
   const surname = document.getElementById("surname").value.trim();
   const address = document.getElementById("address").value.trim();
@@ -247,7 +310,5 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
 
 setMode("login");
 </script>
-
-
 </body>
 </html>

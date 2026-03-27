@@ -551,8 +551,13 @@ function updateAuthUI() {
 
   if (user) {
     loginBtn.innerText = "Account";
+
     loginBtn.onclick = () => {
-      window.location.href = "/account.html";
+      if (user.role === "pro") {
+        window.location.href = "/pro-dashboard.html";
+      } else {
+        window.location.href = "/account.html";
+      }
     };
   } else {
     loginBtn.innerText = "Login";

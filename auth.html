@@ -15,7 +15,7 @@
       <p class="text-gray-600 mt-2 text-sm md:text-base">Zgjidh si dëshiron të vazhdosh</p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div id="mainChoices" class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <button onclick="goVisitor()"
         class="text-left rounded-2xl border border-gray-200 p-6 hover:shadow-lg hover:border-blue-300 transition bg-white">
         <div class="text-4xl mb-4">👤</div>
@@ -25,14 +25,43 @@
         </p>
       </button>
 
-      <button onclick="goPro()"
+      <button onclick="showProOptions()"
         class="text-left rounded-2xl border border-gray-200 p-6 hover:shadow-lg hover:border-blue-300 transition bg-white">
         <div class="text-4xl mb-4">🛠️</div>
         <h2 class="text-xl font-bold text-gray-900 mb-2">Jam Mjeshtër</h2>
         <p class="text-sm text-gray-600">
-          Regjistro listing-un tënd si profesionist në EasyFix.
+          Hyr në dashboard-in tënd ose regjistro listing-un si profesionist.
         </p>
       </button>
+    </div>
+
+    <div id="proChoices" class="hidden space-y-4">
+      <div class="text-center mb-4">
+        <h2 class="text-2xl font-extrabold text-gray-900">Mjeshtër</h2>
+        <p class="text-sm text-gray-600 mt-2">A ke account ekzistues apo dëshiron të regjistrohesh?</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button onclick="goProLogin()"
+          class="rounded-2xl border border-gray-200 p-5 hover:shadow-lg hover:border-blue-300 transition bg-white text-left">
+          <div class="text-3xl mb-3">🔑</div>
+          <div class="text-lg font-bold text-gray-900">Kam account</div>
+          <div class="text-sm text-gray-600 mt-1">Bëj login si mjeshtër</div>
+        </button>
+
+        <button onclick="goProRegister()"
+          class="rounded-2xl border border-gray-200 p-5 hover:shadow-lg hover:border-blue-300 transition bg-white text-left">
+          <div class="text-3xl mb-3">➕</div>
+          <div class="text-lg font-bold text-gray-900">Nuk kam account</div>
+          <div class="text-sm text-gray-600 mt-1">Regjistrohu si mjeshtër</div>
+        </button>
+      </div>
+
+      <div class="text-center pt-2">
+        <button onclick="backToMain()" class="text-blue-600 font-bold hover:underline">
+          Kthehu mbrapa
+        </button>
+      </div>
     </div>
 
     <div class="text-center mt-8">
@@ -45,7 +74,21 @@ function goVisitor() {
   window.location.href = "/login.html";
 }
 
-function goPro() {
+function showProOptions() {
+  document.getElementById("mainChoices").classList.add("hidden");
+  document.getElementById("proChoices").classList.remove("hidden");
+}
+
+function backToMain() {
+  document.getElementById("proChoices").classList.add("hidden");
+  document.getElementById("mainChoices").classList.remove("hidden");
+}
+
+function goProLogin() {
+  window.location.href = "/login.html";
+}
+
+function goProRegister() {
   window.location.href = "/register.html";
 }
 </script>

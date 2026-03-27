@@ -155,7 +155,7 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
 
       setTimeout(() => {
         if (data.user.role === "pro") {
-          window.location.href = "/pro-dashbord.html";
+          window.location.href = "/pro-dashboard.html";
         } else {
           window.location.href = "/";
         }
@@ -223,11 +223,7 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
     showStatus("Account u krijua me sukses.", "success");
 
     setTimeout(() => {
-      if (data.user.role === "pro") {
-        window.location.href = "/pro-dashbord.html";
-      } else {
-        window.location.href = "/";
-      }
+      window.location.href = "/";
     }, 700);
   } catch (err) {
     console.error(err);
@@ -237,6 +233,7 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
 
 setMode("login");
 </script>
+
 
 </body>
 </html>

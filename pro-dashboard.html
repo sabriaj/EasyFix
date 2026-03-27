@@ -200,6 +200,15 @@
 const API_URL = "https://easyfix-dev-1.onrender.com";
 let currentFirm = null;
 
+const currentUser = getUser();
+if (!currentUser || !currentUser.id) {
+  window.location.href = "/auth.html";
+}
+if (currentUser.role !== "pro") {
+  window.location.href = "/account.html";
+}
+
+
 function getUser() {
   return JSON.parse(localStorage.getItem("easyfix_user"));
 }

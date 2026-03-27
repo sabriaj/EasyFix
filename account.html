@@ -208,6 +208,16 @@ function setUser(user) {
   localStorage.setItem("easyfix_user", JSON.stringify(user));
 }
 
+const currentUser = getUser();
+
+if (!currentUser || !currentUser.id) {
+  window.location.href = "/auth.html";
+}
+
+if (currentUser.role === "pro") {
+  window.location.href = "/pro-dashboard.html";
+}
+
 function showError(msg) {
   const errorBox = document.getElementById("errorBox");
   const loadingBox = document.getElementById("loadingBox");
@@ -270,6 +280,7 @@ async function loadAccount() {
       surname: data.user.surname,
       address: data.user.address,
       email: data.user.email,
+      role: "client",
       credits: data.user.credits
     });
 
@@ -328,6 +339,7 @@ async function saveProfile() {
       surname: data.user.surname,
       address: data.user.address,
       email: data.user.email,
+      role: "client",
       credits: data.user.credits
     });
 

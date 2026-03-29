@@ -416,17 +416,15 @@ app.get("/admin/stats", requireAdmin, async (req, res) => {
   try {
     // Count only "real firms" (name exists) by default - FIXED
     const base = { name: { $exists: true, $nin: [null, ""] } };
-
     const total = await Firma.countDocuments(base);
-    const pending = await Firma.countDocuments({ ...base, payment_status: "pending" });
-    const paid = await Firma.countDocuments({ ...base, payment_status: "paid" });
-    const expired = await Firma.countDocuments({ ...base, payment_status: "expired" });
-    const trial = await Firma.countDocuments({ ...base, payment_status: "trial" });
+    const active = await Firma.countDocuments({ ...base, payment_status: "active" });
+    const premium = await Firma.countDocuments({ ...base, plan: "premium" });
+    const free = await Firma.countDocuments({ ...base, plan: "free" });
 
-    return res.json({
-      success: true,
-      stats: { total, pending, paid, expired, trial },
-    });
+return res.json({
+  success: true,
+  stats: { total, active, premium, free },
+});
   } catch (err) {
     errorWithTime("ADMIN STATS ERROR:", err);
     return res.status(500).json({ success: false, error: "Server error" });
@@ -458,10 +456,18 @@ app.post("/admin/firms/:id/expire", requireAdmin, async (req, res) => {
     const nowD = new Date();
 
     const updated = await Firma.findByIdAndUpdate(
-      id,
-      { $set: { payment_status: "expired", expires_at: nowD } },
-      { new: true }
-    ).lean();
+  id,
+  {
+    $set: {
+      payment_status: "active",
+      plan: "free",
+      is_boosted: false,
+      boost_expires_at: null,
+      expires_at: nowD
+    }
+  },
+  { new: true }
+).lean();
 
     if (!updated) return res.status(404).json({ success: false, error: "Not found" });
 
@@ -490,15 +496,14 @@ app.post("/admin/firms/:id/mark-paid", requireAdmin, async (req, res) => {
       id,
       {
         $set: {
-          payment_status: "paid",
-          paid_at: nowD,
-          expires_at: expires,
-          deleted_at: null,
-
-          paid_reminder_7d_sent_at: null,
-          paid_reminder_1d_sent_at: null,
-          paid_expired_email_sent_at: null,
-        },
+  payment_status: "active",
+  plan: "premium",
+  is_boosted: true,
+  boost_expires_at: expires,
+  paid_at: nowD,
+  expires_at: expires,
+  deleted_at: null
+},
       },
       { new: true }
     ).lean();
@@ -533,8 +538,6 @@ app.post("/admin/test-email", requireAdmin, async (req, res) => {
 /* ================= ADMIN: RUN SCHEDULER NOW ================= */
 app.post("/admin/run-scheduler", requireAdmin, async (req, res) => {
   try {
-    await runTrialNotifications();
-    await runPaidNotifications();
     await runCleanup();
     return res.json({ success: true });
   } catch (err) {
@@ -607,7 +610,7 @@ app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
 
     if (patch.plan !== undefined) {
       const p = String(patch.plan || "").toLowerCase();
-      if (!["basic", "standard", "premium"].includes(p)) {
+      if (!["free", "premium"].includes(p)) {
         return res.status(400).json({ success: false, error: "Invalid plan" });
       }
       patch.plan = p;
@@ -615,7 +618,7 @@ app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
 
     if (patch.payment_status !== undefined) {
       const s = String(patch.payment_status || "").toLowerCase();
-      if (!["pending", "paid", "expired", "trial"].includes(s)) {
+      if (!["active", "expired"].includes(s)) {
         return res.status(400).json({ success: false, error: "Invalid payment_status" });
       }
       patch.payment_status = s;
@@ -630,7 +633,7 @@ app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
       let effectivePlan = patch.plan;
       if (!effectivePlan) {
         const existing = await Firma.findById(id).select("plan").lean();
-        effectivePlan = String(existing?.plan || "basic").toLowerCase();
+        effectivePlan = String(existing?.plan || "free").toLowerCase();
       }
 
       const parsed = parseCategoriesFromBody({
@@ -699,6 +702,7 @@ async function createLemonCheckout({ variantId, email, firmId }) {
 }
 
 /* ================= WEBHOOK (RAW BODY) ================= */
+/* ================= WEBHOOK (RAW BODY) ================= */
 app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
     let signature = req.headers["x-signature"] || req.headers["x-signature-256"] || "";
@@ -743,7 +747,6 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
     const firmId = firmIdRaw ? String(firmIdRaw) : null;
     const detectedPlan = detectPlanFromVariant(variantId);
 
-    // credits data
     const userIdRaw =
       payload?.meta?.custom_data?.userId ||
       payload?.data?.attributes?.checkout_data?.custom?.userId ||
@@ -759,31 +762,6 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
     const creditAmountFromVariant = variantToCredits(variantId);
     const finalCreditsToAdd = creditAmountFromVariant || creditPack;
 
-    // KJO PJES EDHT PER CREDITET
-    
-  if (event === "order_created") {
-  if (userId && finalCreditsToAdd > 0) {
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { $inc: { credits: finalCreditsToAdd } },
-      { new: true }
-    );
-
-    if (!updatedUser) {
-      log("⚠️ Credits webhook but user not found", { userId, finalCreditsToAdd });
-    } else {
-      log("✅ Credits added:", {
-        userId: updatedUser._id,
-        email: updatedUser.email,
-        added: finalCreditsToAdd,
-        total: updatedUser.credits
-      });
-    }
-
-    return res.status(200).send("OK");
-  }
-}
-
     log("🔔 Webhook", {
       event,
       email,
@@ -794,8 +772,10 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
       finalCreditsToAdd
     });
 
-    if (event === "order_paid" || event === "subscription_payment_success") {
-      // credits payment
+    // ================= ORDER CREATED =================
+    // Lemon te ti po përdoret me order_created si event kryesor
+    if (event === "order_created") {
+      // 1) CREDITS for client
       if (userId && finalCreditsToAdd > 0) {
         const updatedUser = await User.findByIdAndUpdate(
           userId,
@@ -817,40 +797,70 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
         return res.status(200).send("OK");
       }
 
-      // firm payment
-      if (!email && !firmId) return res.status(200).send("No identifier");
+      // 2) PREMIUM for firm
+      if (firmId || email) {
+        const premiumEnds = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-      const update = {
-        payment_status: "paid",
-        paid_at: new Date(),
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        deleted_at: null,
-        paid_reminder_7d_sent_at: null,
-        paid_reminder_1d_sent_at: null,
-        paid_expired_email_sent_at: null,
-      };
+        const update = {
+          payment_status: "active",
+          plan: "premium",
+          is_boosted: true,
+          boost_expires_at: premiumEnds,
+          paid_at: new Date(),
+          expires_at: premiumEnds,
+          deleted_at: null,
+        };
 
-      if (detectedPlan) update.plan = detectedPlan;
+        let updated = null;
 
-      let updated = null;
-      if (firmId) {
-        updated = await Firma.findByIdAndUpdate(firmId, { $set: update }, { new: true });
-      } else if (email) {
-        updated = await Firma.findOneAndUpdate({ email }, { $set: update }, { upsert: false, new: true });
+        if (firmId) {
+          updated = await Firma.findByIdAndUpdate(firmId, { $set: update }, { new: true });
+        } else if (email) {
+          updated = await Firma.findOneAndUpdate(
+            { email },
+            { $set: update },
+            { upsert: false, new: true }
+          );
+        }
+
+        if (!updated) {
+          log("⚠️ Premium webhook but firm not found", { firmId, email });
+        } else {
+          log("✅ Firm upgraded to premium:", {
+            id: updated._id,
+            email: updated.email,
+            plan: updated.plan
+          });
+        }
+
+        return res.status(200).send("OK");
       }
 
-      if (!updated) log("⚠️ Paid webhook but firm not found", { firmId, email });
-      else log("✅ Marked paid:", { id: updated._id, email: updated.email, plan: updated.plan });
-
-      return res.status(200).send("OK");
+      return res.status(200).send("No matching target");
     }
 
+    // ================= DOWNGRADE EVENTS =================
     if (event === "subscription_cancelled" || event === "subscription_expired" || event === "order_refunded") {
       if (firmId) {
-        await Firma.findByIdAndUpdate(firmId, { $set: { payment_status: "expired", expires_at: new Date() } });
+        await Firma.findByIdAndUpdate(firmId, {
+          $set: {
+            payment_status: "active",
+            plan: "free",
+            is_boosted: false,
+            boost_expires_at: null
+          }
+        });
       } else if (email) {
-        await Firma.findOneAndUpdate({ email }, { $set: { payment_status: "expired", expires_at: new Date() } });
+        await Firma.findOneAndUpdate({ email }, {
+          $set: {
+            payment_status: "active",
+            plan: "free",
+            is_boosted: false,
+            boost_expires_at: null
+          }
+        });
       }
+
       return res.status(200).send("OK");
     }
 
@@ -860,7 +870,6 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
     return res.status(500).send("Webhook error");
   }
 });
-
 
 /* ================= JSON (AFTER WEBHOOK) ================= */
 app.use(express.json());
@@ -1484,16 +1493,16 @@ app.post("/auth/email/start", async (req, res) => {
 
     if (!existing) {
       await Firma.create({
-        email,
-        plan: "basic",
-        payment_status: "pending",
-        email_verified: false,
-        is_stub: true, // ✅ mark as OTP stub
-        email_otp_hash: otpHash,
-        email_otp_expires: expires,
-        email_otp_attempts: 0,
-        email_otp_last_sent_at: new Date(),
-      });
+  email,
+  plan: "free",
+  payment_status: "active",
+  email_verified: false,
+  is_stub: true,
+  email_otp_hash: otpHash,
+  email_otp_expires: expires,
+  email_otp_attempts: 0,
+  email_otp_last_sent_at: new Date(),
+});
     } else {
       // Keep existing doc (could be deleted old firm) - just refresh OTP
       await Firma.updateOne(
@@ -1635,9 +1644,9 @@ app.get("/pay-now/checkout", async (req, res) => {
     const plan = String(req.query.plan || "").trim().toLowerCase();
 
     if (!token) return res.status(400).json({ success: false, error: "Missing token" });
-    if (!["basic", "standard", "premium"].includes(plan)) {
-      return res.status(400).json({ success: false, error: "Invalid plan" });
-    }
+    if (plan !== "premium") {
+  return res.status(400).json({ success: false, error: "Invalid plan" });
+}
 
     const tokenHash = sha256Hex(token);
 
@@ -1649,12 +1658,12 @@ app.get("/pay-now/checkout", async (req, res) => {
     if (!firm) return res.status(400).json({ success: false, error: "Invalid or expired link" });
 
     await Firma.updateOne(
-      { _id: firm._id },
-      {
-        $set: { payment_status: "pending", plan },
-        $unset: { pay_token_hash: "", pay_token_expires: "" },
-      }
-    );
+  { _id: firm._id },
+  {
+    $set: { payment_status: "active", plan: "free" },
+    $unset: { pay_token_hash: "", pay_token_expires: "" },
+  }
+);
 
     const variantId = planToVariant(plan);
     const checkoutUrl = await createLemonCheckout({
@@ -1914,6 +1923,107 @@ app.get("/pro/firma/me/:userId", async (req, res) => {
   }
 });
 
+/* ================= PRO PREMIUM CHECKOUT ================= */
+app.post("/pro/premium/checkout", async (req, res) => {
+  try {
+    const { userId, firmId } = req.body || {};
+
+    const safeUserId = String(userId || "").trim();
+    const safeFirmId = String(firmId || "").trim();
+
+    if (!safeUserId || !safeFirmId) {
+      return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    const user = await User.findById(safeUserId).select("_id email role").lean();
+    if (!user) {
+      return sendError(res, 404, "USER_NOT_FOUND");
+    }
+
+    if (user.role !== "pro") {
+      return sendError(res, 403, "ONLY_PRO_CAN_BUY_PREMIUM");
+    }
+
+    const firm = await Firma.findById(safeFirmId)
+      .select("_id email owner_user_id plan payment_status")
+      .lean();
+
+    if (!firm) {
+      return sendError(res, 404, "FIRM_NOT_FOUND");
+    }
+
+    if (String(firm.owner_user_id || "") !== safeUserId) {
+      return sendError(res, 403, "FORBIDDEN");
+    }
+
+    const variantId = planToVariant("premium");
+    if (!variantId) {
+      return sendError(res, 500, "PREMIUM_VARIANT_NOT_CONFIGURED");
+    }
+
+    const payload = {
+      data: {
+        type: "checkouts",
+        attributes: {
+          product_options: {
+            redirect_url: `${FRONTEND_BASE_URL}/pro-dashboard.html?premium=success`
+          },
+          checkout_options: {
+            embed: true,
+            media: false,
+            logo: true,
+            desc: false,
+            discount: false,
+            locale: "en",
+            button_color: "#2563eb",
+            button_text_color: "#ffffff"
+          },
+          checkout_data: {
+            email: firm.email || user.email,
+            custom: {
+              firmId: String(firm._id),
+              email: String(firm.email || user.email)
+            }
+          }
+        },
+        relationships: {
+          store: { data: { type: "stores", id: String(LEMON_STORE_ID) } },
+          variant: { data: { type: "variants", id: String(variantId) } }
+        }
+      }
+    };
+
+    const resp = await fetch("https://api.lemonsqueezy.com/v1/checkouts", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LEMON_API_KEY}`,
+        Accept: "application/vnd.api+json",
+        "Content-Type": "application/vnd.api+json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const json = await resp.json().catch(() => ({}));
+
+    if (!resp.ok) {
+      errorWithTime("PRO PREMIUM CHECKOUT ERROR:", json);
+      return sendError(res, 500, "CHECKOUT_CREATE_FAILED");
+    }
+
+    const checkoutUrl = json?.data?.attributes?.url;
+    if (!checkoutUrl) {
+      return sendError(res, 500, "CHECKOUT_URL_MISSING");
+    }
+
+    return res.json({
+      success: true,
+      checkoutUrl
+    });
+  } catch (err) {
+    errorWithTime("PRO PREMIUM CHECKOUT SERVER ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
 /* ================= UPDATE PRO FIRM ================= */
 app.put("/pro/firma/:id", async (req, res) => {
   try {
@@ -2336,96 +2446,46 @@ async function runPaidNotifications() {
 async function runCleanup() {
   const nowDate = new Date();
 
-  // ✅ Delete OTP stubs older than STUB_DELETE_AFTER_HOURS (FIXED query: no duplicate $or)
+  // delete OTP stubs only
   const stubCutoff = new Date(Date.now() - STUB_DELETE_AFTER_HOURS * 60 * 60 * 1000);
 
   const stubsDel = await Firma.deleteMany({
     createdAt: { $lte: stubCutoff },
-    payment_status: "pending",
+    is_stub: true,
     $and: [
       { $or: [{ name: { $exists: false } }, { name: null }, { name: "" }] },
       { $or: [{ email_verified: { $exists: false } }, { email_verified: false }] },
     ],
   });
+
   if (stubsDel?.deletedCount) log("🧹 Deleted OTP stubs:", stubsDel.deletedCount);
 
-  const expiredTrials = await Firma.find({
-    payment_status: "trial",
-    trial_ends_at: { $lte: nowDate },
-  }).select("_id email trial_expired_email_sent_at").lean();
+  // downgrade expired premium listings back to free
+  const expiredBoosts = await Firma.find({
+    plan: "premium",
+    is_boosted: true,
+    boost_expires_at: { $lte: nowDate }
+  }).select("_id email").lean();
 
-  await Firma.updateMany(
-    { payment_status: "trial", trial_ends_at: { $lte: nowDate } },
-    { $set: { payment_status: "expired", expires_at: nowDate } }
-  );
-
-  if (resend) {
-    for (const f of expiredTrials) {
-      if (f.trial_expired_email_sent_at) continue;
-      try {
-        await sendMail({
-          to: f.email,
-          subject: "EasyFix - Trial mbaroi, lista u çaktivizua",
-          text: `Trial-i yt mbaroi dhe lista u çaktivizua. Për me vazhdu me u shfaq: ${FRONTEND_BASE_URL}/pay.html`,
-          html: `
-            <div style="font-family:Arial;line-height:1.5">
-              <h2>Lista u çaktivizua</h2>
-              <p>Trial-i yt mbaroi dhe lista u çaktivizua.</p>
-              <p>Për me u shfaq prap: <a href="${FRONTEND_BASE_URL}/pay.html">Pay now</a></p>
-            </div>`,
-        });
-
-        await Firma.updateOne(
-          { _id: f._id },
-          { $set: { trial_expired_email_sent_at: new Date() } }
-        );
-        log("✅ Sent trial-expired email:", f.email);
-      } catch (e) {
-        errorWithTime("TRIAL EXPIRED EMAIL ERROR:", f.email, e);
+  if (expiredBoosts.length) {
+    await Firma.updateMany(
+      {
+        plan: "premium",
+        is_boosted: true,
+        boost_expires_at: { $lte: nowDate }
+      },
+      {
+        $set: {
+          plan: "free",
+          is_boosted: false,
+          boost_expires_at: null,
+          payment_status: "active"
+        }
       }
-    }
+    );
+
+    log("⬇️ Downgraded expired premium firms to free:", expiredBoosts.length);
   }
-
-  const paidExpiredList = await Firma.find({
-    payment_status: "paid",
-    expires_at: { $lte: nowDate },
-  }).select("_id email paid_expired_email_sent_at expires_at").lean();
-
-  await Firma.updateMany(
-    { payment_status: "paid", expires_at: { $lte: nowDate } },
-    { $set: { payment_status: "expired" } }
-  );
-
-  if (resend) {
-    for (const f of paidExpiredList) {
-      if (f.paid_expired_email_sent_at) continue;
-      try {
-        await sendMail({
-          to: f.email,
-          subject: "EasyFix - Abonimi skadoi, lista u çaktivizua",
-          text: `Abonimi yt skadoi dhe lista u çaktivizua. Për me vazhdu me u shfaq: ${FRONTEND_BASE_URL}/pay.html`,
-          html: `
-            <div style="font-family:Arial;line-height:1.5">
-              <h2>Lista u çaktivizua</h2>
-              <p>Abonimi yt skadoi dhe lista u çaktivizua.</p>
-              <p>Për me u shfaq prap: <a href="${FRONTEND_BASE_URL}/pay.html">Pay now</a></p>
-            </div>`,
-        });
-
-        await Firma.updateOne(
-          { _id: f._id },
-          { $set: { paid_expired_email_sent_at: new Date() } }
-        );
-        log("✅ Sent paid-expired email:", f.email);
-      } catch (e) {
-        errorWithTime("PAID EXPIRED EMAIL ERROR:", f.email, e);
-      }
-    }
-  }
-
-  const cutoff = new Date(Date.now() - DELETE_AFTER_DAYS * 24 * 60 * 60 * 1000);
-  const del = await Firma.deleteMany({ payment_status: "expired", expires_at: { $lte: cutoff } });
-  if (del?.deletedCount) log("🗑️ Deleted expired firms:", del.deletedCount);
 }
 
 /* ================= MONGO + START ================= */
@@ -2449,8 +2509,6 @@ async function start() {
     await Firma.findOne({}).select("_id").lean();
 
     try {
-      await runTrialNotifications();
-      await runPaidNotifications();
       await runCleanup();
       log("✅ Initial scheduler run completed");
     } catch (e) {
@@ -2458,9 +2516,11 @@ async function start() {
     }
 
     setInterval(async () => {
-      try { await runTrialNotifications(); } catch (e) { errorWithTime("TrialNotifications scheduler error:", e); }
-      try { await runPaidNotifications(); } catch (e) { errorWithTime("PaidNotifications scheduler error:", e); }
-      try { await runCleanup(); } catch (e) { errorWithTime("Cleanup scheduler error:", e); }
+      try {
+        await runCleanup();
+      } catch (e) {
+        errorWithTime("Cleanup scheduler error:", e);
+      }
     }, CHECK_INTERVAL_MINUTES * 60 * 1000);
 
     app.listen(PORT, () => log(`🚀 Server running on port ${PORT}`));

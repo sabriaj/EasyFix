@@ -434,8 +434,55 @@ async function saveMedia() {
 document.getElementById("saveListingBtn").addEventListener("click", saveListing);
 document.getElementById("saveMediaBtn").addEventListener("click", saveMedia);
 
-document.getElementById("boostBtn").addEventListener("click", () => {
-  showStatus("Hapi tjetër: premium boost checkout për mjeshtrat.", "info");
+document.getElementById("boostBtn").addEventListener("click", async () => {
+  const user = getUser();
+
+  if (!user || !user.id || user.role !== "pro") {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  if (!currentFirm || !currentFirm._id) {
+    showStatus("Firma nuk u ngarkua ende.");
+    return;
+  }
+
+  const btn = document.getElementById("boostBtn");
+  btn.disabled = true;
+  btn.innerText = "Duke hapur pagesën...";
+
+  try {
+    const res = await fetch(`${API_URL}/pro/premium/checkout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        userId: user.id,
+        firmId: currentFirm._id
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      showStatus(data.error_code || "Gabim gjatë krijimit të checkout-it premium.");
+      return;
+    }
+
+    if (!data.checkoutUrl) {
+      showStatus("Nuk u kthye checkout link.");
+      return;
+    }
+
+    window.location.href = data.checkoutUrl;
+  } catch (err) {
+    console.error(err);
+    showStatus("Gabim serveri.");
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Kaloni në Premium";
+  }
 });
 
 document.getElementById("logoutBtn").addEventListener("click", () => {
@@ -443,7 +490,26 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
   window.location.href = "/auth.html";
 });
 
-loadDashboard();
+
+function handlePremiumReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const premium = params.get("premium");
+
+  if (premium === "success") {
+    showStatus("Pagesa u krye. Premium po përditësohet...", "success");
+
+    setTimeout(async () => {
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+      await loadDashboard();
+    }, 1500);
+  }
+}
+
+(async function initProDashboard() {
+  await loadDashboard();
+  handlePremiumReturn();
+})();
 </script>
 </body>
 </html>

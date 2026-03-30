@@ -875,8 +875,20 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 app.use(express.json());
 
 
+/* ================= CONTACT UNLOCKS ================= */
+const contactUnlockSchema = new mongoose.Schema(
+  {
+    user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    firm_id: { type: mongoose.Schema.Types.ObjectId, ref: "Firma", required: true, index: true },
+    unlocked_at: { type: Date, default: Date.now }
+  },
+  { timestamps: true }
+);
 
-/* ================= USERS ================= */
+contactUnlockSchema.index({ user_id: 1, firm_id: 1 }, { unique: true });
+
+const ContactUnlock = mongoose.model("ContactUnlock", contactUnlockSchema);
+
 /* ================= USERS ================= */
 const userSchema = new mongoose.Schema(
   {
@@ -1280,38 +1292,102 @@ app.post("/credits/buy", async (req, res) => {
 });
 
 /* ================= CONTACT SYSTEM ================= */
+/* ================= CONTACT ================= */
 app.post("/contact", async (req, res) => {
   try {
-    const { userId, firmEmail } = req.body;
+    const { userId, firmId } = req.body || {};
 
-    if (!userId || !firmEmail) {
+    const safeUserId = String(userId || "").trim();
+    const safeFirmId = String(firmId || "").trim();
+
+    if (!safeUserId || !safeFirmId) {
       return sendError(res, 400, "MISSING_FIELDS");
     }
 
-    const user = await User.findById(userId);
-    if (!user) return sendError(res, 404, "USER_NOT_FOUND");
-
-    if (user.role !== "client"){
-      return sendError(res, 403, "ONLY_CLIENTS_CAN_CONTACT");
+    const user = await User.findById(safeUserId);
+    if (!user) {
+      return sendError(res, 404, "USER_NOT_FOUND");
     }
 
-
-    if (user.credits <= 0) {
-      return sendError(res, 402, "NO_CREDITS");
+    if (user.role !== "client") {
+      return sendError(res, 403, "ONLY_CLIENT_CAN_CONTACT");
     }
 
-    const firm = await Firma.findOne({ email: normalizeEmail(firmEmail) });
-    if (!firm) return sendError(res, 404, "FIRM_NOT_FOUND");
+    const firm = await Firma.findById(safeFirmId).lean();
+    if (!firm) {
+      return sendError(res, 404, "FIRM_NOT_FOUND");
+    }
 
-    user.credits -= 1;
-    await user.save();
+    const existingUnlock = await ContactUnlock.findOne({
+      user_id: user._id,
+      firm_id: firm._id
+    }).lean();
+
+    if (existingUnlock) {
+      return res.json({
+        success: true,
+        alreadyUnlocked: true,
+        credits: user.credits,
+        contact: {
+          phone: firm.phone || "",
+          email: firm.email || "",
+          callLink: firm.phone ? `tel:${firm.phone}` : "",
+          smsLink: firm.phone ? `sms:${firm.phone}` : "",
+          mailLink: firm.email ? `mailto:${firm.email}` : ""
+        }
+      });
+    }
+
+    if ((user.credits || 0) < 1) {
+      return sendError(res, 400, "NO_CREDITS");
+    }
+
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: user._id, credits: { $gte: 1 } },
+      { $inc: { credits: -1 } },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return sendError(res, 400, "NO_CREDITS");
+    }
+
+    await ContactUnlock.create({
+      user_id: user._id,
+      firm_id: firm._id
+    });
 
     return res.json({
       success: true,
-      phone: firm.phone,
-      credits: user.credits,
+      alreadyUnlocked: false,
+      credits: updatedUser.credits,
+      contact: {
+        phone: firm.phone || "",
+        email: firm.email || "",
+        callLink: firm.phone ? `tel:${firm.phone}` : "",
+        smsLink: firm.phone ? `sms:${firm.phone}` : "",
+        mailLink: firm.email ? `mailto:${firm.email}` : ""
+      }
     });
   } catch (err) {
+    if (err?.code === 11000) {
+      const user = await User.findById(req.body?.userId).lean();
+      const firm = await Firma.findById(req.body?.firmId).lean();
+
+      return res.json({
+        success: true,
+        alreadyUnlocked: true,
+        credits: user?.credits || 0,
+        contact: {
+          phone: firm?.phone || "",
+          email: firm?.email || "",
+          callLink: firm?.phone ? `tel:${firm.phone}` : "",
+          smsLink: firm?.phone ? `sms:${firm.phone}` : "",
+          mailLink: firm?.email ? `mailto:${firm.email}` : ""
+        }
+      });
+    }
+
     errorWithTime("CONTACT ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }

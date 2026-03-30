@@ -32,7 +32,7 @@
             <p id="heroEmail" class="text-blue-100 mt-2"></p>
           </div>
 
-          <div class="bg-white/15 border border-white/20 rounded-2xl px-5 py-4 min-w-[220px]">
+          <div id="heroPlanBox" class="bg-white/15 border border-white/20 rounded-2xl px-5 py-4 min-w-[220px]">
             <div class="text-xs uppercase tracking-wider text-blue-100 font-bold">Statusi i listing-ut</div>
             <div id="planBadge" class="text-2xl font-extrabold mt-1">FREE</div>
             <div id="boostInfo" class="text-sm text-blue-100 mt-2"></div>
@@ -77,21 +77,76 @@
                   class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
               </div>
 
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Kategoria</label>
-                <select id="category"
-                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 bg-white">
-                  <option value="">Zgjidh kategorinë</option>
-                  <option value="plumber">Hidraulik</option>
-                  <option value="electrician">Elektricist</option>
-                  <option value="painter">Bojaxhi</option>
-                  <option value="cleaning">Pastrim</option>
-                  <option value="handyman">Mjeshtër i përgjithshëm</option>
-                  <option value="mason">Murator</option>
-                  <option value="gardener">Kopshtar</option>
-                  <option value="ac">Klima / Ngrohje</option>
-                </select>
-              </div>
+              <div class="md:col-span-2">
+  <label class="block text-sm font-semibold text-gray-700 mb-2">Kategoritë e punës</label>
+  <div id="categoryMultiBox" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+      <input type="checkbox" value="plumber" class="pro-category-checkbox">
+      <span>Hidraulik</span>
+    </label>
+
+    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+      <input type="checkbox" value="electrician" class="pro-category-checkbox">
+      <span>Elektricist</span>
+    </label>
+
+    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+      <input type="checkbox" value="painter" class="pro-category-checkbox">
+      <span>Bojaxhi</span>
+    </label>
+
+    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+      <input type="checkbox" value="cleaning" class="pro-category-checkbox">
+      <span>Pastrim</span>
+    </label>
+
+    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+      <input type="checkbox" value="mason" class="pro-category-checkbox">
+      <span>Murator</span>
+    </label>
+
+    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+      <input type="checkbox" value="gardener" class="pro-category-checkbox">
+      <span>Kopshtar</span>
+    </label>
+
+    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+  <input type="checkbox" value="ac" class="reg-category">
+  <span>Klima </span>
+</label>
+
+<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+  <input type="checkbox" value="gips" class="reg-category">
+  <span>Punime me gips </span>
+</label>
+
+<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+  <input type="checkbox" value="doors_windows" class="reg-category">
+  <span>Dyer/Dritare </span>
+</label>
+
+<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+  <input type="checkbox" value="tiles" class="reg-category">
+  <span>Pllaka/Keramik</span>
+</label>
+
+<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+  <input type="checkbox" value="parquet" class="reg-category">
+  <span>Sallidim parketit </span>
+</label>
+
+<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+  <input type="checkbox" value="facade" class="reg-category">
+  <span>Punime fasade </span>
+</label>
+
+<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+  <input type="checkbox" value="heating_cooling" class="reg-category">
+  <span>Ngrohje/Ftohje </span>
+</label>
+  </div>
+  <p id="categoryPlanHint" class="text-xs text-gray-400 mt-2"></p>
+</div>
 
               <div class="md:col-span-2">
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Adresa</label>
@@ -119,7 +174,7 @@
           <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
             <div class="mb-5">
               <h2 class="text-2xl font-extrabold text-gray-900">Logo dhe foto</h2>
-              <p class="text-sm text-gray-500 mt-1">FREE lejon deri 3 foto. PREMIUM lejon më shumë.</p>
+              <p id="mediaPlanHint" class="text-sm text-gray-500 mt-1">FREE lejon deri 3 foto. PREMIUM lejon më shumë.</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -141,6 +196,12 @@
                 class="bg-gray-900 hover:bg-black text-white px-6 py-3 rounded-2xl font-bold shadow-lg transition">
                 Ruaj media
               </button>
+              <div class="mt-6">
+  <h3 class="text-lg font-extrabold text-gray-900 mb-3">Logo aktuale</h3>
+  <div id="logoPreviewBox" class="w-24 h-24 rounded-2xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center">
+    <span class="text-xs text-gray-400">Pa logo</span>
+  </div>
+</div>
             </div>
 
             <div class="mt-6">
@@ -154,6 +215,7 @@
           <div class="bg-white rounded-3xl shadow-xl p-6">
             <div class="text-sm font-bold text-gray-400 uppercase tracking-wider">Plani aktual</div>
             <div id="sidePlanName" class="text-2xl font-extrabold text-gray-900 mt-2">FREE</div>
+            <div id="premiumExpiresBox" class="text-sm text-gray-500 mt-2"></div>
             <p class="text-sm text-gray-500 mt-2">
               FREE të mban në listim. PREMIUM të jep boost, badge dhe më shumë foto.
             </p>
@@ -224,6 +286,8 @@ function showError(msg) {
   errorBox.innerText = msg;
 }
 
+let statusTimer = null;
+
 function showStatus(msg, type = "error") {
   const box = document.getElementById("statusBox");
   box.classList.remove("hidden");
@@ -237,6 +301,11 @@ function showStatus(msg, type = "error") {
   }
 
   box.textContent = msg;
+
+  clearTimeout(statusTimer);
+  statusTimer = setTimeout(() => {
+    box.classList.add("hidden");
+  }, 4000);
 }
 
 function renderPhotos(photos = []) {
@@ -256,6 +325,30 @@ function renderPhotos(photos = []) {
   });
 }
 
+function getSelectedCategories() {
+  return Array.from(document.querySelectorAll(".pro-category-checkbox:checked"))
+    .map(el => el.value);
+}
+
+function setSelectedCategories(categories = []) {
+  const selected = new Set(Array.isArray(categories) ? categories : []);
+  document.querySelectorAll(".pro-category-checkbox").forEach(el => {
+    el.checked = selected.has(el.value);
+  });
+}
+
+function updateCategoryPlanHint(firm) {
+  const hint = document.getElementById("categoryPlanHint");
+  if (!hint) return;
+
+  const premium = firm?.plan === "premium";
+  hint.innerText = premium
+    ? "Plani PREMIUM lejon deri 7 kategori."
+    : "Plani FREE lejon deri 2 kategori.";
+}
+
+
+
 function fillDashboard(firm) {
   currentFirm = firm;
 
@@ -264,7 +357,13 @@ function fillDashboard(firm) {
   document.getElementById("phone").value = firm.phone || "";
   document.getElementById("city").value = firm.city || "";
   document.getElementById("address").value = firm.address || "";
-  document.getElementById("category").value = firm.category || "";
+  setSelectedCategories(
+  Array.isArray(firm.categories) && firm.categories.length
+    ? firm.categories
+    : (firm.category ? [firm.category] : [])
+);
+
+updateCategoryPlanHint(firm);
   document.getElementById("description").value = firm.description || "";
 
   document.getElementById("heroBusinessName").innerText = firm.name || "Dashboard";
@@ -272,7 +371,8 @@ function fillDashboard(firm) {
 
   const premium = firm.plan === "premium";
   document.getElementById("planBadge").innerText = premium ? "PREMIUM" : "FREE";
-  document.getElementById("sidePlanName").innerText = premium ? "PREMIUM" : "FREE";
+  const sidePlanName = document.getElementById("sidePlanName");
+sidePlanName.childNodes[0].nodeValue = premium ? "PREMIUM" : "FREE";
 
   document.getElementById("boostInfo").innerText = premium
     ? "Listing-u yt ka përparësi në renditje."
@@ -284,6 +384,57 @@ function fillDashboard(firm) {
     firm.payment_status === "active" ? "Aktiv" : (firm.payment_status || "Aktiv");
 
   renderPhotos(Array.isArray(firm.photos) ? firm.photos : []);
+
+
+
+  const logoPreviewBox = document.getElementById("logoPreviewBox");
+
+if (firm.logoUrl) {
+  logoPreviewBox.innerHTML = `<img src="${firm.logoUrl}" class="w-full h-full object-cover">`;
+} else {
+  logoPreviewBox.innerHTML = `<span class="text-xs text-gray-400">Pa logo</span>`;
+}
+
+  const mediaPlanHint = document.getElementById("mediaPlanHint");
+
+if (premium) {
+  mediaPlanHint.innerText = "Plani PREMIUM lejon deri 10 foto.";
+} else {
+  mediaPlanHint.innerText = "Plani FREE lejon deri 3 foto. Për më shumë foto, kalo në PREMIUM.";
+}
+
+
+const heroPlanBox = document.getElementById("heroPlanBox");
+
+if (premium) {
+  heroPlanBox.className = "bg-amber-400/20 border border-amber-200/40 rounded-2xl px-5 py-4 min-w-[220px]";
+} else {
+  heroPlanBox.className = "bg-white/15 border border-white/20 rounded-2xl px-5 py-4 min-w-[220px]";
+}
+
+
+
+  const premiumExpiresBox = document.getElementById("premiumExpiresBox");
+
+if (premium && firm.boost_expires_at) {
+  const d = new Date(firm.boost_expires_at);
+  premiumExpiresBox.innerText = `Aktiv deri më: ${d.toLocaleDateString("sq-AL")}`;
+} else {
+  premiumExpiresBox.innerText = "Aktualisht je në planin falas.";
+}
+
+
+  const boostBtn = document.getElementById("boostBtn");
+
+if (premium) {
+  boostBtn.innerText = "Premium aktiv";
+  boostBtn.disabled = true;
+  boostBtn.className = "mt-5 w-full bg-amber-500 text-white py-3 rounded-2xl font-bold shadow-lg shadow-amber-100 transition cursor-default";
+} else {
+  boostBtn.innerText = "Kaloni në Premium";
+  boostBtn.disabled = false;
+  boostBtn.className = "mt-5 w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-2xl font-bold shadow-lg shadow-green-100 transition";
+}
 }
 
 async function loadDashboard() {
@@ -325,10 +476,10 @@ async function saveListing() {
   const phone = document.getElementById("phone").value.trim();
   const city = document.getElementById("city").value.trim();
   const address = document.getElementById("address").value.trim();
-  const category = document.getElementById("category").value;
+  const categories = getSelectedCategories();
   const description = document.getElementById("description").value.trim();
 
-  if (!businessName || !phone || !city || !address || !category) {
+  if (!businessName || !phone || !city || !address || categories.length === 0) {
     showStatus("Plotëso të gjitha fushat kryesore.");
     return;
   }
@@ -349,7 +500,7 @@ async function saveListing() {
         phone,
         city,
         address,
-        category,
+        categories,
         country: currentFirm.country || "MK",
         description
       })
@@ -481,7 +632,6 @@ document.getElementById("boostBtn").addEventListener("click", async () => {
     showStatus("Gabim serveri.");
   } finally {
     btn.disabled = false;
-    btn.innerText = "Kaloni në Premium";
   }
 });
 

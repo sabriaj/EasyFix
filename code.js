@@ -2,6 +2,12 @@ const API_URL = "https://easyfix-dev-1.onrender.com";
 
 let emailVerified = false;
 
+
+function getSelectedRegisterCategories() {
+  return Array.from(document.querySelectorAll(".reg-category:checked"))
+    .map(el => el.value);
+}
+
 function showStatus(message, type = "error") {
   const box = document.getElementById("statusBox");
   box.classList.remove("hidden");
@@ -128,7 +134,7 @@ async function submitRegister(e) {
   const phone = document.getElementById("phone").value.trim();
   const city = document.getElementById("city").value.trim();
   const businessAddress = document.getElementById("businessAddress").value.trim();
-  const category = document.getElementById("category").value;
+  const categories = getSelectedRegisterCategories();
   const description = document.getElementById("description").value.trim();
 
   const logoFile = document.getElementById("logo").files[0] || null;
@@ -154,8 +160,8 @@ async function submitRegister(e) {
     return;
   }
 
-  if (!businessName || !phone || !city || !businessAddress || !category) {
-    showStatus("Plotëso të gjitha fushat e listing-ut.");
+  if (!businessName || !phone || !city || !businessAddress || categories.length === 0) {
+    showStatus("Plotëso të gjitha fushat e listing-ut dhe zgjidh të paktën një kategori.");
     return;
   }
 
@@ -203,9 +209,12 @@ async function submitRegister(e) {
     formData.append("phone", phone);
     formData.append("address", businessAddress);
     formData.append("city", city);
-    formData.append("category", category);
     formData.append("country", "MK");
     formData.append("description", description);
+
+    categories.forEach(cat => {
+      formData.append("categories", cat);
+    });
 
     if (logoFile) {
       formData.append("logo", logoFile);

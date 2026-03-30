@@ -234,6 +234,14 @@ const CATEGORY_STYLES = {
   "mason": { icon: "fa-trowel", color: "text-orange-400" },
   "gardener": { icon: "fa-leaf", color: "text-emerald-400" },
   "ac": { icon: "fa-snowflake", color: "text-blue-400" },
+
+  "gips": { icon: "fa-layer-group", color: "text-violet-400" },
+  "doors_windows": { icon: "fa-door-open", color: "text-amber-500" },
+  "tiles": { icon: "fa-border-all", color: "text-sky-500" },
+  "parquet": { icon: "fa-grip-lines", color: "text-yellow-700" },
+  "facade": { icon: "fa-building", color: "text-stone-500" },
+  "heating_cooling": { icon: "fa-temperature-half", color: "text-rose-400" },
+
   "default": { icon: "fa-hammer", color: "text-brand-400" }
 };
 
@@ -348,15 +356,15 @@ function renderFirms(firms) {
   document.getElementById("noResults").classList.add("hidden");
 
   firms.forEach(f => {
-    const plan = (f.plan || "basic").toLowerCase();
-    const isPremium = plan === "premium";
-    const photos = plan !== "basic" ? (f.photos || []) : [];
-    const logo = f.logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+    const plan = (f.plan || "free").toLowerCase();
+const isPremium = plan === "premium";
+const photos = Array.isArray(f.photos) ? f.photos : [];
+const logo = f.logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
 
-    let badge = "";
-    if (isPremium) badge = `<span class="badge-premium"><i class="fas fa-crown"></i> PRO</span>`;
-    else if (plan === "standard") badge = `<span class="badge-standard">STANDARD</span>`;
-
+let badge = "";
+if (isPremium) {
+  badge = `<span class="badge-premium"><i class="fas fa-crown"></i> PRO</span>`;
+}
     let mediaHtml = "";
     const sliderId = `slider-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -381,7 +389,9 @@ function renderFirms(firms) {
     }
 
     const card = document.createElement("div");
-    card.className = "bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1";
+card.className = isPremium
+  ? "bg-white rounded-xl shadow-md border border-amber-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ring-1 ring-amber-100"
+  : "bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1";
     const catLabels = (f._catKeys || []).map(k => categoryLabel(k)).join(", ");
     card.dataset.email = (f.email || "").toLowerCase();
 
@@ -394,7 +404,7 @@ function renderFirms(firms) {
             <h3 class="text-lg font-bold text-gray-900 leading-tight">${f.name}</h3>
             <p class="text-xs text-brand-600 font-bold uppercase tracking-wide mt-0.5">${catLabels}</p>
           </div>
-          ${(plan !== "basic") ? `<img src="${logo}" class="w-10 h-10 rounded-full border border-gray-100 shadow-sm object-cover">` : ""}
+          <img src="${logo}" class="w-10 h-10 rounded-full border border-gray-100 shadow-sm object-cover">
         </div>
 
         <div class="flex items-start gap-2 text-xs text-gray-500 font-medium mb-4">
@@ -403,9 +413,10 @@ function renderFirms(firms) {
         </div>
 
         <div class="flex gap-2 mt-auto">
-          <button onclick="handleGetContact('${f.phone}', '${f.email}')"
-  class="flex-1 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-bold">
-  Shfaq Kontaktin (-1 kredi)
+          <button onclick="handleGetContact('${f._id}')"
+  class="flex-1 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
+  <i class="fas fa-phone-alt text-xs"></i>
+  <span>Shfaq Kontaktin (-1 kredi)</span>
 </button>
         </div>
       </div>
@@ -478,8 +489,8 @@ function normalizeCategories(f) {
 }
 
 function sortFirms(a, b) {
-  const score = p => p === "premium" ? 1 : p === "standard" ? 2 : 3;
-  return score((a.plan || "").toLowerCase()) - score((b.plan || "").toLowerCase());
+  const score = p => p === "premium" ? 1 : 2;
+  return score((a.plan || "free").toLowerCase()) - score((b.plan || "free").toLowerCase());
 }
 
 function focusFirmFromUrl() {
@@ -682,6 +693,46 @@ function closeMsgModal() {
   modalEl.classList.add("hidden");
 }
 
+function openContactModal(contact, alreadyUnlocked = false) {
+  const modal = document.getElementById("contactModal");
+  const info = document.getElementById("contactUnlockInfo");
+  const phoneText = document.getElementById("contactPhoneText");
+  const emailText = document.getElementById("contactEmailText");
+  const callBtn = document.getElementById("callBtn");
+  const smsBtn = document.getElementById("smsBtn");
+  const emailBtn = document.getElementById("emailBtn");
+
+  if (!modal) return;
+
+  info.innerText = alreadyUnlocked
+    ? "Ky kontakt është i zhbllokuar tashmë për llogarinë tënde."
+    : "Kontakti u zhbllokua me sukses.";
+
+  phoneText.innerText = contact?.phone || "-";
+  emailText.innerText = contact?.email || "-";
+
+  callBtn.href = contact?.callLink || "#";
+  smsBtn.href = contact?.smsLink || "#";
+  emailBtn.href = contact?.mailLink || "#";
+
+  if (!contact?.callLink) callBtn.classList.add("pointer-events-none", "opacity-50");
+  else callBtn.classList.remove("pointer-events-none", "opacity-50");
+
+  if (!contact?.smsLink) smsBtn.classList.add("pointer-events-none", "opacity-50");
+  else smsBtn.classList.remove("pointer-events-none", "opacity-50");
+
+  if (!contact?.mailLink) emailBtn.classList.add("pointer-events-none", "opacity-50");
+  else emailBtn.classList.remove("pointer-events-none", "opacity-50");
+
+  modal.classList.remove("hidden");
+}
+
+function closeContactModal() {
+  const modal = document.getElementById("contactModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+}
+
 async function continueCreditsPayment() {
   const user = getUser();
 
@@ -745,21 +796,20 @@ async function continueCreditsPayment() {
 }
 
 /* ================= CONTACT ================= */
-async function handleGetContact(phone, firmEmail) {
+async function handleGetContact(firmId) {
   const user = getUser();
-
 
   if (!user) {
     window.location.href = "/auth.html";
     return;
   }
 
-  if (user && user.role === "pro") {
-  alert("Llogaria e mjeshtrit nuk mund të kontaktojë mjeshtra të tjerë.");
-  return;
-}
+  if (user.role === "pro") {
+    alert("Llogaria e mjeshtrit nuk mund të kontaktojë mjeshtra të tjerë.");
+    return;
+  }
 
-  if (!firmEmail) {
+  if (!firmId) {
     showMessage("Kontakti nuk është i disponueshëm.");
     return;
   }
@@ -775,7 +825,7 @@ async function handleGetContact(phone, firmEmail) {
       },
       body: JSON.stringify({
         userId: user.id,
-        firmEmail
+        firmId: firmId
       })
     });
 
@@ -783,10 +833,10 @@ async function handleGetContact(phone, firmEmail) {
 
     if (!res.ok) {
       if (data.error_code === "NO_CREDITS") {
-  openCreditsModal(5);
-  setCreditsModalStatus("Nuk ke kredi. Zgjidh paketën dhe vazhdo me pagesë.");
-  return;
-}
+        openCreditsModal(5);
+        setCreditsModalStatus("Nuk ke kredi. Zgjidh paketën dhe vazhdo me pagesë.");
+        return;
+      }
 
       if (data.error_code === "USER_NOT_FOUND") {
         localStorage.removeItem("easyfix_user");
@@ -804,7 +854,7 @@ async function handleGetContact(phone, firmEmail) {
     }));
 
     await loadCredits();
-    showMessage(`Numri: ${data.phone}`);
+    openContactModal(data.contact, data.alreadyUnlocked);
   } catch (err) {
     console.error(err);
     showMessage("Gabim serveri. Provo më vonë.");
@@ -932,6 +982,51 @@ updateCreditPackUI();
     </div>
   </div>
 </div>
+
+<!-- CONTACT MODAL -->
+<div id="contactModal" class="hidden fixed inset-0 z-[120]">
+  <div class="absolute inset-0 bg-black/50" onclick="closeContactModal()"></div>
+
+  <div class="relative z-[121] flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden">
+      <div class="bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-5 text-white">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-2xl font-extrabold">Kontakti i mjeshtrit</h3>
+            <p id="contactUnlockInfo" class="text-blue-100 text-sm mt-1"></p>
+          </div>
+          <button onclick="closeContactModal()" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+        </div>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
+          <div class="text-xs uppercase tracking-wide text-gray-400 font-bold">Numri i telefonit</div>
+          <div id="contactPhoneText" class="text-lg font-extrabold text-gray-900 mt-1">-</div>
+        </div>
+
+        <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
+          <div class="text-xs uppercase tracking-wide text-gray-400 font-bold">Email</div>
+          <div id="contactEmailText" class="text-base font-bold text-gray-900 mt-1 break-all">-</div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <a id="callBtn" href="#" class="bg-green-600 hover:bg-green-700 text-white text-center py-3 rounded-2xl font-bold">
+            Call
+          </a>
+          <a id="smsBtn" href="#" class="bg-blue-600 hover:bg-blue-700 text-white text-center py-3 rounded-2xl font-bold">
+            SMS
+          </a>
+          <a id="emailBtn" href="#" class="bg-gray-900 hover:bg-black text-white text-center py-3 rounded-2xl font-bold">
+            Email
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 
 </body>
 </html>

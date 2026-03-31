@@ -147,15 +147,15 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
       }
 
       localStorage.setItem("easyfix_user", JSON.stringify({
-        id: data.user.id,
-        name: data.user.name,
-        surname: data.user.surname,
-        address: data.user.address,
-        email: data.user.email,
-        role: data.user.role,
-        credits: data.user.credits,
-        sessionToken: data.user.sessionToken
-      }));
+  id: data.user.id,
+  name: data.user.name,
+  surname: data.user.surname,
+  address: data.user.address,
+  email: data.user.email,
+  role: data.user.role,
+  credits: data.user.credits,
+  sessionToken: data.sessionToken
+}));
 
       showStatus("Login me sukses.", "success");
 
@@ -213,14 +213,15 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
     }
 
     localStorage.setItem("easyfix_user", JSON.stringify({
-      id: data.user.id,
-      name: data.user.name,
-      surname: data.user.surname,
-      address: data.user.address,
-      email: data.user.email,
-      role: data.user.role,
-      credits: data.user.credits
-    }));
+  id: data.user.id,
+  name: data.user.name,
+  surname: data.user.surname,
+  address: data.user.address,
+  email: data.user.email,
+  role: data.user.role,
+  credits: data.user.credits,
+  sessionToken: data.sessionToken
+}));
 
     showStatus("Account u krijua me sukses.", "success");
 

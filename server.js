@@ -549,7 +549,10 @@ app.post("/admin/run-scheduler", requireAdmin, async (req, res) => {
 /* ================= ADMIN: MIGRATE LEGACY FIRMS ================= */
 app.post("/admin/migrate-legacy-firms", requireAdmin, async (req, res) => {
   try {
-    const firms = await Firma.find({}).select("_id plan payment_status is_boosted boost_expires_at").lean();
+    const firms = await Firma.find({
+  name: { $exists: true, $nin: [null, ""] },
+  is_stub: { $ne: true }
+}).select("_id plan payment_status is_boosted boost_expires_at name").lean();
 
     let updatedCount = 0;
 
@@ -1975,11 +1978,12 @@ app.get("/firms", async (req, res) => {
     };
 
     const activeOnly = {
-      $and: [
-        notDeleted,
-        { payment_status: "active" }
-      ],
-    };
+  $and: [
+    notDeleted,
+    { payment_status: "active" },
+    { name: { $exists: true, $nin: [null, ""] } }
+  ],
+};
 
     let query = activeOnly;
 
@@ -2343,11 +2347,12 @@ app.get("/firms/near", async (req, res) => {
     };
 
     const activeOnly = {
-      $and: [
-        notDeleted,
-        { payment_status: "active" }
-      ],
-    };
+  $and: [
+    notDeleted,
+    { payment_status: "active" },
+    { name: { $exists: true, $nin: [null, ""] } }
+  ],
+};
 
     let query = null;
 

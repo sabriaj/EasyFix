@@ -814,6 +814,12 @@ async function handleGetContact(firmId) {
     return;
   }
 
+  if (!user.sessionToken) {
+    localStorage.removeItem("easyfix_user");
+    window.location.href = "/auth.html";
+    return;
+  }
+
   if (window.__loadingContact) return;
   window.__loadingContact = true;
 
@@ -839,13 +845,13 @@ async function handleGetContact(firmId) {
         return;
       }
 
-      if (data.error_code === "USER_NOT_FOUND") {
+      if (data.error_code === "USER_NOT_FOUND" || data.error_code === "MISSING_FIELDS") {
         localStorage.removeItem("easyfix_user");
         window.location.href = "/auth.html";
         return;
       }
 
-      showMessage("Ndodhi një problem. Provo përsëri.");
+      showMessage(data.error_code || "Ndodhi një problem. Provo përsëri.");
       return;
     }
 

@@ -546,6 +546,50 @@ app.post("/admin/run-scheduler", requireAdmin, async (req, res) => {
   }
 });
 
+/* ================= ADMIN: MIGRATE LEGACY FIRMS ================= */
+app.post("/admin/migrate-legacy-firms", requireAdmin, async (req, res) => {
+  try {
+    const firms = await Firma.find({}).select("_id plan payment_status is_boosted boost_expires_at").lean();
+
+    let updatedCount = 0;
+
+    for (const firm of firms) {
+      const oldPlan = String(firm.plan || "").toLowerCase();
+      const oldStatus = String(firm.payment_status || "").toLowerCase();
+
+      const update = {};
+
+      // krejt firmat reale i kalojmë në logjikën e re aktive
+      if (["pending", "paid", "trial", "expired", "active", ""].includes(oldStatus)) {
+        update.payment_status = "active";
+      }
+
+      // planet e vjetra -> planet e reja
+      if (oldPlan === "premium") {
+        update.plan = "premium";
+        update.is_boosted = true;
+      } else {
+        update.plan = "free";
+        update.is_boosted = false;
+        update.boost_expires_at = null;
+      }
+
+      if (Object.keys(update).length > 0) {
+        await Firma.updateOne({ _id: firm._id }, { $set: update });
+        updatedCount++;
+      }
+    }
+
+    return res.json({
+      success: true,
+      updatedCount
+    });
+  } catch (err) {
+    errorWithTime("ADMIN MIGRATE LEGACY FIRMS ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
 /* ================= ADMIN: LIST FIRMS ================= */
 app.get("/admin/firms", requireAdmin, async (req, res) => {
   try {
@@ -895,9 +939,11 @@ const userSchema = new mongoose.Schema(
     name: String,
     surname: String,
     address: String,
+    
 
     email: { type: String, unique: true, required: true, index: true },
     password_hash: String,
+    session_token: String,
 
     role: {
       type: String,
@@ -944,30 +990,33 @@ app.post("/user/signup", async (req, res) => {
       return sendError(res, 409, "EMAIL_EKZISTON");
     }
 
-    const hash = await bcrypt.hash(password, SALT);
+const hash = await bcrypt.hash(password, SALT);
+const sessionToken = crypto.randomBytes(32).toString("hex");
 
-    const user = await User.create({
-      name,
-      surname,
-      address,
-      email,
-      password_hash: hash,
-      role: "client",
-      credits: 3,
-    });
+const user = await User.create({
+  name,
+  surname,
+  address,
+  email,
+  password_hash: hash,
+  session_token: sessionToken,
+  role: "client",
+  credits: 3,
+});
 
-    return res.json({
-      success: true,
-      user: {
-        id: String(user._id),
-        name: user.name,
-        surname: user.surname,
-        address: user.address,
-        email: user.email,
-        role: user.role,
-        credits: user.credits,
-      },
-    });
+return res.json({
+  success: true,
+  user: {
+    id: String(user._id),
+    name: user.name,
+    surname: user.surname,
+    address: user.address,
+    email: user.email,
+    role: user.role,
+    credits: user.credits,
+  },
+  sessionToken
+});
   } catch (err) {
     errorWithTime("USER SIGNUP ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
@@ -1005,30 +1054,33 @@ app.post("/pro/signup", async (req, res) => {
       return sendError(res, 409, "EMAIL_EKZISTON");
     }
 
-    const hash = await bcrypt.hash(password, SALT);
+   const hash = await bcrypt.hash(password, SALT);
+const sessionToken = crypto.randomBytes(32).toString("hex");
 
-    const user = await User.create({
-      name,
-      surname,
-      address,
-      email,
-      password_hash: hash,
-      role: "pro",
-      credits: 0,
-    });
+const user = await User.create({
+  name,
+  surname,
+  address,
+  email,
+  password_hash: hash,
+  session_token: sessionToken,
+  role: "pro",
+  credits: 0,
+});
 
-    return res.json({
-      success: true,
-      user: {
-        id: String(user._id),
-        name: user.name,
-        surname: user.surname,
-        address: user.address,
-        email: user.email,
-        role: user.role,
-        credits: user.credits,
-      },
-    });
+return res.json({
+  success: true,
+  user: {
+    id: String(user._id),
+    name: user.name,
+    surname: user.surname,
+    address: user.address,
+    email: user.email,
+    role: user.role,
+    credits: user.credits,
+  },
+  sessionToken
+});
   } catch (err) {
     errorWithTime("PRO SIGNUP ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
@@ -1048,23 +1100,28 @@ app.post("/user/login", async (req, res) => {
     }
 
     const user = await User.findOne({ email });
-    if (!user) return sendError(res, 400, "INVALID_CREDENTIALS");
+if (!user) return sendError(res, 400, "INVALID_CREDENTIALS");
 
-    const ok = await bcrypt.compare(password, user.password_hash || "");
-    if (!ok) return sendError(res, 400, "INVALID_CREDENTIALS");
+const ok = await bcrypt.compare(password, user.password_hash || "");
+if (!ok) return sendError(res, 400, "INVALID_CREDENTIALS");
 
-    return res.json({
-      success: true,
-      user: {
-        id: String(user._id),
-        name: user.name,
-        surname: user.surname,
-        address: user.address,
-        email: user.email,
-        role: user.role,
-        credits: user.credits,
-      },
-    });
+const sessionToken = crypto.randomBytes(32).toString("hex");
+user.session_token = sessionToken;
+await user.save();
+
+return res.json({
+  success: true,
+  user: {
+    id: String(user._id),
+    name: user.name,
+    surname: user.surname,
+    address: user.address,
+    email: user.email,
+    role: user.role,
+    credits: user.credits,
+  },
+  sessionToken
+});
   } catch (err) {
     errorWithTime("USER LOGIN ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
@@ -1295,19 +1352,20 @@ app.post("/credits/buy", async (req, res) => {
 /* ================= CONTACT ================= */
 app.post("/contact", async (req, res) => {
   try {
-    const { userId, firmId } = req.body || {};
+    const { userId, firmId, sessionToken } = req.body || {};
 
     const safeUserId = String(userId || "").trim();
     const safeFirmId = String(firmId || "").trim();
+    const safeSessionToken = String(sessionToken || "").trim();
 
-    if (!safeUserId || !safeFirmId) {
+    if (!safeUserId || !safeFirmId || !safeSessionToken) {
       return sendError(res, 400, "MISSING_FIELDS");
     }
 
-    const user = await User.findById(safeUserId);
-    if (!user) {
-      return sendError(res, 404, "USER_NOT_FOUND");
-    }
+    const user = await User.findOne({
+      _id: safeUserId,
+      session_token: safeSessionToken
+    });
 
     if (user.role !== "client") {
       return sendError(res, 403, "ONLY_CLIENT_CAN_CONTACT");

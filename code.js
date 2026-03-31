@@ -243,7 +243,8 @@ async function submitRegister(e) {
       address: proUser.address,
       email: proUser.email,
       role: proUser.role,
-      credits: proUser.credits
+      credits: proUser.credits,
+      sessionToken: proSignupData.sessionToken
     }));
 
     showStatus("Account dhe listing u krijuan me sukses.", "success");

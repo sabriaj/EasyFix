@@ -153,7 +153,8 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
         address: data.user.address,
         email: data.user.email,
         role: data.user.role,
-        credits: data.user.credits
+        credits: data.user.credits,
+        sessionToken: data.user.sessionToken
       }));
 
       showStatus("Login me sukses.", "success");

@@ -825,7 +825,8 @@ async function handleGetContact(firmId) {
       },
       body: JSON.stringify({
         userId: user.id,
-        firmId: firmId
+        firmId: firmId,
+        sessionToken: user.sessionToken
       })
     });
 

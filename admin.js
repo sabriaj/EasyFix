@@ -1,4 +1,4 @@
-const BACKEND_URL = "https://easyfix-dev-1.onrender.com";
+const BACKEND_URL = "https://easyfix.onrender.com";
 
 const $ = (s) => document.querySelector(s);
 

@@ -36,7 +36,7 @@ app.options(/.*/, cors(corsOptions));
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
 const RESEND_FROM = String(process.env.RESEND_FROM || "").trim();
 const RESEND_REPLY_TO = String(process.env.RESEND_REPLY_TO || "").trim();
-const FRONTEND_BASE_URL = String(process.env.FRONTEND_BASE_URL || "http://localhost:3000").replace(/\/+$/, "");
+const FRONTEND_BASE_URL = String(process.env.FRONTEND_BASE_URL || "https://easyfix.services/").replace(/\/+$/, "");
 
 const resend = (RESEND_API_KEY && RESEND_FROM) ? new Resend(RESEND_API_KEY) : null;
 
@@ -74,7 +74,7 @@ const VARIANT_CREDITS_10 = String(process.env.VARIANT_CREDITS_10 || "");
 
 const FRONTEND_SUCCESS_URL =
   process.env.FRONTEND_SUCCESS_URL ||
-  "http://localhost:3000/success.html";
+  "https://easyfix.services/success.html";
 
 const DELETE_AFTER_DAYS = Number(process.env.DELETE_AFTER_DAYS || 180);
 const CHECK_INTERVAL_MINUTES = Number(process.env.CHECK_INTERVAL_MINUTES || 60);

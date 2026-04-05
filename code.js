@@ -1,4 +1,4 @@
-const API_URL = "https://easyfix-dev-1.onrender.com";
+const API_URL = "https://easyfix.onrender.com";
 
 let emailVerified = false;
 

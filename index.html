@@ -113,9 +113,9 @@
             </div>
           </div>
 
-          <a href="register.html" class="hidden md:inline-flex bg-gray-900 hover:bg-black text-white px-5 py-2 rounded-full text-sm font-bold shadow-lg transition-all" data-i18n="nav_register">
-            Regjistrohu
-          </a>
+          <a id="registerBtnDesktop" href="register.html" class="hidden md:inline-flex bg-gray-900 hover:bg-black text-white px-5 py-2 rounded-full text-sm font-bold shadow-lg transition-all" data-i18n="nav_register">
+           Regjistrohu
+           </a>
         </div>
       </div>
     </div>
@@ -168,7 +168,7 @@
   </main>
 
   <!-- Mobile Sticky Footer -->
-  <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-3 px-6 flex justify-between items-center z-50 md:hidden shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+  <div id="registerStickyBar" class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-3 px-6 flex justify-between items-center z-50 md:hidden shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
     <div>
       <div class="text-xs font-bold text-gray-400 uppercase tracking-wide" data-i18n="sticky_are_you_pro">Je Mjeshtër?</div>
       <div class="text-sm font-bold text-gray-800" data-i18n="sticky_free_reg">Regjistrimi falas</div>
@@ -215,8 +215,30 @@ langBtn.addEventListener("click", (e) => {
 
 window.changeLang = (lang) => {
   setLang(lang);
-  applyTranslations();
+  applyTranslations(document);
   updateLangUI();
+  updateCreditPackUI();
+
+  const user = getUser();
+  if (user && user.role !== "pro") {
+    updateCreditsUI(user.credits || 0);
+  }
+
+  const creditsModal = document.getElementById("creditsModal");
+  if (creditsModal && !creditsModal.classList.contains("hidden")) {
+    applyTranslations(creditsModal);
+  }
+
+  const contactModal = document.getElementById("contactModal");
+  if (contactModal && !contactModal.classList.contains("hidden")) {
+    applyTranslations(contactModal);
+  }
+
+  const msgModal = document.getElementById("msgModal");
+  if (msgModal && !msgModal.classList.contains("hidden")) {
+    applyTranslations(msgModal);
+  }
+
   langMenu.classList.add("hidden");
   populateCategories(allFirms);
   filterFirms();
@@ -388,12 +410,16 @@ if (isPremium) {
       if (photos.length > 1) setTimeout(() => startAutoScroll(sliderId), 100);
     }
 
-    const card = document.createElement("div");
+    const unlockedContact = getUnlockedFirmContact(f._id);
+
+const card = document.createElement("div");
 card.className = isPremium
   ? "bg-white rounded-xl shadow-md border border-amber-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ring-1 ring-amber-100"
   : "bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1";
-    const catLabels = (f._catKeys || []).map(k => categoryLabel(k)).join(", ");
-    card.dataset.email = (f.email || "").toLowerCase();
+
+const catLabels = (f._catKeys || []).map(k => categoryLabel(k)).join(", ");
+card.dataset.email = (f.email || "").toLowerCase();
+
 
     card.innerHTML = `
       ${mediaHtml}
@@ -412,13 +438,44 @@ card.className = isPremium
           <span>${f.city || f.address}</span>
         </div>
 
-        <div class="flex gap-2 mt-auto">
-          <button onclick="handleGetContact('${f._id}')"
-  class="flex-1 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
-  <i class="fas fa-phone-alt text-xs"></i>
-  <span>Shfaq Kontaktin (-1 kredi)</span>
-</button>
-        </div>
+        <div class="mt-auto space-y-3">
+  ${unlockedContact ? `
+    <div class="rounded-xl border border-green-200 bg-green-50 p-3">
+      <div class="flex items-center gap-2 text-green-700 font-bold text-sm mb-2">
+  <i class="fas fa-check-circle"></i>
+  <span>${t("contact_unlocked")}</span>
+</div>
+
+<div class="text-sm text-gray-800 space-y-1">
+  <div><span class="font-semibold">${t("phone_short")}:</span> ${unlockedContact.phone || "-"}</div>
+  <div class="break-all"><span class="font-semibold">${t("email")}:</span> ${unlockedContact.email || "-"}</div>
+</div>
+
+      <div class="grid grid-cols-3 gap-2 mt-3">
+        <a href="${unlockedContact.callLink || "#"}"
+   class="${unlockedContact.callLink ? "bg-green-600 hover:bg-green-700" : "bg-gray-300 pointer-events-none"} text-white text-center py-2 rounded-lg text-xs font-bold">
+  ${t("call")}
+</a>
+<a href="${unlockedContact.smsLink || "#"}"
+   class="${unlockedContact.smsLink ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-300 pointer-events-none"} text-white text-center py-2 rounded-lg text-xs font-bold">
+  ${t("sms")}
+</a>
+<a href="${unlockedContact.mailLink || "#"}"
+   class="${unlockedContact.mailLink ? "bg-gray-900 hover:bg-black" : "bg-gray-300 pointer-events-none"} text-white text-center py-2 rounded-lg text-xs font-bold">
+  ${t("email")}
+</a>
+      </div>
+    </div>
+  ` : `
+    <div class="flex gap-2">
+      <button onclick="handleGetContact('${f._id}')"
+        class="flex-1 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
+        <i class="fas fa-phone-alt text-xs"></i>
+        <span>${t("contact_cta")} (-1 ${t("credits_one")})</span>
+      </button>
+    </div>
+  `}
+</div>
       </div>
     `;
     container.appendChild(card);
@@ -510,8 +567,9 @@ function focusFirmFromUrl() {
 }
 
 async function init() {
-  applyTranslations();
+  applyTranslations(document);
   updateLangUI();
+  updateCreditPackUI();
 
   try {
     const res = await fetch(`${API_URL}/firms?country=MK`);
@@ -534,6 +592,80 @@ function getUser() {
   return JSON.parse(localStorage.getItem("easyfix_user"));
 }
 
+function getUnlockedStorageKey() {
+  const user = getUser();
+  if (!user || !user.id) return null;
+  return `easyfix_unlocked_firms_map_${user.id}`;
+}
+
+function getUnlockedFirmsMap() {
+  try {
+    const key = getUnlockedStorageKey();
+    if (!key) return {};
+    return JSON.parse(localStorage.getItem(key) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function setUnlockedFirmsMap(map) {
+  const key = getUnlockedStorageKey();
+  if (!key) return;
+  localStorage.setItem(key, JSON.stringify(map || {}));
+}
+
+function saveUnlockedFirmContact(firmId, contact) {
+  if (!firmId || !contact) return;
+  const map = getUnlockedFirmsMap();
+  map[firmId] = contact;
+  setUnlockedFirmsMap(map);
+}
+
+function getUnlockedFirmContact(firmId) {
+  const map = getUnlockedFirmsMap();
+  return map[firmId] || null;
+}
+
+function isFirmUnlocked(firmId) {
+  return !!getUnlockedFirmContact(firmId);
+}
+
+
+
+function updateAuthUI() {
+  const user = getUser();
+  const registerBtnDesktop = document.getElementById("registerBtnDesktop");
+  const registerStickyBar = document.getElementById("registerStickyBar");
+
+  if (user) {
+    loginBtn.innerText = "Account";
+
+    loginBtn.onclick = () => {
+      if (user.role === "pro") {
+        window.location.href = "/pro-dashboard.html";
+      } else {
+        window.location.href = "/account.html";
+      }
+    };
+
+    if (user.role === "client") {
+      if (registerBtnDesktop) registerBtnDesktop.classList.add("hidden");
+      if (registerStickyBar) registerStickyBar.classList.add("hidden");
+    } else {
+      if (registerBtnDesktop) registerBtnDesktop.classList.remove("hidden");
+      if (registerStickyBar) registerStickyBar.classList.remove("hidden");
+    }
+  } else {
+    loginBtn.innerText = "Login";
+    loginBtn.onclick = () => {
+      window.location.href = "/auth.html";
+    };
+
+    if (registerBtnDesktop) registerBtnDesktop.classList.remove("hidden");
+    if (registerStickyBar) registerStickyBar.classList.remove("hidden");
+  }
+}
+
 function updateCreditsUI(credits) {
   const el = document.getElementById("creditBox");
   const user = getUser();
@@ -554,35 +686,15 @@ function updateCreditsUI(credits) {
   const safeCredits = Number(credits || 0);
 
   if (safeCredits <= 0) {
-    el.innerHTML = `<span class="text-red-500 font-extrabold">0 kredi</span>`;
+    el.innerHTML = `<span class="text-red-500 font-extrabold">0 ${t("credits_unit")}</span>`;
     return;
   }
 
-  el.innerHTML = `<span class="text-gray-700 font-extrabold">Kredi: ${safeCredits}</span>`;
+  el.innerHTML = `<span class="text-gray-700 font-extrabold">${t("credits_label")}: ${safeCredits}</span>`;
 }
 
 const loginBtn = document.getElementById("loginBtn");
 
-function updateAuthUI() {
-  const user = getUser();
-
-  if (user) {
-    loginBtn.innerText = "Account";
-
-    loginBtn.onclick = () => {
-      if (user.role === "pro") {
-        window.location.href = "/pro-dashboard.html";
-      } else {
-        window.location.href = "/account.html";
-      }
-    };
-  } else {
-    loginBtn.innerText = "Login";
-    loginBtn.onclick = () => {
-      window.location.href = "/auth.html";
-    };
-  }
-}
 
 async function loadCredits() {
   const user = getUser();
@@ -642,7 +754,7 @@ function updateCreditPackUI() {
 
   const label = document.getElementById("selectedPackLabel");
   if (label) {
-    label.innerText = `${selectedCreditPack} Kredi`;
+    label.innerText = `${selectedCreditPack} ${t("credits_unit")}`;
   }
 }
 
@@ -657,6 +769,7 @@ function openCreditsModal(defaultPack = 5) {
   const modal = document.getElementById("creditsModal");
   if (!modal) return;
 
+  applyTranslations(modal);
   modal.classList.remove("hidden");
   updateCreditPackUI();
   setCreditsModalStatus("");
@@ -672,7 +785,7 @@ function closeCreditsModal() {
   const btn = document.getElementById("continuePaymentBtn");
   if (btn) {
     btn.disabled = false;
-    btn.innerText = "Vazhdo me pagesë";
+    btn.innerText = t("credits_continue_payment");
   }
 
   setCreditsModalStatus("");
@@ -705,8 +818,8 @@ function openContactModal(contact, alreadyUnlocked = false) {
   if (!modal) return;
 
   info.innerText = alreadyUnlocked
-    ? "Ky kontakt është i zhbllokuar tashmë për llogarinë tënde."
-    : "Kontakti u zhbllokua me sukses.";
+  ? t("contact_already_unlocked")
+  : t("contact_unlocked_success");
 
   phoneText.innerText = contact?.phone || "-";
   emailText.innerText = contact?.email || "-";
@@ -742,7 +855,7 @@ async function continueCreditsPayment() {
   }
 
   if (!selectedCreditPack) {
-    setCreditsModalStatus("Zgjidh një paketë.", true);
+    setCreditsModalStatus(t("credits_choose_pack"), true);
     return;
   }
 
@@ -752,11 +865,11 @@ async function continueCreditsPayment() {
   const btn = document.getElementById("continuePaymentBtn");
   if (btn) {
     btn.disabled = true;
-    btn.innerText = "Duke u përgatitur...";
+    btn.innerText = t("credits_preparing");
   }
 
   try {
-    setCreditsModalStatus("Duke u përgatitur pagesa...");
+    setCreditsModalStatus(t("credits_preparing_payment"));
 
     const res = await fetch(`${API_URL}/credits/buy`, {
       method: "POST",
@@ -777,20 +890,20 @@ async function continueCreditsPayment() {
     }
 
     if (!data.checkoutUrl) {
-      setCreditsModalStatus("Nuk u kthye checkout link", true);
+      setCreditsModalStatus(t("credits_missing_checkout"), true);
       return;
     }
 
-    setCreditsModalStatus("Po hapet pagesa...");
+    setCreditsModalStatus(t("credits_opening_payment"));
     await window.EASYFIX_LEMON.openCheckout(data.checkoutUrl);
   } catch (err) {
     console.error(err);
-    setCreditsModalStatus("Gabim serveri", true);
+    setCreditsModalStatus(t("api_server_error"), true);
   } finally {
     buyingCreditsNow = false;
     if (btn) {
       btn.disabled = false;
-      btn.innerText = "Vazhdo me pagesë";
+      btn.innerText = t("credits_continue_payment");
     }
   }
 }
@@ -805,12 +918,12 @@ async function handleGetContact(firmId) {
   }
 
   if (user.role === "pro") {
-    alert("Llogaria e mjeshtrit nuk mund të kontaktojë mjeshtra të tjerë.");
+    alert(t("pro_cannot_contact_pros"));
     return;
   }
 
   if (!firmId) {
-    showMessage("Kontakti nuk është i disponueshëm.");
+    showMessage(t("contact_not_available"));
     return;
   }
 
@@ -841,7 +954,7 @@ async function handleGetContact(firmId) {
     if (!res.ok) {
       if (data.error_code === "NO_CREDITS") {
         openCreditsModal(5);
-        setCreditsModalStatus("Nuk ke kredi. Zgjidh paketën dhe vazhdo me pagesë.");
+        setCreditsModalStatus(t("credits_no_credits_choose_pack"), true);
         return;
       }
 
@@ -851,20 +964,24 @@ async function handleGetContact(firmId) {
         return;
       }
 
-      showMessage(data.error_code || "Ndodhi një problem. Provo përsëri.");
+      showMessage(data.error_code || t("generic_try_again"));
       return;
     }
 
     localStorage.setItem("easyfix_user", JSON.stringify({
-      ...user,
-      credits: data.credits
-    }));
+  ...user,
+  credits: data.credits
+}));
 
-    await loadCredits();
-    openContactModal(data.contact, data.alreadyUnlocked);
+saveUnlockedFirmContact(firmId, data.contact);
+
+await loadCredits();
+filterFirms();
+
+
   } catch (err) {
     console.error(err);
-    showMessage("Gabim serveri. Provo më vonë.");
+    showMessage(t("server_error_try_later"));
   } finally {
     window.__loadingContact = false;
   }
@@ -895,8 +1012,8 @@ updateCreditPackUI();
       <div class="bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-5 text-white">
         <div class="flex items-start justify-between gap-4">
           <div>
-            <h3 class="text-2xl font-extrabold">Blej kredi</h3>
-            <p class="text-blue-100 text-sm mt-1">Zhblloko kontaktet e mjeshtrave pa dalë nga EasyFix.</p>
+            <h3 class="text-2xl font-extrabold" data-i18n="account_buy_credits_title">Blej kredi</h3>
+            <p class="text-blue-100 text-sm mt-1" data-i18n="credits_modal_desc">Zhblloko kontaktet e mjeshtrave pa dalë nga EasyFix.</p>
           </div>
           <button onclick="closeCreditsModal()" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
         </div>
@@ -910,11 +1027,11 @@ updateCreditPackUI();
             class="credit-pack-btn group w-full rounded-2xl border border-gray-200 bg-white px-5 py-4 text-left transition hover:border-brand-500 hover:shadow-sm">
             <div class="flex items-center justify-between gap-4">
               <div>
-                <div class="text-lg font-extrabold text-gray-900">1 Kredi</div>
-                <div class="text-sm text-gray-500 mt-1">Për një kontakt të shpejtë</div>
+                <div class="text-lg font-extrabold text-gray-900" data-i18n="credits_pack_1_title">1 Kredi</div>
+                <div class="text-sm text-gray-500 mt-1" data-i18n="credits_pack_1_desc">Për një kontakt të shpejtë</div>
               </div>
               <div class="text-right">
-                <div class="text-sm font-bold text-gray-900">Paketa Mini</div>
+                <div class="text-sm font-bold text-gray-900" data-i18n="credits_pack_1_badge">Paketa Mini</div>
               </div>
             </div>
           </button>
@@ -922,16 +1039,16 @@ updateCreditPackUI();
           <button type="button" onclick="selectCreditPack(5)"
             id="packBtn5"
             class="credit-pack-btn group relative w-full rounded-2xl border border-gray-200 bg-white px-5 py-4 text-left transition hover:border-brand-500 hover:shadow-sm">
-            <div class="absolute -top-2 right-4 bg-brand-600 text-white text-[11px] font-extrabold px-3 py-1 rounded-full shadow">
+            <div class="absolute -top-2 right-4 bg-brand-600 text-white text-[11px] font-extrabold px-3 py-1 rounded-full shadow" data-i18n="credits_pack_popular">
               MË E PREFERUARA
             </div>
             <div class="flex items-center justify-between gap-4">
               <div>
-                <div class="text-lg font-extrabold text-gray-900">5 Kredi</div>
-                <div class="text-sm text-gray-500 mt-1">Për disa kontakte pa u ndal</div>
+                <div class="text-lg font-extrabold text-gray-900" data-i18n="credits_pack_5_title">5 Kredi</div>
+                <div class="text-sm text-gray-500 mt-1" data-i18n="credits_pack_5_desc">Për disa kontakte pa u ndal</div>
               </div>
               <div class="text-right">
-                <div class="text-sm font-bold text-gray-900">Vlerë e mirë</div>
+                <div class="text-sm font-bold text-gray-900" data-i18n="credits_pack_5_badge">Vlerë e mirë</div>
               </div>
             </div>
           </button>
@@ -941,11 +1058,11 @@ updateCreditPackUI();
             class="credit-pack-btn group w-full rounded-2xl border border-gray-200 bg-white px-5 py-4 text-left transition hover:border-brand-500 hover:shadow-sm">
             <div class="flex items-center justify-between gap-4">
               <div>
-                <div class="text-lg font-extrabold text-gray-900">10 Kredi</div>
-                <div class="text-sm text-gray-500 mt-1">Paketë për përdorim serioz</div>
+                <div class="text-lg font-extrabold text-gray-900" data-i18n="credits_pack_10_title">10 Kredi</div>
+                <div class="text-sm text-gray-500 mt-1" data-i18n="credits_pack_10_desc">Paketë për përdorim serioz</div>
               </div>
               <div class="text-right">
-                <div class="text-sm font-bold text-gray-900">Më shumë vlerë</div>
+                <div class="text-sm font-bold text-gray-900" data-i18n="credits_pack_10_badge">Më shumë vlerë</div>
               </div>
             </div>
           </button>
@@ -954,18 +1071,19 @@ updateCreditPackUI();
 
         <div class="mt-5 rounded-2xl bg-gray-50 border border-gray-100 px-4 py-3">
           <div class="flex items-center justify-between text-sm">
-            <span class="text-gray-500 font-medium">Paketa e zgjedhur</span>
+            <span class="text-gray-500 font-medium" data-i18n="credits_selected_pack">Paketa e zgjedhur</span>
             <span id="selectedPackLabel" class="font-extrabold text-gray-900">5 Kredi</span>
           </div>
         </div>
 
         <button id="continuePaymentBtn" type="button"
           onclick="continueCreditsPayment()"
-          class="w-full mt-5 bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-2xl font-extrabold text-base transition shadow-lg shadow-brand-100">
+          class="w-full mt-5 bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-2xl font-extrabold text-base transition shadow-lg shadow-brand-100"
+          data-i18n="credits_continue_payment">
           Vazhdo me pagesë
         </button>
 
-        <p class="text-xs text-gray-400 text-center mt-3">
+        <p class="text-xs text-gray-400 text-center mt-3" data-i18n="credits_secure_payment">
           Pagesa përpunohet në mënyrë të sigurt përmes Lemon Squeezy.
         </p>
 
@@ -983,7 +1101,8 @@ updateCreditPackUI();
       <p id="msgText" class="text-gray-800 font-semibold"></p>
 
       <button onclick="closeMsgModal()"
-        class="mt-4 bg-brand-600 text-white px-6 py-2 rounded-xl font-bold">
+        class="mt-4 bg-brand-600 text-white px-6 py-2 rounded-xl font-bold"
+        data-i18n="close">
         OK
       </button>
     </div>
@@ -999,7 +1118,7 @@ updateCreditPackUI();
       <div class="bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-5 text-white">
         <div class="flex items-start justify-between gap-4">
           <div>
-            <h3 class="text-2xl font-extrabold">Kontakti i mjeshtrit</h3>
+            <h3 class="text-2xl font-extrabold" data-i18n="contact_modal_title">Kontakti i mjeshtrit</h3>
             <p id="contactUnlockInfo" class="text-blue-100 text-sm mt-1"></p>
           </div>
           <button onclick="closeContactModal()" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
@@ -1008,25 +1127,25 @@ updateCreditPackUI();
 
       <div class="p-6 space-y-4">
         <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
-          <div class="text-xs uppercase tracking-wide text-gray-400 font-bold">Numri i telefonit</div>
+          <div class="text-xs uppercase tracking-wide text-gray-400 font-bold" data-i18n="contact_phone_label">Numri i telefonit</div>
           <div id="contactPhoneText" class="text-lg font-extrabold text-gray-900 mt-1">-</div>
         </div>
 
         <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
-          <div class="text-xs uppercase tracking-wide text-gray-400 font-bold">Email</div>
+          <div class="text-xs uppercase tracking-wide text-gray-400 font-bold" data-i18n="email">Email</div>
           <div id="contactEmailText" class="text-base font-bold text-gray-900 mt-1 break-all">-</div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-          <a id="callBtn" href="#" class="bg-green-600 hover:bg-green-700 text-white text-center py-3 rounded-2xl font-bold">
-            Call
+          <a id="callBtn" href="#" class="bg-green-600 hover:bg-green-700 text-white text-center py-3 rounded-2xl font-bold" data-i18n="call">
+          Call
           </a>
-          <a id="smsBtn" href="#" class="bg-blue-600 hover:bg-blue-700 text-white text-center py-3 rounded-2xl font-bold">
-            SMS
+          <a id="smsBtn" href="#" class="bg-blue-600 hover:bg-blue-700 text-white text-center py-3 rounded-2xl font-bold" data-i18n="sms">
+          SMS
           </a>
-          <a id="emailBtn" href="#" class="bg-gray-900 hover:bg-black text-white text-center py-3 rounded-2xl font-bold">
-            Email
-          </a>
+         <a id="emailBtn" href="#" class="bg-gray-900 hover:bg-black text-white text-center py-3 rounded-2xl font-bold" data-i18n="email">
+         Email
+        </a>
         </div>
       </div>
     </div>

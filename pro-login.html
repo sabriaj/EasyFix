@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EasyFix - Login Mjeshtër</title>
+  <title>EasyFix - Pro Login</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="i18n.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
@@ -12,50 +13,62 @@
   <div class="w-full max-w-md bg-white rounded-3xl shadow-xl p-8">
     <div class="text-center mb-6">
       <h1 class="text-3xl font-extrabold text-gray-900">EasyFix</h1>
-      <p class="text-sm text-gray-600 mt-2">Hyr në dashboard-in tënd profesional</p>
+      <p id="subtitle" class="text-sm text-gray-600 mt-2"></p>
     </div>
 
-    <h2 class="text-2xl font-bold text-center text-gray-900 mb-6">Login si Mjeshtër</h2>
+    <h2 id="title" class="text-2xl font-bold text-center text-gray-900 mb-6"></h2>
 
     <div id="statusBox" class="hidden mb-4 rounded-xl px-4 py-3 text-sm font-semibold"></div>
 
     <form id="authForm" class="space-y-4">
       <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
-        <input id="email" type="email" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Email">
+        <label class="block text-sm font-semibold text-gray-700 mb-1" data-i18n="email">Email</label>
+        <input id="email" type="email" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500">
       </div>
 
       <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Password</label>
-        <input id="password" type="password" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Password">
+        <label class="block text-sm font-semibold text-gray-700 mb-1" data-i18n="password_label">Password</label>
+        <input id="password" type="password" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500">
       </div>
 
-      <button type="submit"
+      <button type="submit" id="submitBtn"
         class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 font-bold transition">
-        Login
       </button>
     </form>
 
     <div class="text-center mt-5">
-      <a href="/register.html" class="text-blue-600 font-bold hover:underline">
-        Nuk ke account? Regjistrohu si mjeshtër
-      </a>
+      <a href="/register.html" id="registerLink" class="text-blue-600 font-bold hover:underline"></a>
     </div>
 
     <div class="text-center mt-4">
-      <a href="/auth.html" class="text-sm text-gray-500 hover:text-gray-700">Kthehu mbrapa</a>
+      <a href="/auth.html" class="text-sm text-gray-500 hover:text-gray-700" data-i18n="back">Kthehu mbrapa</a>
     </div>
   </div>
 
 <script>
 const API_URL = "https://easyfix-dev-1.onrender.com";
+const { t, applyTranslations, getLang } = window.EASYFIX_I18N;
+
+function applyPageTranslations() {
+  applyTranslations(document);
+  document.documentElement.setAttribute("lang", getLang());
+
+  document.title = "EasyFix - " + t("pro_login_title");
+  document.getElementById("subtitle").innerText = t("pro_login_subtitle");
+  document.getElementById("title").innerText = t("pro_login_title");
+  document.getElementById("submitBtn").innerText = t("pro_login_button");
+  document.getElementById("registerLink").innerText = t("pro_login_register_link");
+
+  document.getElementById("email").placeholder = t("email");
+  document.getElementById("password").placeholder = t("password_label");
+}
 
 function showStatus(msg, type = "error") {
   const box = document.getElementById("statusBox");
   box.classList.remove("hidden");
 
   if (type === "success") {
-    box.className = "hidden mb-4 rounded-xl px-4 py-3 text-sm font-semibold bg-green-100 text-green-700";
+    box.className = "mb-4 rounded-xl px-4 py-3 text-sm font-semibold bg-green-100 text-green-700";
   } else if (type === "info") {
     box.className = "mb-4 rounded-xl px-4 py-3 text-sm font-semibold bg-blue-100 text-blue-700";
   } else {
@@ -72,12 +85,12 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
   const password = document.getElementById("password").value;
 
   if (!email || !password) {
-    showStatus("Plotëso email dhe password.");
+    showStatus(t("login_fill_email_password"));
     return;
   }
 
   try {
-    showStatus("Duke u kyçur si mjeshtër...", "info");
+    showStatus(t("pro_login_loading"), "info");
 
     const res = await fetch(`${API_URL}/user/login`, {
       method: "POST",
@@ -88,12 +101,12 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
     const data = await res.json();
 
     if (!res.ok) {
-      showStatus(data.error_code || "Gabim login");
+      showStatus(data.error_code || t("login_error"));
       return;
     }
 
     if (data.user.role !== "pro") {
-      showStatus("Ky account nuk është account i mjeshtrit.");
+      showStatus(t("pro_login_not_pro"));
       return;
     }
 
@@ -104,19 +117,22 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
       address: data.user.address,
       email: data.user.email,
       role: data.user.role,
-      credits: data.user.credits
+      credits: data.user.credits,
+      sessionToken: data.sessionToken
     }));
 
-    showStatus("Login me sukses.", "success");
+    showStatus(t("login_success"), "success");
 
     setTimeout(() => {
       window.location.href = "/pro-dashboard.html";
     }, 700);
   } catch (err) {
     console.error(err);
-    showStatus("Gabim serveri");
+    showStatus(t("api_server_error"));
   }
 });
+
+applyPageTranslations();
 </script>
 
 </body>

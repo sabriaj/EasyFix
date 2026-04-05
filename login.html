@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EasyFix - Login / Signup</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="i18n.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
@@ -12,65 +13,70 @@
   <div class="w-full max-w-md bg-white rounded-3xl shadow-xl p-8">
     <div class="text-center mb-6">
       <h1 class="text-3xl font-extrabold text-gray-900">EasyFix</h1>
-      <p id="subtitle" class="text-sm text-gray-600 mt-2">Hyr në llogarinë tënde</p>
+      <p id="subtitle" class="text-sm text-gray-600 mt-2"></p>
     </div>
 
-    <h2 id="title" class="text-2xl font-bold text-center text-gray-900 mb-6">Login</h2>
+    <h2 id="title" class="text-2xl font-bold text-center text-gray-900 mb-6"></h2>
 
     <div id="statusBox" class="hidden mb-4 rounded-xl px-4 py-3 text-sm font-semibold"></div>
 
     <form id="authForm" class="space-y-4">
       <div id="signupFields" class="hidden space-y-4">
         <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-1">Emri</label>
-          <input id="name" type="text" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Emri">
+          <label class="block text-sm font-semibold text-gray-700 mb-1" data-i18n="name_label">Emri</label>
+          <input id="name" type="text" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500">
         </div>
 
         <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-1">Mbiemri</label>
-          <input id="surname" type="text" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Mbiemri">
+          <label class="block text-sm font-semibold text-gray-700 mb-1" data-i18n="surname_label">Mbiemri</label>
+          <input id="surname" type="text" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500">
         </div>
 
         <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-1">Adresa</label>
-          <input id="address" type="text" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Adresa">
+          <label class="block text-sm font-semibold text-gray-700 mb-1" data-i18n="address">Adresa</label>
+          <input id="address" type="text" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500">
         </div>
       </div>
 
       <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
-        <input id="email" type="email" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Email">
+        <label class="block text-sm font-semibold text-gray-700 mb-1" data-i18n="email">Email</label>
+        <input id="email" type="email" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500">
       </div>
 
       <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Password</label>
-        <input id="password" type="password" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Password">
+        <label class="block text-sm font-semibold text-gray-700 mb-1" data-i18n="password_label">Password</label>
+        <input id="password" type="password" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500">
       </div>
 
       <div id="confirmBox" class="hidden">
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Konfirmo Password</label>
-        <input id="confirm" type="password" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Konfirmo Password">
+        <label class="block text-sm font-semibold text-gray-700 mb-1" data-i18n="confirm_password_label">Konfirmo Password</label>
+        <input id="confirm" type="password" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500">
       </div>
 
       <button type="submit" id="submitBtn"
         class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 font-bold transition">
-        Login
       </button>
     </form>
 
     <div class="text-center mt-5">
-      <button id="toggleBtn" class="text-blue-600 font-bold hover:underline">
-        Nuk ke account? Krijo një
-      </button>
+      <button id="toggleBtn" class="text-blue-600 font-bold hover:underline"></button>
     </div>
 
     <div class="text-center mt-4">
-      <a href="/auth.html" class="text-sm text-gray-500 hover:text-gray-700">Kthehu mbrapa</a>
+      <a href="/auth.html" class="text-sm text-gray-500 hover:text-gray-700" data-i18n="back">Kthehu mbrapa</a>
     </div>
   </div>
+
 <script>
 const API_URL = "https://easyfix-dev-1.onrender.com";
+const { t, applyTranslations, getLang } = window.EASYFIX_I18N;
 let mode = "login";
+
+function applyPageTranslations() {
+  applyTranslations(document);
+  document.documentElement.setAttribute("lang", getLang());
+  updateTexts();
+}
 
 function showStatus(msg, type = "error") {
   const box = document.getElementById("statusBox");
@@ -90,17 +96,25 @@ function showStatus(msg, type = "error") {
 function updateTexts() {
   const isSignup = mode === "signup";
 
-  document.getElementById("title").innerText = isSignup ? "Signup" : "Login";
+  document.title = isSignup ? "EasyFix - Signup" : "EasyFix - Login";
+  document.getElementById("title").innerText = isSignup ? t("login_signup_title") : t("login_login_title");
   document.getElementById("subtitle").innerText = isSignup
-    ? "Krijo llogarinë tënde si klient"
-    : "Hyr në llogarinë tënde si klient";
+    ? t("login_signup_subtitle")
+    : t("login_login_subtitle");
 
   document.getElementById("signupFields").classList.toggle("hidden", !isSignup);
   document.getElementById("confirmBox").classList.toggle("hidden", !isSignup);
-  document.getElementById("submitBtn").innerText = isSignup ? "Krijo account" : "Login";
+  document.getElementById("submitBtn").innerText = isSignup ? t("login_create_account") : t("login_login_title");
   document.getElementById("toggleBtn").innerText = isSignup
-    ? "Ke account? Bëj login"
-    : "Nuk ke account? Krijo një";
+    ? t("login_have_account")
+    : t("login_no_account");
+
+  document.getElementById("name").placeholder = t("name_label");
+  document.getElementById("surname").placeholder = t("surname_label");
+  document.getElementById("address").placeholder = t("address");
+  document.getElementById("email").placeholder = t("email");
+  document.getElementById("password").placeholder = t("password_label");
+  document.getElementById("confirm").placeholder = t("confirm_password_label");
 }
 
 function setMode(newMode) {
@@ -120,13 +134,13 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
   const password = document.getElementById("password").value;
 
   if (!email || !password) {
-    showStatus("Plotëso email dhe password.");
+    showStatus(t("login_fill_email_password"));
     return;
   }
 
   if (mode === "login") {
     try {
-      showStatus("Duke u kyçur...", "info");
+      showStatus(t("login_logging_in"), "info");
 
       const res = await fetch(`${API_URL}/user/login`, {
         method: "POST",
@@ -137,34 +151,34 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
       const data = await res.json();
 
       if (!res.ok) {
-        showStatus(data.error_code || "Gabim login");
+        showStatus(data.error_code || t("login_error"));
         return;
       }
 
       if (data.user.role !== "client") {
-        showStatus("Ky account nuk është account i klientit.");
+        showStatus(t("login_not_client"));
         return;
       }
 
       localStorage.setItem("easyfix_user", JSON.stringify({
-  id: data.user.id,
-  name: data.user.name,
-  surname: data.user.surname,
-  address: data.user.address,
-  email: data.user.email,
-  role: data.user.role,
-  credits: data.user.credits,
-  sessionToken: data.sessionToken
-}));
+        id: data.user.id,
+        name: data.user.name,
+        surname: data.user.surname,
+        address: data.user.address,
+        email: data.user.email,
+        role: data.user.role,
+        credits: data.user.credits,
+        sessionToken: data.sessionToken
+      }));
 
-      showStatus("Login me sukses.", "success");
+      showStatus(t("login_success"), "success");
 
       setTimeout(() => {
         window.location.href = "/";
       }, 700);
     } catch (err) {
       console.error(err);
-      showStatus("Gabim serveri");
+      showStatus(t("api_server_error"));
     }
 
     return;
@@ -176,22 +190,22 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
   const confirm = document.getElementById("confirm").value;
 
   if (!name || !surname || !address || !email || !password || !confirm) {
-    showStatus("Plotëso të gjitha fushat.");
+    showStatus(t("msg_fill_all"));
     return;
   }
 
   if (password.length < 6) {
-    showStatus("Password duhet me pas të paktën 6 karaktere.");
+    showStatus(t("login_password_min"));
     return;
   }
 
   if (password !== confirm) {
-    showStatus("Password nuk përputhen.");
+    showStatus(t("login_password_mismatch"));
     return;
   }
 
   try {
-    showStatus("Duke krijuar account...", "info");
+    showStatus(t("login_creating_account"), "info");
 
     const res = await fetch(`${API_URL}/user/signup`, {
       method: "POST",
@@ -208,33 +222,34 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
     const data = await res.json();
 
     if (!res.ok) {
-      showStatus(data.error_code || "Gabim signup");
+      showStatus(data.error_code || t("login_signup_error"));
       return;
     }
 
     localStorage.setItem("easyfix_user", JSON.stringify({
-  id: data.user.id,
-  name: data.user.name,
-  surname: data.user.surname,
-  address: data.user.address,
-  email: data.user.email,
-  role: data.user.role,
-  credits: data.user.credits,
-  sessionToken: data.sessionToken
-}));
+      id: data.user.id,
+      name: data.user.name,
+      surname: data.user.surname,
+      address: data.user.address,
+      email: data.user.email,
+      role: data.user.role,
+      credits: data.user.credits,
+      sessionToken: data.sessionToken
+    }));
 
-    showStatus("Account u krijua me sukses.", "success");
+    showStatus(t("login_account_created"), "success");
 
     setTimeout(() => {
       window.location.href = "/";
     }, 700);
   } catch (err) {
     console.error(err);
-    showStatus("Gabim serveri");
+    showStatus(t("api_server_error"));
   }
 });
 
 setMode("login");
+applyPageTranslations();
 </script>
 </body>
 </html>

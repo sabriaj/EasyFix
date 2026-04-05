@@ -5,19 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EasyFix - Pro Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="i18n.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
 </head>
 <body class="bg-gray-100 min-h-screen text-gray-800">
 
   <div class="max-w-6xl mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-6">
-      <a href="/" class="text-sm font-bold text-blue-600 hover:underline">← Kthehu te faqja kryesore</a>
-      <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-bold">
+      <a href="/" class="text-sm font-bold text-blue-600 hover:underline" data-i18n="back_home">← Kthehu te faqja kryesore</a>
+      <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-bold" data-i18n="account_logout">
         Logout
       </button>
     </div>
 
-    <div id="loadingBox" class="bg-white rounded-3xl shadow-xl p-8 text-center font-semibold text-gray-500">
+    <div id="loadingBox" class="bg-white rounded-3xl shadow-xl p-8 text-center font-semibold text-gray-500" data-i18n="pro_loading">
       Duke ngarkuar dashboard-in...
     </div>
 
@@ -27,13 +28,13 @@
       <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-3xl shadow-xl overflow-hidden">
         <div class="px-6 py-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <p class="text-blue-100 text-sm font-semibold uppercase tracking-wider">EasyFix Pro</p>
-            <h1 id="heroBusinessName" class="text-3xl md:text-4xl font-extrabold mt-1">Dashboard</h1>
+            <p class="text-blue-100 text-sm font-semibold uppercase tracking-wider" data-i18n="pro_label">EasyFix Pro</p>
+            <h1 id="heroBusinessName" class="text-3xl md:text-4xl font-extrabold mt-1" data-i18n="pro_dashboard">Dashboard</h1>
             <p id="heroEmail" class="text-blue-100 mt-2"></p>
           </div>
 
           <div id="heroPlanBox" class="bg-white/15 border border-white/20 rounded-2xl px-5 py-4 min-w-[220px]">
-            <div class="text-xs uppercase tracking-wider text-blue-100 font-bold">Statusi i listing-ut</div>
+            <div class="text-xs uppercase tracking-wider text-blue-100 font-bold" data-i18n="pro_listing_status_label">Statusi i listing-ut</div>
             <div id="planBadge" class="text-2xl font-extrabold mt-1">FREE</div>
             <div id="boostInfo" class="text-sm text-blue-100 mt-2"></div>
           </div>
@@ -47,125 +48,125 @@
           <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
             <div class="flex items-center justify-between mb-5">
               <div>
-                <h2 class="text-2xl font-extrabold text-gray-900">Profili i listing-ut</h2>
-                <p class="text-sm text-gray-500 mt-1">Ndrysho informacionet që shfaqen në EasyFix.</p>
+                <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="pro_profile_title">Profili i listing-ut</h2>
+                <p class="text-sm text-gray-500 mt-1" data-i18n="pro_profile_desc">Ndrysho informacionet që shfaqen në EasyFix.</p>
               </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div class="md:col-span-2">
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Emri i biznesit / profilit</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_business_name">Emri i biznesit / profilit</label>
                 <input id="businessName" type="text"
                   class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
               </div>
 
               <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="email">Email</label>
                 <input id="email" type="text" disabled
                   class="w-full bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 text-gray-500">
               </div>
 
               <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Telefoni</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="phone">Telefoni</label>
                 <input id="phone" type="text"
                   class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
               </div>
 
               <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Qyteti</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="city">Qyteti</label>
                 <input id="city" type="text"
                   class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
               </div>
 
               <div class="md:col-span-2">
-  <label class="block text-sm font-semibold text-gray-700 mb-2">Kategoritë e punës</label>
+  <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_work_categories">Kategoritë e punës</label>
   <div id="categoryMultiBox" class="grid grid-cols-2 md:grid-cols-3 gap-3">
     <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
       <input type="checkbox" value="plumber" class="pro-category-checkbox">
-      <span>Hidraulik</span>
+      <span data-i18n="cat_plumber">Hidraulik</span>
     </label>
 
     <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
       <input type="checkbox" value="electrician" class="pro-category-checkbox">
-      <span>Elektricist</span>
+      <span data-i18n="cat_electrician">Elektricist</span>
     </label>
 
     <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
       <input type="checkbox" value="painter" class="pro-category-checkbox">
-      <span>Bojaxhi</span>
+      <span data-i18n="cat_painter">Bojaxhi</span>
     </label>
 
     <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
       <input type="checkbox" value="cleaning" class="pro-category-checkbox">
-      <span>Pastrim</span>
+      <span data-i18n="cat_cleaning">Pastrim</span>
     </label>
 
     <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
       <input type="checkbox" value="mason" class="pro-category-checkbox">
-      <span>Murator</span>
+      <span data-i18n="cat_mason">Murator</span>
     </label>
 
     <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
       <input type="checkbox" value="gardener" class="pro-category-checkbox">
-      <span>Kopshtar</span>
+      <span data-i18n="cat_gardener">Kopshtar</span>
     </label>
 
     <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
   <input type="checkbox" value="ac" class="reg-category">
-  <span>Klima </span>
+  <span data-i18n="cat_ac">Klima </span>
 </label>
 
 <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
   <input type="checkbox" value="gips" class="reg-category">
-  <span>Punime me gips </span>
+  <span data-i18n="cat_gips">Punime me gips </span>
 </label>
 
 <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
   <input type="checkbox" value="doors_windows" class="reg-category">
-  <span>Dyer/Dritare </span>
+  <span data-i18n="cat_doors_windows">Dyer/Dritare </span>
 </label>
 
 <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
   <input type="checkbox" value="tiles" class="reg-category">
-  <span>Pllaka/Keramik</span>
+  <span data-i18n="cat_tiles">Pllaka/Keramik</span>
 </label>
 
 <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
   <input type="checkbox" value="parquet" class="reg-category">
-  <span>Sallidim parketit </span>
+  <span data-i18n="cat_parquet">Sallidim parketit </span>
 </label>
 
 <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
   <input type="checkbox" value="facade" class="reg-category">
-  <span>Punime fasade </span>
+  <span data-i18n="cat_facade">Punime fasade </span>
 </label>
 
 <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
   <input type="checkbox" value="heating_cooling" class="reg-category">
-  <span>Ngrohje/Ftohje </span>
+  <span data-i18n="cat_heating_cooling">Ngrohje/Ftohje </span>
 </label>
   </div>
   <p id="categoryPlanHint" class="text-xs text-gray-400 mt-2"></p>
 </div>
 
               <div class="md:col-span-2">
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Adresa</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_business_address">Adresa</label>
                 <input id="address" type="text"
                   class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
               </div>
 
               <div class="md:col-span-2">
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Përshkrimi</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_description">Përshkrimi</label>
                 <textarea id="description" rows="5" maxlength="1000"
-                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" data-i18n-placeholder="register_description_placeholder"
                   placeholder="Përshkruaj shërbimet që ofron..."></textarea>
-                <p class="text-xs text-gray-400 mt-1">Maksimumi 1000 karaktere</p>
+                <p class="text-xs text-gray-400 mt-1" data-i18n="register_description_max">Maksimumi 1000 karaktere</p>
               </div>
             </div>
 
             <div class="mt-5">
               <button id="saveListingBtn"
-                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-blue-100 transition">
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-blue-100 transition" data-i18n="account_save_changes">
                 Ruaj ndryshimet
               </button>
             </div>
@@ -173,19 +174,19 @@
 
           <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
             <div class="mb-5">
-              <h2 class="text-2xl font-extrabold text-gray-900">Logo dhe foto</h2>
+              <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="pro_media_title">Logo dhe foto</h2>
               <p id="mediaPlanHint" class="text-sm text-gray-500 mt-1">FREE lejon deri 3 foto. PREMIUM lejon më shumë.</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Ndrysho logon</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="pro_change_logo">Ndrysho logon</label>
                 <input id="newLogo" type="file" accept="image/*"
                   class="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white">
               </div>
 
               <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Shto foto të reja</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="pro_add_photos">Shto foto të reja</label>
                 <input id="newPhotos" type="file" accept="image/*" multiple
                   class="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white">
               </div>
@@ -193,19 +194,19 @@
 
             <div class="mt-5">
               <button id="saveMediaBtn"
-                class="bg-gray-900 hover:bg-black text-white px-6 py-3 rounded-2xl font-bold shadow-lg transition">
+                class="bg-gray-900 hover:bg-black text-white px-6 py-3 rounded-2xl font-bold shadow-lg transition" data-i18n="pro_save_media">
                 Ruaj media
               </button>
               <div class="mt-6">
-  <h3 class="text-lg font-extrabold text-gray-900 mb-3">Logo aktuale</h3>
+  <h3 class="text-lg font-extrabold text-gray-900 mb-3" data-i18n="pro_current_logo">Logo aktuale</h3>
   <div id="logoPreviewBox" class="w-24 h-24 rounded-2xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center">
-    <span class="text-xs text-gray-400">Pa logo</span>
+    <span class="text-xs text-gray-400" data-i18n="no_logo">Pa logo</span>
   </div>
 </div>
             </div>
 
             <div class="mt-6">
-              <h3 class="text-lg font-extrabold text-gray-900 mb-3">Fotot aktuale</h3>
+              <h3 class="text-lg font-extrabold text-gray-900 mb-3" data-i18n="pro_current_photos">Fotot aktuale</h3>
               <div id="photosGrid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
             </div>
           </div>
@@ -213,43 +214,43 @@
 
         <div class="space-y-6">
           <div class="bg-white rounded-3xl shadow-xl p-6">
-            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider">Plani aktual</div>
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="pro_current_plan">Plani aktual</div>
             <div id="sidePlanName" class="text-2xl font-extrabold text-gray-900 mt-2">FREE</div>
             <div id="premiumExpiresBox" class="text-sm text-gray-500 mt-2"></div>
-            <p class="text-sm text-gray-500 mt-2">
+            <p class="text-sm text-gray-500 mt-2" data-i18n="pro_plan_desc">
               FREE të mban në listim. PREMIUM të jep boost, badge dhe më shumë foto.
             </p>
 
             <button id="boostBtn"
-              class="mt-5 w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-2xl font-bold shadow-lg shadow-green-100 transition">
+              class="mt-5 w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-2xl font-bold shadow-lg shadow-green-100 transition" data-i18n="pro_upgrade">
               Kaloni në Premium
             </button>
           </div>
 
           <div class="bg-white rounded-3xl shadow-xl p-6">
-            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider">Përmbledhje</div>
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="account_summary">Përmbledhje</div>
 
             <div class="mt-4 space-y-4">
               <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
-                <div class="text-xs text-gray-400 font-bold uppercase">Email i verifikuar</div>
+                <div class="text-xs text-gray-400 font-bold uppercase" data-i18n="pro_email_verified">Email i verifikuar</div>
                 <div id="emailVerifiedBox" class="text-base font-extrabold text-gray-900 mt-1">Po</div>
               </div>
 
               <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
-                <div class="text-xs text-gray-400 font-bold uppercase">Numri i fotove</div>
+                <div class="text-xs text-gray-400 font-bold uppercase" data-i18n="pro_photo_count">Numri i fotove</div>
                 <div id="photoCountBox" class="text-base font-extrabold text-gray-900 mt-1">0</div>
               </div>
 
               <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
-                <div class="text-xs text-gray-400 font-bold uppercase">Listing status</div>
+                <div class="text-xs text-gray-400 font-bold uppercase" data-i18n="pro_listing_status">Listing status</div>
                 <div id="listingStatusBox" class="text-base font-extrabold text-gray-900 mt-1">Aktiv</div>
               </div>
             </div>
           </div>
 
           <div class="bg-white rounded-3xl shadow-xl p-6">
-            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider">Ndihmë</div>
-            <p class="text-sm text-gray-500 mt-2">
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="pro_help">Ndihmë</div>
+            <p class="text-sm text-gray-500 mt-2" data-i18n="pro_help_desc">
               Më vonë këtu mund të shtojmë statistika, boost history dhe menaxhim më të avancuar.
             </p>
           </div>
@@ -660,6 +661,12 @@ function handlePremiumReturn() {
   await loadDashboard();
   handlePremiumReturn();
 })();
+</script>
+
+<script>
+  const { applyTranslations, getLang, t } = window.EASYFIX_I18N;
+  applyTranslations(document);
+  document.documentElement.setAttribute("lang", getLang());
 </script>
 </body>
 </html>

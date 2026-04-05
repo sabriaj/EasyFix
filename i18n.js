@@ -287,6 +287,7 @@
       account_changing_password: "Duke ndryshuar...",
       account_password_change_error: "Gabim gjatë ndryshimit të password-it.",
       account_password_changed: "Password u ndryshua me sukses.",
+      account_save_changes: "ruaj ndryshimet",
 
       pro_label: "EasyFix Pro",
       pro_dashboard: "Dashboard",
@@ -629,6 +630,7 @@ credits_pack_10_title: "10 Kredi",
       account_changing_password: "Се менува...",
       account_password_change_error: "Грешка при промена на password.",
       account_password_changed: "Password успешно е променет.",
+      account_save_changes: "Зачувај промени",
 
       pro_label: "EasyFix Pro",
       pro_dashboard: "Dashboard",
@@ -973,6 +975,7 @@ credits_pack_10_title: "10 Кредити",
       account_changing_password: "Changing...",
       account_password_change_error: "Error changing password.",
       account_password_changed: "Password changed successfully.",
+      account_save_changes: "save changes",
 
       pro_label: "EasyFix Pro",
       pro_dashboard: "Dashboard",

@@ -653,7 +653,9 @@ function updateAuthUI() {
       if (registerStickyBar) registerStickyBar.classList.add("hidden");
     } else {
       if (registerBtnDesktop) registerBtnDesktop.classList.remove("hidden");
+      if (registerBtnDesktop) registerBtnDesktop.classList.add("md:inline-flex");
       if (registerStickyBar) registerStickyBar.classList.remove("hidden");
+      if (registerStickyBar) registerStickyBar.classList.add("md:hidden");
     }
   } else {
     loginBtn.innerText = "Login";
@@ -662,7 +664,10 @@ function updateAuthUI() {
     };
 
     if (registerBtnDesktop) registerBtnDesktop.classList.remove("hidden");
+    if (registerBtnDesktop) registerBtnDesktop.classList.add("md:inline-flex");
+
     if (registerStickyBar) registerStickyBar.classList.remove("hidden");
+    if (registerStickyBar) registerStickyBar.classList.add("md:hidden");
   }
 }
 

@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyFix - Pro Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="i18n.js"></script>
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800">
+
+  <div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="flex items-center justify-between mb-6">
+      <a href="/" class="text-sm font-bold text-blue-600 hover:underline" data-i18n="back_home">← Kthehu te faqja kryesore</a>
+      <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-bold" data-i18n="account_logout">
+        Logout
+      </button>
+    </div>
+
+    <div id="loadingBox" class="bg-white rounded-3xl shadow-xl p-8 text-center font-semibold text-gray-500" data-i18n="pro_loading">
+      Duke ngarkuar dashboard-in...
+    </div>
+
+    <div id="errorBox" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-2xl px-5 py-4 font-semibold"></div>
+
+    <div id="dashboardBox" class="hidden space-y-6">
+      <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-3xl shadow-xl overflow-hidden">
+        <div class="px-6 py-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <p class="text-blue-100 text-sm font-semibold uppercase tracking-wider" data-i18n="pro_label">EasyFix Pro</p>
+            <h1 id="heroBusinessName" class="text-3xl md:text-4xl font-extrabold mt-1" data-i18n="pro_dashboard">Dashboard</h1>
+            <p id="heroEmail" class="text-blue-100 mt-2"></p>
+          </div>
+
+          <div id="heroPlanBox" class="bg-white/15 border border-white/20 rounded-2xl px-5 py-4 min-w-[220px]">
+            <div class="text-xs uppercase tracking-wider text-blue-100 font-bold" data-i18n="pro_listing_status_label">Statusi i listing-ut</div>
+            <div id="planBadge" class="text-2xl font-extrabold mt-1">FREE</div>
+            <div id="boostInfo" class="text-sm text-blue-100 mt-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="statusBox" class="hidden rounded-2xl px-4 py-3 text-sm font-semibold"></div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-6">
+          <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+            <div class="flex items-center justify-between mb-5">
+              <div>
+                <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="pro_profile_title">Profili i listing-ut</h2>
+                <p class="text-sm text-gray-500 mt-1" data-i18n="pro_profile_desc">Ndrysho informacionet që shfaqen në EasyFix.</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_business_name">Emri i biznesit / profilit</label>
+                <input id="businessName" type="text"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="email">Email</label>
+                <input id="email" type="text" disabled
+                  class="w-full bg-gray-50 border border-gray-300 rounded-2xl px-4 py-3 text-gray-500">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="phone">Telefoni</label>
+                <input id="phone" type="text"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="city">Qyteti</label>
+                <input id="city" type="text"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
+              </div>
+
+              <div class="md:col-span-2">
+  <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_work_categories">Kategoritë e punës</label>
+  <div id="categoryMultiBox" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+      <input type="checkbox" value="plumber" class="pro-category-checkbox">
+      <span data-i18n="cat_plumber">Hidraulik</span>
+    </label>
+
+    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+      <input type="checkbox" value="electrician" class="pro-category-checkbox">
+      <span data-i18n="cat_electrician">Elektricist</span>
+    </label>
+
+    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+      <input type="checkbox" value="painter" class="pro-category-checkbox">
+      <span data-i18n="cat_painter">Bojaxhi</span>
+    </label>
+
+    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+      <input type="checkbox" value="cleaning" class="pro-category-checkbox">
+      <span data-i18n="cat_cleaning">Pastrim</span>
+    </label>
+
+    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+      <input type="checkbox" value="mason" class="pro-category-checkbox">
+      <span data-i18n="cat_mason">Murator</span>
+    </label>
+
+    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+      <input type="checkbox" value="gardener" class="pro-category-checkbox">
+      <span data-i18n="cat_gardener">Kopshtar</span>
+    </label>
+
+    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+  <input type="checkbox" value="ac" class="reg-category">
+  <span data-i18n="cat_ac">Klima </span>
+</label>
+
+<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+  <input type="checkbox" value="gips" class="reg-category">
+  <span data-i18n="cat_gips">Punime me gips </span>
+</label>
+
+<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+  <input type="checkbox" value="doors_windows" class="reg-category">
+  <span data-i18n="cat_doors_windows">Dyer/Dritare </span>
+</label>
+
+<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+  <input type="checkbox" value="tiles" class="reg-category">
+  <span data-i18n="cat_tiles">Pllaka/Keramik</span>
+</label>
+
+<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+  <input type="checkbox" value="parquet" class="reg-category">
+  <span data-i18n="cat_parquet">Sallidim parketit </span>
+</label>
+
+<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+  <input type="checkbox" value="facade" class="reg-category">
+  <span data-i18n="cat_facade">Punime fasade </span>
+</label>
+
+<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
+  <input type="checkbox" value="heating_cooling" class="reg-category">
+  <span data-i18n="cat_heating_cooling">Ngrohje/Ftohje </span>
+</label>
+  </div>
+  <p id="categoryPlanHint" class="text-xs text-gray-400 mt-2"></p>
+</div>
+
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_business_address">Adresa</label>
+                <input id="address" type="text"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_description">Përshkrimi</label>
+                <textarea id="description" rows="5" maxlength="1000"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" data-i18n-placeholder="register_description_placeholder"
+                  placeholder="Përshkruaj shërbimet që ofron..."></textarea>
+                <p class="text-xs text-gray-400 mt-1" data-i18n="register_description_max">Maksimumi 1000 karaktere</p>
+              </div>
+            </div>
+
+            <div class="mt-5">
+              <button id="saveListingBtn"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-blue-100 transition" data-i18n="account_save_changes">
+                Ruaj ndryshimet
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+            <div class="mb-5">
+              <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="pro_media_title">Logo dhe foto</h2>
+              <p id="mediaPlanHint" class="text-sm text-gray-500 mt-1">FREE lejon deri 3 foto. PREMIUM lejon më shumë.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="pro_change_logo">Ndrysho logon</label>
+                <input id="newLogo" type="file" accept="image/*"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="pro_add_photos">Shto foto të reja</label>
+                <input id="newPhotos" type="file" accept="image/*" multiple
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white">
+              </div>
+            </div>
+
+            <div class="mt-5">
+              <button id="saveMediaBtn"
+                class="bg-gray-900 hover:bg-black text-white px-6 py-3 rounded-2xl font-bold shadow-lg transition" data-i18n="pro_save_media">
+                Ruaj media
+              </button>
+              <div class="mt-6">
+  <h3 class="text-lg font-extrabold text-gray-900 mb-3" data-i18n="pro_current_logo">Logo aktuale</h3>
+  <div id="logoPreviewBox" class="w-24 h-24 rounded-2xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center">
+    <span class="text-xs text-gray-400" data-i18n="no_logo">Pa logo</span>
+  </div>
+</div>
+            </div>
+
+            <div class="mt-6">
+              <h3 class="text-lg font-extrabold text-gray-900 mb-3" data-i18n="pro_current_photos">Fotot aktuale</h3>
+              <div id="photosGrid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <div class="bg-white rounded-3xl shadow-xl p-6">
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="pro_current_plan">Plani aktual</div>
+            <div id="sidePlanName" class="text-2xl font-extrabold text-gray-900 mt-2">FREE</div>
+            <div id="premiumExpiresBox" class="text-sm text-gray-500 mt-2"></div>
+            <p class="text-sm text-gray-500 mt-2" data-i18n="pro_plan_desc">
+              FREE të mban në listim. PREMIUM të jep boost, badge dhe më shumë foto.
+            </p>
+
+            <button id="boostBtn"
+              class="mt-5 w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-2xl font-bold shadow-lg shadow-green-100 transition" data-i18n="pro_upgrade">
+              Kaloni në Premium
+            </button>
+          </div>
+
+          <div class="bg-white rounded-3xl shadow-xl p-6">
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="account_summary">Përmbledhje</div>
+
+            <div class="mt-4 space-y-4">
+              <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+                <div class="text-xs text-gray-400 font-bold uppercase" data-i18n="pro_email_verified">Email i verifikuar</div>
+                <div id="emailVerifiedBox" class="text-base font-extrabold text-gray-900 mt-1">Po</div>
+              </div>
+
+              <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+                <div class="text-xs text-gray-400 font-bold uppercase" data-i18n="pro_photo_count">Numri i fotove</div>
+                <div id="photoCountBox" class="text-base font-extrabold text-gray-900 mt-1">0</div>
+              </div>
+
+              <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+                <div class="text-xs text-gray-400 font-bold uppercase" data-i18n="pro_listing_status">Listing status</div>
+                <div id="listingStatusBox" class="text-base font-extrabold text-gray-900 mt-1">Aktiv</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-3xl shadow-xl p-6">
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="pro_help">Ndihmë</div>
+            <p class="text-sm text-gray-500 mt-2" data-i18n="pro_help_desc">
+              Më vonë këtu mund të shtojmë statistika, boost history dhe menaxhim më të avancuar.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const API_URL = "https://easyfix.onrender.com";
+let currentFirm = null;
+
+const currentUser = getUser();
+if (!currentUser || !currentUser.id) {
+  window.location.href = "/auth.html";
+}
+if (currentUser.role !== "pro") {
+  window.location.href = "/account.html";
+}
+
+
+function getUser() {
+  return JSON.parse(localStorage.getItem("easyfix_user"));
+}
+
+function showError(msg) {
+  const loadingBox = document.getElementById("loadingBox");
+  const errorBox = document.getElementById("errorBox");
+  const dashboardBox = document.getElementById("dashboardBox");
+
+  loadingBox.classList.add("hidden");
+  dashboardBox.classList.add("hidden");
+  errorBox.classList.remove("hidden");
+  errorBox.innerText = msg;
+}
+
+let statusTimer = null;
+
+function showStatus(msg, type = "error") {
+  const box = document.getElementById("statusBox");
+  box.classList.remove("hidden");
+
+  if (type === "success") {
+    box.className = "rounded-2xl px-4 py-3 text-sm font-semibold bg-green-100 text-green-700";
+  } else if (type === "info") {
+    box.className = "rounded-2xl px-4 py-3 text-sm font-semibold bg-blue-100 text-blue-700";
+  } else {
+    box.className = "rounded-2xl px-4 py-3 text-sm font-semibold bg-red-100 text-red-700";
+  }
+
+  box.textContent = msg;
+
+  clearTimeout(statusTimer);
+  statusTimer = setTimeout(() => {
+    box.classList.add("hidden");
+  }, 4000);
+}
+
+function renderPhotos(photos = []) {
+  const grid = document.getElementById("photosGrid");
+  grid.innerHTML = "";
+
+  if (!photos.length) {
+    grid.innerHTML = `<div class="col-span-full text-sm text-gray-500">Nuk ka foto ende.</div>`;
+    return;
+  }
+
+  photos.forEach(src => {
+    const wrap = document.createElement("div");
+    wrap.className = "rounded-2xl overflow-hidden border border-gray-200 bg-gray-50";
+    wrap.innerHTML = `<img src="${src}" class="w-full h-32 object-cover">`;
+    grid.appendChild(wrap);
+  });
+}
+
+function getSelectedCategories() {
+  return Array.from(document.querySelectorAll(".pro-category-checkbox:checked"))
+    .map(el => el.value);
+}
+
+function setSelectedCategories(categories = []) {
+  const selected = new Set(Array.isArray(categories) ? categories : []);
+  document.querySelectorAll(".pro-category-checkbox").forEach(el => {
+    el.checked = selected.has(el.value);
+  });
+}
+
+function updateCategoryPlanHint(firm) {
+  const hint = document.getElementById("categoryPlanHint");
+  if (!hint) return;
+
+  const premium = firm?.plan === "premium";
+  hint.innerText = premium
+    ? "Plani PREMIUM lejon deri 7 kategori."
+    : "Plani FREE lejon deri 2 kategori.";
+}
+
+
+
+function fillDashboard(firm) {
+  currentFirm = firm;
+
+  document.getElementById("businessName").value = firm.name || "";
+  document.getElementById("email").value = firm.email || "";
+  document.getElementById("phone").value = firm.phone || "";
+  document.getElementById("city").value = firm.city || "";
+  document.getElementById("address").value = firm.address || "";
+  setSelectedCategories(
+  Array.isArray(firm.categories) && firm.categories.length
+    ? firm.categories
+    : (firm.category ? [firm.category] : [])
+);
+
+updateCategoryPlanHint(firm);
+  document.getElementById("description").value = firm.description || "";
+
+  document.getElementById("heroBusinessName").innerText = firm.name || "Dashboard";
+  document.getElementById("heroEmail").innerText = firm.email || "";
+
+  const premium = firm.plan === "premium";
+  document.getElementById("planBadge").innerText = premium ? "PREMIUM" : "FREE";
+  const sidePlanName = document.getElementById("sidePlanName");
+sidePlanName.childNodes[0].nodeValue = premium ? "PREMIUM" : "FREE";
+
+  document.getElementById("boostInfo").innerText = premium
+    ? "Listing-u yt ka përparësi në renditje."
+    : "Mund ta boost-osh listing-un për më shumë shikueshmëri.";
+
+  document.getElementById("emailVerifiedBox").innerText = firm.email_verified ? "Po" : "Jo";
+  document.getElementById("photoCountBox").innerText = Array.isArray(firm.photos) ? firm.photos.length : 0;
+  document.getElementById("listingStatusBox").innerText =
+    firm.payment_status === "active" ? "Aktiv" : (firm.payment_status || "Aktiv");
+
+  renderPhotos(Array.isArray(firm.photos) ? firm.photos : []);
+
+
+
+  const logoPreviewBox = document.getElementById("logoPreviewBox");
+
+if (firm.logoUrl) {
+  logoPreviewBox.innerHTML = `<img src="${firm.logoUrl}" class="w-full h-full object-cover">`;
+} else {
+  logoPreviewBox.innerHTML = `<span class="text-xs text-gray-400">Pa logo</span>`;
+}
+
+  const mediaPlanHint = document.getElementById("mediaPlanHint");
+
+if (premium) {
+  mediaPlanHint.innerText = "Plani PREMIUM lejon deri 10 foto.";
+} else {
+  mediaPlanHint.innerText = "Plani FREE lejon deri 3 foto. Për më shumë foto, kalo në PREMIUM.";
+}
+
+
+const heroPlanBox = document.getElementById("heroPlanBox");
+
+if (premium) {
+  heroPlanBox.className = "bg-amber-400/20 border border-amber-200/40 rounded-2xl px-5 py-4 min-w-[220px]";
+} else {
+  heroPlanBox.className = "bg-white/15 border border-white/20 rounded-2xl px-5 py-4 min-w-[220px]";
+}
+
+
+
+  const premiumExpiresBox = document.getElementById("premiumExpiresBox");
+
+if (premium && firm.boost_expires_at) {
+  const d = new Date(firm.boost_expires_at);
+  premiumExpiresBox.innerText = `Aktiv deri më: ${d.toLocaleDateString("sq-AL")}`;
+} else {
+  premiumExpiresBox.innerText = "Aktualisht je në planin falas.";
+}
+
+
+  const boostBtn = document.getElementById("boostBtn");
+
+if (premium) {
+  boostBtn.innerText = "Premium aktiv";
+  boostBtn.disabled = true;
+  boostBtn.className = "mt-5 w-full bg-amber-500 text-white py-3 rounded-2xl font-bold shadow-lg shadow-amber-100 transition cursor-default";
+} else {
+  boostBtn.innerText = "Kaloni në Premium";
+  boostBtn.disabled = false;
+  boostBtn.className = "mt-5 w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-2xl font-bold shadow-lg shadow-green-100 transition";
+}
+}
+
+async function loadDashboard() {
+  const user = getUser();
+
+  if (!user || !user.id || user.role !== "pro") {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/pro/firma/me/${user.id}`);
+    const data = await res.json();
+
+    if (!res.ok || !data.success || !data.firm) {
+      showError(data.error_code || "Nuk u gjet listing-u i mjeshtrit.");
+      return;
+    }
+
+    fillDashboard(data.firm);
+
+    document.getElementById("loadingBox").classList.add("hidden");
+    document.getElementById("dashboardBox").classList.remove("hidden");
+  } catch (err) {
+    console.error(err);
+    showError("Gabim gjatë ngarkimit të dashboard-it.");
+  }
+}
+
+async function saveListing() {
+  const user = getUser();
+
+  if (!user || !user.id || user.role !== "pro" || !currentFirm?._id) {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  const businessName = document.getElementById("businessName").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  const city = document.getElementById("city").value.trim();
+  const address = document.getElementById("address").value.trim();
+  const categories = getSelectedCategories();
+  const description = document.getElementById("description").value.trim();
+
+  if (!businessName || !phone || !city || !address || categories.length === 0) {
+    showStatus("Plotëso të gjitha fushat kryesore.");
+    return;
+  }
+
+  const btn = document.getElementById("saveListingBtn");
+  btn.disabled = true;
+  btn.innerText = "Duke ruajtur...";
+
+  try {
+    const res = await fetch(`${API_URL}/pro/firma/${currentFirm._id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        owner_user_id: user.id,
+        name: businessName,
+        phone,
+        city,
+        address,
+        categories,
+        country: currentFirm.country || "MK",
+        description
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success || !data.firm) {
+      showStatus(data.error_code || "Gabim gjatë ruajtjes.");
+      return;
+    }
+
+    fillDashboard(data.firm);
+    showStatus("Ndryshimet u ruajtën me sukses.", "success");
+  } catch (err) {
+    console.error(err);
+    showStatus("Gabim serveri.");
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Ruaj ndryshimet";
+  }
+}
+
+async function saveMedia() {
+  const user = getUser();
+
+  if (!user || !user.id || user.role !== "pro" || !currentFirm?._id) {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  const logoFile = document.getElementById("newLogo").files[0] || null;
+  const photoFiles = Array.from(document.getElementById("newPhotos").files || []);
+
+  if (!logoFile && photoFiles.length === 0) {
+    showStatus("Zgjidh logon ose fotot që dëshiron me i ndryshu.");
+    return;
+  }
+
+  const btn = document.getElementById("saveMediaBtn");
+  btn.disabled = true;
+  btn.innerText = "Duke ruajtur...";
+
+  try {
+    const formData = new FormData();
+    formData.append("owner_user_id", user.id);
+
+    if (logoFile) {
+      formData.append("logo", logoFile);
+    }
+
+    photoFiles.forEach(file => {
+      formData.append("photos", file);
+    });
+
+    const res = await fetch(`${API_URL}/pro/firma/${currentFirm._id}/media`, {
+      method: "PUT",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success || !data.firm) {
+      showStatus(data.error_code || "Gabim gjatë ruajtjes së mediave.");
+      return;
+    }
+
+    document.getElementById("newLogo").value = "";
+    document.getElementById("newPhotos").value = "";
+
+    fillDashboard(data.firm);
+    showStatus("Media u ruajt me sukses.", "success");
+  } catch (err) {
+    console.error(err);
+    showStatus("Gabim serveri.");
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Ruaj media";
+  }
+}
+
+document.getElementById("saveListingBtn").addEventListener("click", saveListing);
+document.getElementById("saveMediaBtn").addEventListener("click", saveMedia);
+
+document.getElementById("boostBtn").addEventListener("click", async () => {
+  const user = getUser();
+
+  if (!user || !user.id || user.role !== "pro") {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  if (!currentFirm || !currentFirm._id) {
+    showStatus("Firma nuk u ngarkua ende.");
+    return;
+  }
+
+  const btn = document.getElementById("boostBtn");
+  btn.disabled = true;
+  btn.innerText = "Duke hapur pagesën...";
+
+  try {
+    const res = await fetch(`${API_URL}/pro/premium/checkout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        userId: user.id,
+        firmId: currentFirm._id
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      showStatus(data.error_code || "Gabim gjatë krijimit të checkout-it premium.");
+      return;
+    }
+
+    if (!data.checkoutUrl) {
+      showStatus("Nuk u kthye checkout link.");
+      return;
+    }
+
+    window.location.href = data.checkoutUrl;
+  } catch (err) {
+    console.error(err);
+    showStatus("Gabim serveri.");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  localStorage.removeItem("easyfix_user");
+  window.location.href = "/auth.html";
+});
+
+
+function handlePremiumReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const premium = params.get("premium");
+
+  if (premium === "success") {
+    showStatus("Pagesa u krye. Premium po përditësohet...", "success");
+
+    setTimeout(async () => {
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+      await loadDashboard();
+    }, 1500);
+  }
+}
+
+(async function initProDashboard() {
+  await loadDashboard();
+  handlePremiumReturn();
+})();
+</script>
+
+<script>
+  const { applyTranslations, getLang, t } = window.EASYFIX_I18N;
+  applyTranslations(document);
+  document.documentElement.setAttribute("lang", getLang());
+</script>
+</body>
+</html>

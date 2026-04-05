@@ -109,6 +109,10 @@
       document.getElementById("langEN")?.addEventListener("click", () => { setLang("en"); applyTranslations(); setLangButtonsUI(); repaintDynamicTexts(); });
     }
 
+    const isDev =
+  window.location.hostname.includes("main") ||
+  window.location.hostname.includes("easyfix.services");
+
     const API_URL = "https://easyfix.onrender.com";
     const params = new URLSearchParams(window.location.search);
     const email = params.get("email");

@@ -99,7 +99,11 @@
   </footer>
 
   <script>
-    const API_URL = "https://easyfix.onrender.com";
+  const isDev =
+  window.location.hostname.includes("main") ||
+  window.location.hostname.includes("easyfix.services");
+
+  const API_URL = "https://easyfix.onrender.com";
 
     const msg = document.getElementById("msg");
     const requestCard = document.getElementById("requestCard");

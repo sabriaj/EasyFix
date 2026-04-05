@@ -7,108 +7,145 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="admin.js"></script>
 
-
-  <!-- logo per tabs -->
-<link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
-<link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-16.png" sizes="16x16">
-<link rel="apple-touch-icon" href="easyfix-icons-pack/apple-touch-icon.png">
-<meta name="theme-color" content="#1d4ed8">
-<!-- /logo per tabs -->
-
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-16.png" sizes="16x16">
+  <link rel="apple-touch-icon" href="easyfix-icons-pack/apple-touch-icon.png">
+  <meta name="theme-color" content="#1d4ed8">
 </head>
 
-<body class="bg-gray-100 min-h-screen">
-  <header class="bg-blue-700 text-white py-5 shadow">
-    <div class="container mx-auto px-4 flex items-center justify-between">
+<body class="bg-gray-100 min-h-screen text-gray-800">
+  <header class="bg-gradient-to-r from-blue-700 to-blue-800 text-white py-5 shadow-lg">
+    <div class="container mx-auto px-4 flex items-center justify-between gap-4">
       <div>
-        <div class="text-2xl font-extrabold">EasyFix Admin</div>
-        <div class="text-xs opacity-80">Menaxho firmat, pagesat, shtetet</div>
+        <div class="text-2xl font-extrabold tracking-tight">EasyFix Admin</div>
+        <div class="text-xs opacity-80">Menaxho listing-et, premium planin dhe statuset</div>
       </div>
+
       <div class="flex gap-2">
-        <a href="index.html" class="px-3 py-2 bg-white/15 rounded-lg hover:bg-white/25">Kthehu te faqja</a>
-        <button id="logoutBtn" class="px-3 py-2 bg-red-600 rounded-lg hover:bg-red-700">Dil</button>
+        <a href="index.html" class="px-3 py-2 bg-white/15 rounded-lg hover:bg-white/25 font-semibold">
+          Kthehu te faqja
+        </a>
+        <button id="logoutBtn" class="px-3 py-2 bg-red-600 rounded-lg hover:bg-red-700 font-semibold">
+          Dil
+        </button>
       </div>
     </div>
   </header>
 
   <main class="container mx-auto px-4 py-6">
-    <!-- Login box -->
-    <section id="loginBox" class="max-w-xl mx-auto bg-white rounded-2xl shadow p-6">
-      <h2 class="text-xl font-bold mb-2">Hyrje Admin</h2>
+    <!-- Login -->
+    <section id="loginBox" class="max-w-xl mx-auto bg-white rounded-3xl shadow-xl p-6 md:p-8 border border-gray-100">
+      <h2 class="text-2xl font-extrabold mb-2 text-gray-900">Hyrje Admin</h2>
       <p class="text-sm text-gray-600 mb-4">
-        Shkruaj <span class="font-semibold">ADMIN_KEY</span> (nga Render → Environment).
+        Shkruaj <span class="font-semibold">ADMIN_KEY</span> nga Render Environment.
       </p>
 
-      <label class="block text-sm font-semibold mb-1">Admin Key</label>
-      <input id="adminKeyInput" type="password" class="w-full border rounded-lg px-3 py-2" placeholder="Bearer token / ADMIN_KEY" />
+      <label class="block text-sm font-semibold mb-2 text-gray-700">Admin Key</label>
+      <input
+        id="adminKeyInput"
+        type="password"
+        class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500"
+        placeholder="ADMIN_KEY"
+      />
 
-      <div class="mt-4 flex gap-2">
-        <button id="loginBtn" class="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 font-semibold">
+      <div class="mt-4 flex items-center gap-3">
+        <button
+          id="loginBtn"
+          class="px-5 py-3 bg-blue-700 text-white rounded-xl hover:bg-blue-800 font-bold"
+        >
           Hyr
         </button>
-        <div id="loginMsg" class="text-sm text-gray-600 flex items-center"></div>
+        <div id="loginMsg" class="text-sm text-gray-600"></div>
       </div>
     </section>
 
-    <!-- Admin content -->
-    <section id="adminApp" class="hidden">
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-5">
-        <div class="bg-white rounded-2xl shadow p-4">
-          <div class="text-xs text-gray-500">Total</div>
-          <div id="statTotal" class="text-2xl font-extrabold">-</div>
+    <!-- App -->
+    <section id="adminApp" class="hidden space-y-5">
+      <!-- Stats -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl shadow p-5 border border-gray-100">
+          <div class="text-xs text-gray-500 uppercase tracking-wide font-bold">Total</div>
+          <div id="statTotal" class="text-3xl font-extrabold mt-2">-</div>
         </div>
-        <div class="bg-white rounded-2xl shadow p-4">
-          <div class="text-xs text-gray-500">Pending</div>
-          <div id="statPending" class="text-2xl font-extrabold">-</div>
+
+        <div class="bg-white rounded-2xl shadow p-5 border border-gray-100">
+          <div class="text-xs text-gray-500 uppercase tracking-wide font-bold">Active</div>
+          <div id="statActive" class="text-3xl font-extrabold mt-2 text-green-700">-</div>
         </div>
-        <div class="bg-white rounded-2xl shadow p-4">
-          <div class="text-xs text-gray-500">Paid</div>
-          <div id="statPaid" class="text-2xl font-extrabold">-</div>
+
+        <div class="bg-white rounded-2xl shadow p-5 border border-gray-100">
+          <div class="text-xs text-gray-500 uppercase tracking-wide font-bold">Premium</div>
+          <div id="statPremium" class="text-3xl font-extrabold mt-2 text-yellow-600">-</div>
         </div>
-        <div class="bg-white rounded-2xl shadow p-4">
-          <div class="text-xs text-gray-500">Expired</div>
-          <div id="statExpired" class="text-2xl font-extrabold">-</div>
+
+        <div class="bg-white rounded-2xl shadow p-5 border border-gray-100">
+          <div class="text-xs text-gray-500 uppercase tracking-wide font-bold">Free</div>
+          <div id="statFree" class="text-3xl font-extrabold mt-2 text-gray-700">-</div>
         </div>
       </div>
 
-      <div class="bg-white rounded-2xl shadow p-4 mb-4">
+      <!-- Filters -->
+      <div class="bg-white rounded-2xl shadow p-4 md:p-5 border border-gray-100">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <input id="searchInput" class="border rounded-lg px-3 py-2" placeholder="Kërko (name/email/phone/category)" />
-          <select id="statusSelect" class="border rounded-lg px-3 py-2">
+          <input
+            id="searchInput"
+            class="border border-gray-300 rounded-xl px-4 py-3"
+            placeholder="Kërko (name/email/phone/category)"
+          />
+
+          <select id="statusSelect" class="border border-gray-300 rounded-xl px-4 py-3 bg-white">
             <option value="all">All status</option>
-            <option value="pending">Pending</option>
-            <option value="paid">Paid</option>
+            <option value="active">Active</option>
             <option value="expired">Expired</option>
           </select>
-          <select id="planSelect" class="border rounded-lg px-3 py-2">
+
+          <select id="planSelect" class="border border-gray-300 rounded-xl px-4 py-3 bg-white">
             <option value="all">All plan</option>
-            <option value="basic">Basic</option>
-            <option value="standard">Standard</option>
+            <option value="free">Free</option>
             <option value="premium">Premium</option>
           </select>
-          <input id="countryInput" class="border rounded-lg px-3 py-2" placeholder="Country ISO2 (p.sh MK, DE) ose bosh" />
+
+          <input
+            id="countryInput"
+            class="border border-gray-300 rounded-xl px-4 py-3"
+            placeholder="Country ISO2 (p.sh MK, DE)"
+          />
         </div>
 
-        <div class="mt-3 flex gap-2">
-          <button id="refreshBtn" class="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-black font-semibold">Refresh</button>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button
+            id="refreshBtn"
+            class="px-5 py-3 bg-gray-900 text-white rounded-xl hover:bg-black font-bold"
+          >
+            Refresh
+          </button>
+
+          <button
+            id="migrateBtn"
+            class="px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold"
+          >
+            Migrate Legacy Firms
+          </button>
+
           <div id="appMsg" class="text-sm text-gray-600 flex items-center"></div>
         </div>
       </div>
 
-      <div class="bg-white rounded-2xl shadow overflow-hidden">
+      <!-- Table -->
+      <div class="bg-white rounded-2xl shadow overflow-hidden border border-gray-100">
         <div class="overflow-x-auto">
           <table class="min-w-full text-sm">
             <thead class="bg-gray-50">
               <tr>
-                <th class="text-left p-3">Firma</th>
-                <th class="text-left p-3">Email</th>
-                <th class="text-left p-3">Phone</th>
-                <th class="text-left p-3">Plan</th>
-                <th class="text-left p-3">Status</th>
-                <th class="text-left p-3">Country</th>
-                <th class="text-left p-3">Created</th>
-                <th class="text-left p-3">Actions</th>
+                <th class="text-left p-4 font-bold text-gray-600">Firma</th>
+                <th class="text-left p-4 font-bold text-gray-600">Email</th>
+                <th class="text-left p-4 font-bold text-gray-600">Phone</th>
+                <th class="text-left p-4 font-bold text-gray-600">Plan</th>
+                <th class="text-left p-4 font-bold text-gray-600">Status</th>
+                <th class="text-left p-4 font-bold text-gray-600">Country</th>
+                <th class="text-left p-4 font-bold text-gray-600">Created</th>
+                <th class="text-left p-4 font-bold text-gray-600">Actions</th>
               </tr>
             </thead>
             <tbody id="firmsTbody"></tbody>

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyFix - Account</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="i18n.js"></script>
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+  <style>
+    .glass-card {
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(10px);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 min-h-screen text-gray-800">
+
+  <div class="max-w-5xl mx-auto px-4 py-8 md:py-12">
+    <!-- Top bar -->
+    <div class="flex items-center justify-between mb-6">
+      <a href="/" class="inline-flex items-center gap-2 text-sm font-bold text-blue-700 hover:text-blue-800">
+        <span>←</span>
+        <span data-i18n="back">Kthehu mbrapa</span>
+      </a>
+
+      <div class="text-right">
+        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">EasyFix</div>
+        <div class="text-sm font-bold text-gray-700" data-i18n="account_page_title">Llogaria ime</div>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loadingBox" class="glass-card rounded-3xl shadow-xl border border-white/60 p-8 text-center text-gray-500 font-semibold" data-i18n="account_loading">
+      Duke ngarkuar të dhënat...
+    </div>
+
+    <!-- Error -->
+    <div id="errorBox" class="hidden rounded-2xl border border-red-200 bg-red-50 text-red-700 px-5 py-4 font-semibold shadow-sm"></div>
+
+    <!-- Main -->
+    <div id="accountBox" class="hidden space-y-6">
+      <!-- Hero -->
+      <div class="glass-card rounded-3xl shadow-xl border border-white/60 overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-8 text-white">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <p class="text-blue-100 text-sm font-semibold uppercase tracking-wider" data-i18n="account_dashboard">Dashboard</p>
+              <h1 id="heroName" class="text-3xl md:text-4xl font-extrabold mt-1">Llogaria ime</h1>
+              <p id="heroEmail" class="text-blue-100 mt-2 text-sm md:text-base"></p>
+            </div>
+
+            <div class="bg-white/15 rounded-2xl px-5 py-4 border border-white/20 min-w-[180px]">
+              <div class="text-xs uppercase tracking-wider text-blue-100 font-bold" data-i18n="account_current_credits">Kreditë aktuale</div>
+              <div id="credits" class="text-3xl font-extrabold mt-1">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-6 py-5 bg-white">
+          <p class="text-sm text-gray-500" data-i18n="account_hero_desc">
+            Menaxho të dhënat e profilit, kreditë dhe sigurinë e llogarisë tënde.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left column -->
+        <div class="lg:col-span-2 space-y-6">
+          <!-- Profile -->
+          <div class="glass-card rounded-3xl shadow-xl border border-white/60 p-6 md:p-7">
+            <div class="flex items-center justify-between mb-5">
+              <div>
+                <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="account_profile_title">Profili im</h2>
+                <p class="text-sm text-gray-500 mt-1" data-i18n="account_profile_desc">Përditëso informacionet personale.</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="name_label">Emri</label>
+                <input id="name" type="text"
+                  class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="surname_label">Mbiemri</label>
+                <input id="surname" type="text"
+                  class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="email">Email</label>
+                <input id="email" type="text" disabled
+                  class="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-gray-500">
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="address">Adresa</label>
+                <input id="address" type="text"
+                  class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+              </div>
+            </div>
+
+            <p id="status" class="text-sm font-semibold mt-4"></p>
+
+            <div class="mt-5">
+              <button id="saveBtn"
+                class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-blue-100 transition"
+                data-i18n="account_save_changes">
+                Ruaj ndryshimet
+              </button>
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div class="glass-card rounded-3xl shadow-xl border border-white/60 p-6 md:p-7">
+            <div class="mb-5">
+              <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="account_security_title">Siguria</h2>
+              <p class="text-sm text-gray-500 mt-1" data-i18n="account_security_desc">Ndrysho password-in e llogarisë.</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="account_current_password">Password aktual</label>
+                <input id="currentPassword" type="password"
+                  class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="account_new_password">Password i ri</label>
+                <input id="newPassword" type="password"
+                  class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="confirm_password_label">Konfirmo password-in</label>
+                <input id="confirmNewPassword" type="password"
+                  class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+              </div>
+            </div>
+
+            <p id="passwordStatus" class="text-sm font-semibold mt-4"></p>
+
+            <div class="mt-5">
+              <button id="changePasswordBtn"
+                class="w-full sm:w-auto bg-gray-900 hover:bg-black text-white px-6 py-3 rounded-2xl font-bold shadow-lg transition"
+                data-i18n="account_change_password">
+                Ndrysho Password
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div class="space-y-6">
+          <!-- Credits card -->
+          <div class="glass-card rounded-3xl shadow-xl border border-white/60 p-6">
+            <div class="text-sm font-bold text-blue-600 uppercase tracking-wider" data-i18n="account_credits_label">EasyFix Credits</div>
+            <h3 class="text-2xl font-extrabold text-gray-900 mt-2" data-i18n="account_buy_credits_title">Blej më shumë kredi</h3>
+            <p class="text-sm text-gray-500 mt-2" data-i18n="account_buy_credits_desc">
+              Përdori kreditë për me kontaktu mjeshtrat direkt nga platforma.
+            </p>
+
+            <a href="/buy-credits.html"
+              class="mt-5 inline-flex w-full items-center justify-center bg-green-600 hover:bg-green-700 text-white py-3 rounded-2xl font-bold shadow-lg shadow-green-100 transition"
+              data-i18n="account_buy_credits_button">
+              Blej kredi
+            </a>
+          </div>
+
+          <!-- Account summary -->
+          <div class="glass-card rounded-3xl shadow-xl border border-white/60 p-6">
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="account_summary">Përmbledhje</div>
+
+            <div class="mt-4 space-y-4">
+              <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+                <div class="text-xs text-gray-400 font-bold uppercase" data-i18n="account_status">Statusi</div>
+                <div class="text-base font-extrabold text-gray-900 mt-1" data-i18n="account_active">Aktiv</div>
+              </div>
+
+              <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+                <div class="text-xs text-gray-400 font-bold uppercase" data-i18n="account_account_type">Llogaria</div>
+                <div class="text-base font-extrabold text-gray-900 mt-1" data-i18n="account_client">Klient</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Logout -->
+          <div class="glass-card rounded-3xl shadow-xl border border-white/60 p-6">
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="account_session">Sesioni</div>
+            <p class="text-sm text-gray-500 mt-2" data-i18n="account_session_desc">Dil nga llogaria jote në këtë pajisje.</p>
+
+            <button id="logoutBtn"
+              class="mt-5 w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-2xl font-bold shadow-lg shadow-red-100 transition"
+              data-i18n="account_logout">
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const { applyTranslations, getLang, t } = window.EASYFIX_I18N;
+applyTranslations(document);
+document.documentElement.setAttribute("lang", getLang());
+
+const API_URL = "https://easyfix.onrender.com";
+
+function getUser() {
+  return JSON.parse(localStorage.getItem("easyfix_user"));
+}
+
+function setUser(user) {
+  localStorage.setItem("easyfix_user", JSON.stringify(user));
+}
+
+const currentUser = getUser();
+
+if (!currentUser || !currentUser.id) {
+  window.location.href = "/auth.html";
+}
+
+if (currentUser.role === "pro") {
+  window.location.href = "/pro-dashboard.html";
+}
+
+function showError(msg) {
+  const errorBox = document.getElementById("errorBox");
+  const loadingBox = document.getElementById("loadingBox");
+  const accountBox = document.getElementById("accountBox");
+
+  loadingBox.classList.add("hidden");
+  accountBox.classList.add("hidden");
+  errorBox.classList.remove("hidden");
+  errorBox.innerText = msg;
+}
+
+function showStatus(msg, isError = false) {
+  const el = document.getElementById("status");
+  el.innerText = msg;
+  el.className = isError
+    ? "text-sm font-semibold mt-4 text-red-600"
+    : "text-sm font-semibold mt-4 text-green-600";
+}
+
+function showPasswordStatus(msg, isError = false) {
+  const el = document.getElementById("passwordStatus");
+  el.innerText = msg;
+  el.className = isError
+    ? "text-sm font-semibold mt-4 text-red-600"
+    : "text-sm font-semibold mt-4 text-green-600";
+}
+
+async function loadAccount() {
+  const user = getUser();
+
+  if (!user || !user.id) {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/user/me/${user.id}`);
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      localStorage.removeItem("easyfix_user");
+      window.location.href = "/auth.html";
+      return;
+    }
+
+    document.getElementById("name").value = data.user.name || "";
+    document.getElementById("surname").value = data.user.surname || "";
+    document.getElementById("email").value = data.user.email || "";
+    document.getElementById("address").value = data.user.address || "";
+    document.getElementById("credits").innerText = data.user.credits ?? 0;
+
+    document.getElementById("heroName").innerText =
+      `${data.user.name || ""} ${data.user.surname || ""}`.trim() || t("account_page_title");
+
+    document.getElementById("heroEmail").innerText = data.user.email || "";
+
+    setUser({
+      ...user,
+      id: data.user.id,
+      name: data.user.name,
+      surname: data.user.surname,
+      address: data.user.address,
+      email: data.user.email,
+      credits: data.user.credits
+    });
+
+    document.getElementById("loadingBox").classList.add("hidden");
+    document.getElementById("accountBox").classList.remove("hidden");
+  } catch (err) {
+    console.error(err);
+    showError(t("account_load_error"));
+  }
+}
+
+async function saveProfile() {
+  const user = getUser();
+
+  if (!user || !user.id) {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  const name = document.getElementById("name").value.trim();
+  const surname = document.getElementById("surname").value.trim();
+  const address = document.getElementById("address").value.trim();
+
+  if (!name || !surname || !address) {
+    showStatus(t("msg_fill_all"), true);
+    return;
+  }
+
+  const saveBtn = document.getElementById("saveBtn");
+  saveBtn.disabled = true;
+  saveBtn.innerText = t("account_saving");
+
+  try {
+    const res = await fetch(`${API_URL}/user/me/${user.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        name,
+        surname,
+        address
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      showStatus(data.error_code || t("account_save_error"), true);
+      return;
+    }
+
+    setUser({
+      ...user,
+      id: data.user.id,
+      name: data.user.name,
+      surname: data.user.surname,
+      address: data.user.address,
+      email: data.user.email,
+      credits: data.user.credits
+    });
+
+    document.getElementById("credits").innerText = data.user.credits ?? 0;
+    document.getElementById("heroName").innerText =
+      `${data.user.name || ""} ${data.user.surname || ""}`.trim() || t("account_page_title");
+    document.getElementById("heroEmail").innerText = data.user.email || "";
+
+    showStatus(t("account_saved_success"));
+  } catch (err) {
+    console.error(err);
+    showStatus(t("api_server_error"), true);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.innerText = t("account_save_changes");
+  }
+}
+
+async function changePassword() {
+  const user = getUser();
+
+  if (!user || !user.id) {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  const currentPassword = document.getElementById("currentPassword").value.trim();
+  const newPassword = document.getElementById("newPassword").value.trim();
+  const confirmNewPassword = document.getElementById("confirmNewPassword").value.trim();
+
+  if (!currentPassword || !newPassword || !confirmNewPassword) {
+    showPasswordStatus(t("msg_fill_all"), true);
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    showPasswordStatus(t("account_password_min"), true);
+    return;
+  }
+
+  if (newPassword !== confirmNewPassword) {
+    showPasswordStatus(t("login_password_mismatch"), true);
+    return;
+  }
+
+  const btn = document.getElementById("changePasswordBtn");
+  btn.disabled = true;
+  btn.innerText = t("account_changing_password");
+
+  try {
+    const res = await fetch(`${API_URL}/user/password/${user.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        currentPassword,
+        newPassword
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      showPasswordStatus(data.error_code || t("account_password_change_error"), true);
+      return;
+    }
+
+    document.getElementById("currentPassword").value = "";
+    document.getElementById("newPassword").value = "";
+    document.getElementById("confirmNewPassword").value = "";
+
+    showPasswordStatus(t("account_password_changed"));
+  } catch (err) {
+    console.error(err);
+    showPasswordStatus(t("api_server_error"), true);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = t("account_change_password");
+  }
+}
+
+document.getElementById("saveBtn").addEventListener("click", saveProfile);
+
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  localStorage.removeItem("easyfix_user");
+  window.location.href = "/auth.html";
+});
+
+document.getElementById("changePasswordBtn").addEventListener("click", changePassword);
+
+loadAccount();
+</script>
+
+</body>
+</html>

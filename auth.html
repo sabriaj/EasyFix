@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyFix - Auth</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="i18n.js"></script>
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
+
+  <div class="w-full max-w-3xl bg-white rounded-3xl shadow-xl p-8 md:p-10">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900">EasyFix</h1>
+      <p class="text-gray-600 mt-2 text-sm md:text-base" data-i18n="auth_choose_continue">
+        Zgjidh si dëshiron të vazhdosh
+      </p>
+    </div>
+
+    <div id="mainChoices" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <button onclick="goVisitor()"
+        class="text-left rounded-2xl border border-gray-200 p-6 hover:shadow-lg hover:border-blue-300 transition bg-white">
+        <div class="text-4xl mb-4">👤</div>
+        <h2 class="text-xl font-bold text-gray-900 mb-2" data-i18n="auth_client_title">Jam Klient</h2>
+        <p class="text-sm text-gray-600" data-i18n="auth_client_desc">
+          Krijo llogari ose bëj login për me kontaktu mjeshtrat dhe me përdor kreditë.
+        </p>
+      </button>
+
+      <button onclick="showProOptions()"
+        class="text-left rounded-2xl border border-gray-200 p-6 hover:shadow-lg hover:border-blue-300 transition bg-white">
+        <div class="text-4xl mb-4">🛠️</div>
+        <h2 class="text-xl font-bold text-gray-900 mb-2" data-i18n="auth_pro_title">Jam Mjeshtër</h2>
+        <p class="text-sm text-gray-600" data-i18n="auth_pro_desc">
+          Hyr në dashboard-in tënd ose regjistro listing-un si profesionist.
+        </p>
+      </button>
+    </div>
+
+    <div id="proChoices" class="hidden space-y-4">
+      <div class="text-center mb-4">
+        <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="auth_pro_title">Mjeshtër</h2>
+        <p class="text-sm text-gray-600 mt-2" data-i18n="auth_pro_question">
+          A ke account ekzistues apo dëshiron të regjistrohesh?
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button onclick="goProLogin()"
+          class="rounded-2xl border border-gray-200 p-5 hover:shadow-lg hover:border-blue-300 transition bg-white text-left">
+          <div class="text-3xl mb-3">🔑</div>
+          <div class="text-lg font-bold text-gray-900" data-i18n="auth_have_account">Kam account</div>
+          <div class="text-sm text-gray-600 mt-1" data-i18n="auth_pro_login_desc">Bëj login si mjeshtër</div>
+        </button>
+
+        <button onclick="goProRegister()"
+          class="rounded-2xl border border-gray-200 p-5 hover:shadow-lg hover:border-blue-300 transition bg-white text-left">
+          <div class="text-3xl mb-3">➕</div>
+          <div class="text-lg font-bold text-gray-900" data-i18n="auth_no_account">Nuk kam account</div>
+          <div class="text-sm text-gray-600 mt-1" data-i18n="auth_pro_register_desc">Regjistrohu si mjeshtër</div>
+        </button>
+      </div>
+
+      <div class="text-center pt-2">
+        <button onclick="backToMain()" class="text-blue-600 font-bold hover:underline" data-i18n="back">
+          Kthehu mbrapa
+        </button>
+      </div>
+    </div>
+
+    <div class="text-center mt-8">
+      <a href="/" class="text-blue-600 font-bold hover:underline" data-i18n="back">Kthehu mbrapa</a>
+    </div>
+  </div>
+
+<script>
+const { getLang, applyTranslations } = window.EASYFIX_I18N;
+
+function applyPageTranslations() {
+  applyTranslations(document);
+  document.documentElement.setAttribute("lang", getLang());
+}
+
+function goVisitor() {
+  window.location.href = "/login.html";
+}
+
+function showProOptions() {
+  document.getElementById("mainChoices").classList.add("hidden");
+  document.getElementById("proChoices").classList.remove("hidden");
+}
+
+function backToMain() {
+  document.getElementById("proChoices").classList.add("hidden");
+  document.getElementById("mainChoices").classList.remove("hidden");
+}
+
+function goProLogin() {
+  window.location.href = "/pro-login.html";
+}
+
+function goProRegister() {
+  window.location.href = "/register.html";
+}
+
+applyPageTranslations();
+</script>
+
+</body>
+</html>

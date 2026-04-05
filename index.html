@@ -12,12 +12,14 @@
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>EasyFix - Find Professionals</title>
-  
+  <title>EasyFix - Gjej Profesionistë</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="i18n.js"></script>
+  <script src="https://app.lemonsqueezy.com/js/lemon.js" defer></script>
+  <script src="lemon.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
   <meta name="theme-color" content="#2563eb">
 
@@ -40,31 +42,43 @@
     .snap-x { scroll-snap-type: x mandatory; }
     .snap-center { scroll-snap-align: center; }
     .custom-select {
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-        background-position: right 0.5rem center;
-        background-repeat: no-repeat;
-        background-size: 1.5em 1.5em;
-        padding-right: 2.5rem;
-        -webkit-appearance: none;
-        appearance: none;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+      background-position: right 0.5rem center;
+      background-repeat: no-repeat;
+      background-size: 1.5em 1.5em;
+      padding-right: 2.5rem;
+      -webkit-appearance: none;
+      appearance: none;
     }
-    .badge-premium { 
-      background: linear-gradient(90deg, #F59E0B, #D97706); color: white; padding: 3px 8px; border-radius: 6px; 
-      font-size: 0.7rem; font-weight: 800; text-transform: uppercase; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+    .badge-premium {
+      background: linear-gradient(90deg, #F59E0B, #D97706);
+      color: white;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
     }
-    .badge-standard { 
-      background: #EFF6FF; color: #2563eb; border: 1px solid #BFDBFE; padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;
+    .badge-standard {
+      background: #EFF6FF;
+      color: #2563eb;
+      border: 1px solid #BFDBFE;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
     }
-    /* Active Button State */
     .cat-btn.active div { background-color: #2563eb !important; border-color: #2563eb !important; }
     .cat-btn.active i { color: white !important; }
     .cat-btn.active span { color: #2563eb !important; font-weight: 700; }
+
+    .credit-pack-btn.active {
+  border-color: #2563eb !important;
+  background-color: #eff6ff !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
+}
   </style>
-
-
-  <meta property="og:image" content="https://easyfix.mk/easyfix-icons-pack/logo.png">
-  <meta property="og:type" content="website">
-  
 </head>
 
 <body class="bg-gray-50 min-h-screen flex flex-col font-sans text-gray-800 pb-[80px] md:pb-0">
@@ -77,22 +91,31 @@
           <span class="text-2xl font-black text-brand-600 tracking-tighter">EasyFix</span>
           <span id="countryPill" class="hidden text-[9px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border">MK</span>
         </div>
+
         <div class="flex items-center gap-3">
+          <span id="creditBox" class="text-xs font-bold text-gray-600"></span>
+
+          <button id="loginBtn"
+            class="bg-white border border-gray-200 px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-50">
+            Login
+          </button>
+
           <div class="relative">
             <button id="langBtn" class="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-full border border-gray-200 transition-all">
-               <img id="langFlagImg" class="w-5 h-5 rounded-full object-cover shadow-sm">
-               <span id="langLabel" class="text-xs font-bold text-gray-700 hidden sm:inline">SQ</span>
-               <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+              <img id="langFlagImg" class="w-5 h-5 rounded-full object-cover shadow-sm">
+              <span id="langLabel" class="text-xs font-bold text-gray-700 hidden sm:inline">SQ</span>
+              <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
             </button>
             <div id="langMenu" class="hidden absolute right-0 top-full mt-2 w-40 bg-white border border-gray-100 shadow-xl rounded-xl p-1 z-50">
-               <button onclick="changeLang('sq')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/al.png" class="w-4"> Shqip</button>
-               <button onclick="changeLang('mk')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/mk.png" class="w-4"> MKD</button>
-               <button onclick="changeLang('en')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/gb.png" class="w-4"> English</button>
+              <button onclick="changeLang('sq')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/al.png" class="w-4"> Shqip</button>
+              <button onclick="changeLang('mk')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/mk.png" class="w-4"> MKD</button>
+              <button onclick="changeLang('en')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/gb.png" class="w-4"> English</button>
             </div>
           </div>
-          <a href="register.html" class="hidden md:inline-flex bg-gray-900 hover:bg-black text-white px-5 py-2 rounded-full text-sm font-bold shadow-lg transition-all" data-i18n="nav_register">
-            Regjistrohu
-          </a>
+
+          <a id="registerBtnDesktop" href="register.html" class="hidden md:inline-flex bg-gray-900 hover:bg-black text-white px-5 py-2 rounded-full text-sm font-bold shadow-lg transition-all" data-i18n="nav_register">
+           Regjistrohu
+           </a>
         </div>
       </div>
     </div>
@@ -106,29 +129,26 @@
         <h1 class="text-3xl md:text-4xl font-extrabold text-center text-white mb-2 tracking-tight" data-i18n="hero">Gjej Mjeshtër</h1>
         <p class="text-blue-100 text-center text-sm md:text-base mb-8 font-medium" data-i18n="hero_sub">Zgjidhje të shpejta për shtëpinë tuaj.</p>
 
-        <!-- Search Bar -->
         <div class="bg-white p-2 rounded-2xl shadow-xl max-w-2xl mx-auto flex flex-col md:flex-row items-center gap-2 transform translate-y-2">
-           <div class="flex items-center w-full gap-2">
-               <div class="bg-gray-50 w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 shrink-0 ml-1"><i class="fas fa-search"></i></div>
-               <input id="searchInput" type="text" data-i18n-placeholder="search_placeholder" placeholder="Kërko (psh. Hidraulik...)" 
-                 class="w-full bg-transparent text-gray-800 text-sm font-semibold placeholder-gray-400 focus:outline-none h-10">
-           </div>
-           <div class="flex items-center w-full md:w-auto gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-2 md:pt-0 md:pl-2">
-               <!-- Dynamic Dropdown (Filled by JS) -->
-               <select id="headerCatSelect" class="custom-select bg-gray-50 text-gray-700 text-sm font-bold rounded-xl px-4 py-2.5 w-full md:w-48 outline-none border border-transparent focus:border-brand-300 transition-all cursor-pointer">
-                   <option value="all" data-i18n="all_categories">Të gjitha</option>
-               </select>
+          <div class="flex items-center w-full gap-2">
+            <div class="bg-gray-50 w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 shrink-0 ml-1"><i class="fas fa-search"></i></div>
+            <input id="searchInput" type="text" data-i18n-placeholder="search_placeholder" placeholder="Kërko (psh. Hidraulik...)"
+              class="w-full bg-transparent text-gray-800 text-sm font-semibold placeholder-gray-400 focus:outline-none h-10">
+          </div>
+          <div class="flex items-center w-full md:w-auto gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-2 md:pt-0 md:pl-2">
+            <select id="headerCatSelect" class="custom-select bg-gray-50 text-gray-700 text-sm font-bold rounded-xl px-4 py-2.5 w-full md:w-48 outline-none border border-transparent focus:border-brand-300 transition-all cursor-pointer">
+              <option value="all" data-i18n="all_categories">Të gjitha</option>
+            </select>
 
-               <button id="nearMeBtn" class="bg-brand-50 hover:bg-brand-100 text-brand-600 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1 border border-brand-200">
-                 <i class="fas fa-location-arrow"></i> <span data-i18n="near_me">Afër</span>
-               </button>
-           </div>
+            <button id="nearMeBtn" class="bg-brand-50 hover:bg-brand-100 text-brand-600 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1 border border-brand-200">
+              <i class="fas fa-location-arrow"></i> <span data-i18n="near_me">Afër</span>
+            </button>
+          </div>
         </div>
+
         <div id="nearMeStatus" class="text-[10px] text-center mt-4 text-blue-200 font-bold uppercase tracking-wider h-4"></div>
 
-        <!-- Dynamic Quick Buttons Container (Filled by JS) -->
         <div id="quickButtonsContainer" class="flex gap-4 mt-6 overflow-x-auto no-scrollbar justify-start md:justify-center px-4 py-2">
-          <!-- Buttons will be injected here automatically -->
         </div>
       </div>
     </section>
@@ -136,8 +156,8 @@
     <!-- Results Section -->
     <section class="container mx-auto px-4 pb-4">
       <div id="loadingGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-         <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 h-64 animate-pulse"></div>
-         <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 h-64 animate-pulse"></div>
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 h-64 animate-pulse"></div>
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 h-64 animate-pulse"></div>
       </div>
       <div id="firmsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 hidden"></div>
       <div id="noResults" class="hidden text-center py-12 opacity-60">
@@ -148,22 +168,22 @@
   </main>
 
   <!-- Mobile Sticky Footer -->
-  <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-3 px-6 flex justify-between items-center z-50 md:hidden shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
-      <div>
-         <div class="text-xs font-bold text-gray-400 uppercase tracking-wide" data-i18n="sticky_are_you_pro">Je Mjeshtër?</div>
-         <div class="text-sm font-bold text-gray-800" data-i18n="sticky_free_reg">Regjistrimi falas</div>
-      </div>
-      <a href="register.html" class="bg-brand-600 text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-lg shadow-brand-200 active:scale-95 transition-transform flex items-center gap-2">
-         <span data-i18n="sticky_btn">Regjistrohu</span> <i class="fas fa-arrow-right"></i>
-      </a>
+  <div id="registerStickyBar" class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-3 px-6 flex justify-between items-center z-50 md:hidden shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+    <div>
+      <div class="text-xs font-bold text-gray-400 uppercase tracking-wide" data-i18n="sticky_are_you_pro">Je Mjeshtër?</div>
+      <div class="text-sm font-bold text-gray-800" data-i18n="sticky_free_reg">Regjistrimi falas</div>
+    </div>
+    <a href="register.html" class="bg-brand-600 text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-lg shadow-brand-200 active:scale-95 transition-transform flex items-center gap-2">
+      <span data-i18n="sticky_btn">Regjistrohu</span> <i class="fas fa-arrow-right"></i>
+    </a>
   </div>
 
   <footer class="bg-white border-t border-gray-100 py-8 text-center mt-auto hidden md:block">
     <div class="text-2xl font-black text-gray-200 mb-4 tracking-tighter">EasyFix</div>
     <div class="flex justify-center gap-6 text-xs font-bold text-gray-400">
-       <a href="contact.html" class="hover:text-brand-600" data-i18n="nav_contact">KONTAKT</a>
-       <a href="register.html" class="hover:text-brand-600" data-i18n="nav_register">REGJISTROHU</a>
-       <a href="privacy.html" class="hover:text-brand-600" data-i18n="nav_privacy">PRIVACY</a>
+      <a href="contact.html" class="hover:text-brand-600" data-i18n="nav_contact">KONTAKT</a>
+      <a href="register.html" class="hover:text-brand-600" data-i18n="nav_register">REGJISTROHU</a>
+      <a href="privacy.html" class="hover:text-brand-600" data-i18n="nav_privacy">PRIVACY</a>
     </div>
   </footer>
 
@@ -180,105 +200,139 @@ const { getLang, setLang, t, applyTranslations, normalizeCategoryKey, categoryLa
 const LANG_META = { sq: { flag: "al.png", label: "SQ" }, mk: { flag: "mk.png", label: "MK" }, en: { flag: "gb.png", label: "EN" } };
 
 function updateLangUI() {
-    const lang = getLang() || "sq";
-    document.getElementById("langLabel").innerText = LANG_META[lang].label;
-    document.getElementById("langFlagImg").src = `https://flagcdn.com/w40/${LANG_META[lang].flag}`;
+  const lang = getLang() || "sq";
+  document.getElementById("langLabel").innerText = LANG_META[lang].label;
+  document.getElementById("langFlagImg").src = `https://flagcdn.com/w40/${LANG_META[lang].flag}`;
 }
+
 const langBtn = document.getElementById("langBtn");
 const langMenu = document.getElementById("langMenu");
-langBtn.addEventListener("click", (e) => { e.stopPropagation(); langMenu.classList.toggle("hidden"); });
+
+langBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  langMenu.classList.toggle("hidden");
+});
+
 window.changeLang = (lang) => {
-    setLang(lang); 
-    applyTranslations(); 
-    updateLangUI(); 
-    langMenu.classList.add("hidden"); 
-    // Rifresko kategoritë dhe kërkimin kur ndërrohet gjuha
-    populateCategories(allFirms);
-    filterFirms();
+  setLang(lang);
+  applyTranslations(document);
+  updateLangUI();
+  updateCreditPackUI();
+
+  const user = getUser();
+  if (user && user.role !== "pro") {
+    updateCreditsUI(user.credits || 0);
+  }
+
+  const creditsModal = document.getElementById("creditsModal");
+  if (creditsModal && !creditsModal.classList.contains("hidden")) {
+    applyTranslations(creditsModal);
+  }
+
+  const contactModal = document.getElementById("contactModal");
+  if (contactModal && !contactModal.classList.contains("hidden")) {
+    applyTranslations(contactModal);
+  }
+
+  const msgModal = document.getElementById("msgModal");
+  if (msgModal && !msgModal.classList.contains("hidden")) {
+    applyTranslations(msgModal);
+  }
+
+  langMenu.classList.add("hidden");
+  populateCategories(allFirms);
+  filterFirms();
 };
+
 document.addEventListener("click", () => langMenu.classList.add("hidden"));
 
 /* ================= ICON MAP ================= */
 const CATEGORY_STYLES = {
-    "plumber": { icon: "fa-faucet", color: "text-cyan-400" },
-    "electrician": { icon: "fa-bolt", color: "text-yellow-400" },
-    "painter": { icon: "fa-paint-roller", color: "text-pink-400" },
-    "cleaning": { icon: "fa-broom", color: "text-green-400" },
-    "handyman": { icon: "fa-tools", color: "text-gray-400" },
-    "mason": { icon: "fa-trowel", color: "text-orange-400" },
-    "gardener": { icon: "fa-leaf", color: "text-emerald-400" },
-    "ac": { icon: "fa-snowflake", color: "text-blue-400" },
-    "default": { icon: "fa-hammer", color: "text-brand-400" }
+  "plumber": { icon: "fa-faucet", color: "text-cyan-400" },
+  "electrician": { icon: "fa-bolt", color: "text-yellow-400" },
+  "painter": { icon: "fa-paint-roller", color: "text-pink-400" },
+  "cleaning": { icon: "fa-broom", color: "text-green-400" },
+  "handyman": { icon: "fa-tools", color: "text-gray-400" },
+  "mason": { icon: "fa-trowel", color: "text-orange-400" },
+  "gardener": { icon: "fa-leaf", color: "text-emerald-400" },
+  "ac": { icon: "fa-snowflake", color: "text-blue-400" },
+
+  "gips": { icon: "fa-layer-group", color: "text-violet-400" },
+  "doors_windows": { icon: "fa-door-open", color: "text-amber-500" },
+  "tiles": { icon: "fa-border-all", color: "text-sky-500" },
+  "parquet": { icon: "fa-grip-lines", color: "text-yellow-700" },
+  "facade": { icon: "fa-building", color: "text-stone-500" },
+  "heating_cooling": { icon: "fa-temperature-half", color: "text-rose-400" },
+
+  "default": { icon: "fa-hammer", color: "text-brand-400" }
 };
 
 /* ================= DYNAMIC CATEGORY LOGIC ================= */
 const headerCatSelect = document.getElementById("headerCatSelect");
 const quickButtonsContainer = document.getElementById("quickButtonsContainer");
-let activeCategory = 'all';
+let activeCategory = "all";
 
 function populateCategories(firms) {
-    const catSet = new Set();
-    firms.forEach(f => (f._catKeys || []).forEach(k => catSet.add(k)));
-    const sortedCats = Array.from(catSet).sort((a,b) => categoryLabel(a).localeCompare(categoryLabel(b)));
+  const catSet = new Set();
+  firms.forEach(f => (f._catKeys || []).forEach(k => catSet.add(k)));
+  const sortedCats = Array.from(catSet).sort((a, b) => categoryLabel(a).localeCompare(categoryLabel(b)));
 
-    headerCatSelect.innerHTML = `<option value="all">${t("all_categories")}</option>`;
-    sortedCats.forEach(catKey => {
-        const opt = document.createElement("option");
-        opt.value = catKey;
-        opt.textContent = categoryLabel(catKey);
-        headerCatSelect.appendChild(opt);
-    });
-    headerCatSelect.value = activeCategory;
+  headerCatSelect.innerHTML = `<option value="all">${t("all_categories")}</option>`;
+  sortedCats.forEach(catKey => {
+    const opt = document.createElement("option");
+    opt.value = catKey;
+    opt.textContent = categoryLabel(catKey);
+    headerCatSelect.appendChild(opt);
+  });
+  headerCatSelect.value = activeCategory;
 
-    quickButtonsContainer.innerHTML = ""; 
-    
-    // Butoni All
-    const allBtn = document.createElement("button");
-    allBtn.className = `cat-btn flex flex-col items-center gap-2 min-w-[70px] group ${activeCategory === 'all' ? 'active' : ''}`;
-    allBtn.onclick = () => quickFilter('all');
-    allBtn.innerHTML = `
-        <div class="w-14 h-14 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm transition-all group-hover:scale-105">
-            <i class="fas fa-th-large text-white text-xl"></i>
-        </div>
-        <span class="text-[10px] font-semibold text-white/90">${t("all_categories")}</span>
+  quickButtonsContainer.innerHTML = "";
+
+  const allBtn = document.createElement("button");
+  allBtn.className = `cat-btn flex flex-col items-center gap-2 min-w-[70px] group ${activeCategory === "all" ? "active" : ""}`;
+  allBtn.onclick = () => quickFilter("all");
+  allBtn.innerHTML = `
+    <div class="w-14 h-14 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm transition-all group-hover:scale-105">
+      <i class="fas fa-th-large text-white text-xl"></i>
+    </div>
+    <span class="text-[10px] font-semibold text-white/90">${t("all_categories")}</span>
+  `;
+  quickButtonsContainer.appendChild(allBtn);
+
+  sortedCats.forEach(catKey => {
+    const style = CATEGORY_STYLES[catKey] || CATEGORY_STYLES["default"];
+    const btn = document.createElement("button");
+    btn.className = `cat-btn flex flex-col items-center gap-2 min-w-[70px] group ${activeCategory === catKey ? "active" : ""}`;
+    btn.id = `btn-${catKey}`;
+    btn.onclick = () => quickFilter(catKey);
+    btn.innerHTML = `
+      <div class="w-14 h-14 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm transition-all group-hover:scale-105">
+        <i class="fas ${style.icon} ${style.color} text-xl"></i>
+      </div>
+      <span class="text-[10px] font-semibold text-white/90 text-center leading-tight px-1">${categoryLabel(catKey)}</span>
     `;
-    quickButtonsContainer.appendChild(allBtn);
-
-    // Butonat e tjerë
-    sortedCats.forEach(catKey => {
-        const style = CATEGORY_STYLES[catKey] || CATEGORY_STYLES["default"];
-        const btn = document.createElement("button");
-        btn.className = `cat-btn flex flex-col items-center gap-2 min-w-[70px] group ${activeCategory === catKey ? 'active' : ''}`;
-        btn.id = `btn-${catKey}`;
-        btn.onclick = () => quickFilter(catKey);
-        btn.innerHTML = `
-            <div class="w-14 h-14 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm transition-all group-hover:scale-105">
-                <i class="fas ${style.icon} ${style.color} text-xl"></i>
-            </div>
-            <span class="text-[10px] font-semibold text-white/90 text-center leading-tight px-1">${categoryLabel(catKey)}</span>
-        `;
-        quickButtonsContainer.appendChild(btn);
-    });
+    quickButtonsContainer.appendChild(btn);
+  });
 }
 
 window.quickFilter = (catKey) => {
-    activeCategory = catKey;
-    headerCatSelect.value = catKey;
-    updateActiveButton();
-    filterFirms();
+  activeCategory = catKey;
+  headerCatSelect.value = catKey;
+  updateActiveButton();
+  filterFirms();
 };
 
 headerCatSelect.addEventListener("change", (e) => {
-    activeCategory = e.target.value;
-    updateActiveButton();
-    filterFirms();
+  activeCategory = e.target.value;
+  updateActiveButton();
+  filterFirms();
 });
 
 function updateActiveButton() {
-    document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
-    const btn = document.getElementById(`btn-${activeCategory}`);
-    if(btn) btn.classList.add('active');
-    else if(activeCategory === 'all' && quickButtonsContainer.firstChild) quickButtonsContainer.firstChild.classList.add('active');
+  document.querySelectorAll(".cat-btn").forEach(btn => btn.classList.remove("active"));
+  const btn = document.getElementById(`btn-${activeCategory}`);
+  if (btn) btn.classList.add("active");
+  else if (activeCategory === "all" && quickButtonsContainer.firstChild) quickButtonsContainer.firstChild.classList.add("active");
 }
 
 /* ================= SMART SEARCH LOGIC ================= */
@@ -286,206 +340,819 @@ const searchInput = document.getElementById("searchInput");
 searchInput.addEventListener("input", filterFirms);
 
 function filterFirms() {
-    const term = searchInput.value.toLowerCase().trim();
-    const results = allFirms.filter(f => {
-        // 1. Kategoria e zgjedhur me buton
-        let matchesCategory = true;
-        if (activeCategory !== 'all') {
-            matchesCategory = (f._catKeys || []).includes(activeCategory);
-        }
+  const term = searchInput.value.toLowerCase().trim();
+  const results = allFirms.filter(f => {
+    let matchesCategory = true;
+    if (activeCategory !== "all") {
+      matchesCategory = (f._catKeys || []).includes(activeCategory);
+    }
 
-        // 2. Kërkimi me tekst (Në 3 Gjuhë)
-        let matchesSearch = true;
-        if (term) {
-            const nameMatch = f.name.toLowerCase().includes(term);
-            
-            // Përdor funksionin e ri nga i18n.js që kontrollon të 3 gjuhët
-            const catMatch = (f._catKeys || []).some(key => {
-                if(key.includes(term)) return true; // match "plumber" directly
-                return checkCategoryMatch(key, term); // match "vodovod", "hidraulik", etj.
-            });
-            
-            matchesSearch = nameMatch || catMatch;
-        }
+    let matchesSearch = true;
+    if (term) {
+      const nameMatch = f.name.toLowerCase().includes(term);
+      const catMatch = (f._catKeys || []).some(key => {
+        if (key.includes(term)) return true;
+        return checkCategoryMatch(key, term);
+      });
+      matchesSearch = nameMatch || catMatch;
+    }
 
-        return matchesCategory && matchesSearch;
-    });
-    renderFirms(results);
+    return matchesCategory && matchesSearch;
+  });
+
+  renderFirms(results);
 }
 
 /* ================= RENDER LOGIC ================= */
 function renderFirms(firms) {
-    autoScrollIntervals.forEach(clearInterval);
-    autoScrollIntervals = [];
+  autoScrollIntervals.forEach(clearInterval);
+  autoScrollIntervals = [];
 
-    const container = document.getElementById("firmsContainer");
-    container.innerHTML = "";
-    
-    if (firms.length === 0) {
-        document.getElementById("noResults").classList.remove("hidden");
-        return;
+  const container = document.getElementById("firmsContainer");
+  container.innerHTML = "";
+
+  if (firms.length === 0) {
+    document.getElementById("noResults").classList.remove("hidden");
+    return;
+  }
+  document.getElementById("noResults").classList.add("hidden");
+
+  firms.forEach(f => {
+    const plan = (f.plan || "free").toLowerCase();
+const isPremium = plan === "premium";
+const photos = Array.isArray(f.photos) ? f.photos : [];
+const logo = f.logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+
+let badge = "";
+if (isPremium) {
+  badge = `<span class="badge-premium"><i class="fas fa-crown"></i> PRO</span>`;
+}
+    let mediaHtml = "";
+    const sliderId = `slider-${Math.random().toString(36).substr(2, 9)}`;
+
+    if (photos.length > 0) {
+      const slides = photos.map(src => `
+        <div class="snap-center shrink-0 w-full h-48 bg-gray-100 relative">
+          <img src="${src}" class="w-full h-full object-cover pointer-events-none">
+        </div>
+      `).join("");
+
+      mediaHtml = `
+        <div class="relative w-full h-48 overflow-hidden rounded-t-xl group">
+          <div id="${sliderId}" class="flex overflow-x-auto snap-x no-scrollbar w-full h-full scroll-smooth">
+            ${slides}
+          </div>
+          <div class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-md border border-white/10">
+            <i class="fas fa-images"></i> ${photos.length}
+          </div>
+        </div>
+      `;
+      if (photos.length > 1) setTimeout(() => startAutoScroll(sliderId), 100);
     }
-    document.getElementById("noResults").classList.add("hidden");
 
-    firms.forEach(f => {
-        const plan = (f.plan || "basic").toLowerCase();
-        const isPremium = plan === "premium";
-        const photos = plan !== "basic" ? (f.photos || []) : [];
-        const logo = f.logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
-        
-        let badge = "";
-        if (isPremium) badge = `<span class="badge-premium"><i class="fas fa-crown"></i> PRO</span>`;
-        else if (plan === "standard") badge = `<span class="badge-standard">STANDARD</span>`;
+    const unlockedContact = getUnlockedFirmContact(f._id);
 
-        let mediaHtml = "";
-        const sliderId = `slider-${Math.random().toString(36).substr(2, 9)}`;
-        
-        if (photos.length > 0) {
-            const slides = photos.map(src => `
-                <div class="snap-center shrink-0 w-full h-48 bg-gray-100 relative">
-                    <img src="${src}" class="w-full h-full object-cover pointer-events-none"> 
-                </div>
-            `).join("");
+const card = document.createElement("div");
+card.className = isPremium
+  ? "bg-white rounded-xl shadow-md border border-amber-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ring-1 ring-amber-100"
+  : "bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1";
 
-            mediaHtml = `
-                <div class="relative w-full h-48 overflow-hidden rounded-t-xl group">
-                    <div id="${sliderId}" class="flex overflow-x-auto snap-x no-scrollbar w-full h-full scroll-smooth">
-                        ${slides}
-                    </div>
-                    <div class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-md border border-white/10">
-                       <i class="fas fa-images"></i> ${photos.length}
-                    </div>
-                </div>
-            `;
-            if(photos.length > 1) setTimeout(() => startAutoScroll(sliderId, photos.length), 100);
-        }
+const catLabels = (f._catKeys || []).map(k => categoryLabel(k)).join(", ");
+card.dataset.email = (f.email || "").toLowerCase();
 
-        const card = document.createElement("div");
-        card.className = "bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1";
-        const catLabels = (f._catKeys || []).map(k => categoryLabel(k)).join(", ");
 
-        // SHTUAR: ID për Focus (Highlight)
-        card.dataset.email = (f.email || "").toLowerCase();
+    card.innerHTML = `
+      ${mediaHtml}
+      <div class="p-4">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            ${badge ? `<div class="mb-1">${badge}</div>` : ""}
+            <h3 class="text-lg font-bold text-gray-900 leading-tight">${f.name}</h3>
+            <p class="text-xs text-brand-600 font-bold uppercase tracking-wide mt-0.5">${catLabels}</p>
+          </div>
+          <img src="${logo}" class="w-10 h-10 rounded-full border border-gray-100 shadow-sm object-cover">
+        </div>
 
-        card.innerHTML = `
-            ${mediaHtml}
-            <div class="p-4">
-                <div class="flex justify-between items-start mb-2">
-                   <div>
-                      ${badge ? `<div class="mb-1">${badge}</div>` : ''}
-                      <h3 class="text-lg font-bold text-gray-900 leading-tight">${f.name}</h3>
-                      <p class="text-xs text-brand-600 font-bold uppercase tracking-wide mt-0.5">${catLabels}</p>
-                   </div>
-                   ${(plan !== 'basic') ? `<img src="${logo}" class="w-10 h-10 rounded-full border border-gray-100 shadow-sm object-cover">` : ''}
-                </div>
-                
-                <!-- NDRYSHUAR: Shfaq Qytetin -->
-                <div class="flex items-start gap-2 text-xs text-gray-500 font-medium mb-4">
-                   <i class="fas fa-map-marker-alt mt-0.5 text-gray-400"></i> <span>${f.city || f.address}</span>
-                </div>
+        <div class="flex items-start gap-2 text-xs text-gray-500 font-medium mb-4">
+          <i class="fas fa-map-marker-alt mt-0.5 text-gray-400"></i>
+          <span>${f.city || f.address}</span>
+        </div>
 
-                ${f.phone ? `
-                <div class="flex gap-2 mt-auto">
-                    <a href="tel:${f.phone}" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-brand-100 active:scale-95 transition-all">
-                       <i class="fas fa-phone"></i> <span data-i18n="call">Thirr</span>
-                    </a>
-                    <a href="sms:${f.phone}" class="flex-1 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-all">
-                       <i class="fas fa-comment-alt text-brand-500"></i> <span data-i18n="sms">SMS</span>
-                    </a>
-                </div>` : ''}
-            </div>
-        `;
-        container.appendChild(card);
-    });
-    applyTranslations(container); 
+        <div class="mt-auto space-y-3">
+  ${unlockedContact ? `
+    <div class="rounded-xl border border-green-200 bg-green-50 p-3">
+      <div class="flex items-center gap-2 text-green-700 font-bold text-sm mb-2">
+  <i class="fas fa-check-circle"></i>
+  <span>${t("contact_unlocked")}</span>
+</div>
+
+<div class="text-sm text-gray-800 space-y-1">
+  <div><span class="font-semibold">${t("phone_short")}:</span> ${unlockedContact.phone || "-"}</div>
+  <div class="break-all"><span class="font-semibold">${t("email")}:</span> ${unlockedContact.email || "-"}</div>
+</div>
+
+      <div class="grid grid-cols-3 gap-2 mt-3">
+        <a href="${unlockedContact.callLink || "#"}"
+   class="${unlockedContact.callLink ? "bg-green-600 hover:bg-green-700" : "bg-gray-300 pointer-events-none"} text-white text-center py-2 rounded-lg text-xs font-bold">
+  ${t("call")}
+</a>
+<a href="${unlockedContact.smsLink || "#"}"
+   class="${unlockedContact.smsLink ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-300 pointer-events-none"} text-white text-center py-2 rounded-lg text-xs font-bold">
+  ${t("sms")}
+</a>
+<a href="${unlockedContact.mailLink || "#"}"
+   class="${unlockedContact.mailLink ? "bg-gray-900 hover:bg-black" : "bg-gray-300 pointer-events-none"} text-white text-center py-2 rounded-lg text-xs font-bold">
+  ${t("email")}
+</a>
+      </div>
+    </div>
+  ` : `
+    <div class="flex gap-2">
+      <button onclick="handleGetContact('${f._id}')"
+        class="flex-1 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
+        <i class="fas fa-phone-alt text-xs"></i>
+        <span>${t("contact_cta")} (-1 ${t("credits_one")})</span>
+      </button>
+    </div>
+  `}
+</div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  applyTranslations(container);
 }
 
-function startAutoScroll(elementId, photoCount) {
-    const el = document.getElementById(elementId);
-    if(!el) return;
-    let direction = 1;
-    const interval = setInterval(() => {
-        if(!el) return clearInterval(interval);
-        if(el.matches(':hover') || el.matches(':active')) return;
-        const width = el.offsetWidth;
-        const scrollPos = el.scrollLeft;
-        const maxScroll = el.scrollWidth - width;
-        if (scrollPos >= maxScroll - 5) direction = -1;
-        if (scrollPos <= 0) direction = 1;
-        if(direction === 1) el.scrollLeft += width;
-        else el.scrollLeft = 0;
-    }, 3500);
-    autoScrollIntervals.push(interval);
+function startAutoScroll(elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+
+  let direction = 1;
+  const interval = setInterval(() => {
+    if (!el) return clearInterval(interval);
+    if (el.matches(":hover") || el.matches(":active")) return;
+
+    const width = el.offsetWidth;
+    const scrollPos = el.scrollLeft;
+    const maxScroll = el.scrollWidth - width;
+
+    if (scrollPos >= maxScroll - 5) direction = -1;
+    if (scrollPos <= 0) direction = 1;
+
+    if (direction === 1) el.scrollLeft += width;
+    else el.scrollLeft = 0;
+  }, 3500);
+
+  autoScrollIntervals.push(interval);
 }
 
 document.getElementById("nearMeBtn").addEventListener("click", () => {
-    if(nearMode) { window.location.reload(); return; }
-    if (!navigator.geolocation) return alert(t("near_me_error"));
-    const btn = document.getElementById("nearMeBtn");
-    const status = document.getElementById("nearMeStatus");
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
-    status.innerText = t("near_me_fetching");
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-        try {
-            const res = await fetch(`${API_URL}/firms/near?country=MK&lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&radius_km=${NEAR_RADIUS_KM}`);
-            const data = await res.json();
-            allFirms = data.map(normalizeCategories).sort(sortFirms);
-            nearMode = true;
-            btn.innerHTML = `<i class="fas fa-check"></i> ${t("near_me_active", {km: NEAR_RADIUS_KM})}`;
-            btn.classList.add("bg-green-100", "text-green-700");
-            status.innerText = "";
-            populateCategories(allFirms);
-            activeCategory = 'all'; updateActiveButton(); filterFirms();
-        } catch(e) { status.innerText = t("near_me_error"); }
-    }, () => status.innerText = t("near_me_error"));
+  if (nearMode) {
+    window.location.reload();
+    return;
+  }
+
+  if (!navigator.geolocation) return alert(t("near_me_error"));
+
+  const btn = document.getElementById("nearMeBtn");
+  const status = document.getElementById("nearMeStatus");
+  btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+  status.innerText = t("near_me_fetching");
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    try {
+      const res = await fetch(`${API_URL}/firms/near?country=MK&lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&radius_km=${NEAR_RADIUS_KM}`);
+      const data = await res.json();
+      allFirms = data.map(normalizeCategories).sort(sortFirms);
+      nearMode = true;
+      btn.innerHTML = `<i class="fas fa-check"></i> ${t("near_me_active", {km: NEAR_RADIUS_KM})}`;
+      btn.classList.add("bg-green-100", "text-green-700");
+      status.innerText = "";
+      populateCategories(allFirms);
+      activeCategory = "all";
+      updateActiveButton();
+      filterFirms();
+    } catch (e) {
+      status.innerText = t("near_me_error");
+    }
+  }, () => status.innerText = t("near_me_error"));
 });
 
 function normalizeCategories(f) {
-    const arr = Array.isArray(f.categories) ? f.categories : (f.category ? [f.category] : []);
-    f._catKeys = arr.map(k => normalizeCategoryKey(k)).filter(Boolean);
-    return f;
+  const arr = Array.isArray(f.categories) ? f.categories : (f.category ? [f.category] : []);
+  f._catKeys = arr.map(k => normalizeCategoryKey(k)).filter(Boolean);
+  return f;
 }
+
 function sortFirms(a, b) {
-    const score = p => p === 'premium' ? 1 : p === 'standard' ? 2 : 3;
-    return score((a.plan || '').toLowerCase()) - score((b.plan || '').toLowerCase());
+  const score = p => p === "premium" ? 1 : 2;
+  return score((a.plan || "free").toLowerCase()) - score((b.plan || "free").toLowerCase());
 }
 
-// --- FUNKSIONI I RI PER FOCUS (HIGHLIGHT) ---
 function focusFirmFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    const focusEmail = params.get("focus"); 
+  const params = new URLSearchParams(window.location.search);
+  const focusEmail = params.get("focus");
 
-    if (focusEmail) {
-        const targetCard = document.querySelector(`[data-email="${focusEmail.toLowerCase()}"]`);
-        if (targetCard) {
-            targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
-            targetCard.classList.add("ring-4", "ring-brand-500", "scale-105", "z-10");
-            setTimeout(() => {
-                targetCard.classList.remove("ring-4", "ring-brand-500", "scale-105", "z-10");
-            }, 3000);
-        }
+  if (focusEmail) {
+    const targetCard = document.querySelector(`[data-email="${focusEmail.toLowerCase()}"]`);
+    if (targetCard) {
+      targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+      targetCard.classList.add("ring-4", "ring-brand-500", "scale-105", "z-10");
+      setTimeout(() => {
+        targetCard.classList.remove("ring-4", "ring-brand-500", "scale-105", "z-10");
+      }, 3000);
     }
+  }
 }
 
 async function init() {
-    applyTranslations(); updateLangUI();
-    try {
-        const res = await fetch(`${API_URL}/firms?country=MK`);
-        const data = await res.json();
-        allFirms = data.map(normalizeCategories).sort(sortFirms);
-        document.getElementById("loadingGrid").classList.add("hidden");
-        document.getElementById("firmsContainer").classList.remove("hidden");
-        
-        populateCategories(allFirms);
-        renderFirms(allFirms);
+  applyTranslations(document);
+  updateLangUI();
+  updateCreditPackUI();
 
-        // THIRRJA E FOCUS PAS MBUSHJES SË FAQES
-        setTimeout(focusFirmFromUrl, 500);
+  try {
+    const res = await fetch(`${API_URL}/firms?country=MK`);
+    const data = await res.json();
+    allFirms = data.map(normalizeCategories).sort(sortFirms);
+    document.getElementById("loadingGrid").classList.add("hidden");
+    document.getElementById("firmsContainer").classList.remove("hidden");
 
-    } catch(e) { console.error(e); }
+    populateCategories(allFirms);
+    renderFirms(allFirms);
+
+    setTimeout(focusFirmFromUrl, 500);
+  } catch (e) {
+    console.error(e);
+  }
 }
 
+/* ================= AUTH / USER ================= */
+function getUser() {
+  return JSON.parse(localStorage.getItem("easyfix_user"));
+}
+
+function getUnlockedStorageKey() {
+  const user = getUser();
+  if (!user || !user.id) return null;
+  return `easyfix_unlocked_firms_map_${user.id}`;
+}
+
+function getUnlockedFirmsMap() {
+  try {
+    const key = getUnlockedStorageKey();
+    if (!key) return {};
+    return JSON.parse(localStorage.getItem(key) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function setUnlockedFirmsMap(map) {
+  const key = getUnlockedStorageKey();
+  if (!key) return;
+  localStorage.setItem(key, JSON.stringify(map || {}));
+}
+
+function saveUnlockedFirmContact(firmId, contact) {
+  if (!firmId || !contact) return;
+  const map = getUnlockedFirmsMap();
+  map[firmId] = contact;
+  setUnlockedFirmsMap(map);
+}
+
+function getUnlockedFirmContact(firmId) {
+  const map = getUnlockedFirmsMap();
+  return map[firmId] || null;
+}
+
+function isFirmUnlocked(firmId) {
+  return !!getUnlockedFirmContact(firmId);
+}
+
+
+
+function updateAuthUI() {
+  const user = getUser();
+  const registerBtnDesktop = document.getElementById("registerBtnDesktop");
+  const registerStickyBar = document.getElementById("registerStickyBar");
+
+  if (user) {
+    loginBtn.innerText = "Account";
+
+    loginBtn.onclick = () => {
+      if (user.role === "pro") {
+        window.location.href = "/pro-dashboard.html";
+      } else {
+        window.location.href = "/account.html";
+      }
+    };
+
+    if (user.role === "client") {
+      if (registerBtnDesktop) registerBtnDesktop.classList.add("hidden");
+      if (registerStickyBar) registerStickyBar.classList.add("hidden");
+    } else {
+      if (registerBtnDesktop) registerBtnDesktop.classList.remove("hidden");
+      if (registerStickyBar) registerStickyBar.classList.remove("hidden");
+    }
+  } else {
+    loginBtn.innerText = "Login";
+    loginBtn.onclick = () => {
+      window.location.href = "/auth.html";
+    };
+
+    if (registerBtnDesktop) registerBtnDesktop.classList.remove("hidden");
+    if (registerStickyBar) registerStickyBar.classList.remove("hidden");
+  }
+}
+
+function updateCreditsUI(credits) {
+  const el = document.getElementById("creditBox");
+  const user = getUser();
+
+
+  if (!el) return;
+
+  if (!user) {
+    el.innerText = "";
+    return;
+  }
+
+  if (user.role === "pro") {
+    el.innerText =  "";
+    return;
+  }
+
+  const safeCredits = Number(credits || 0);
+
+  if (safeCredits <= 0) {
+    el.innerHTML = `<span class="text-red-500 font-extrabold">0 ${t("credits_unit")}</span>`;
+    return;
+  }
+
+  el.innerHTML = `<span class="text-gray-700 font-extrabold">${t("credits_label")}: ${safeCredits}</span>`;
+}
+
+const loginBtn = document.getElementById("loginBtn");
+
+
+async function loadCredits() {
+  const user = getUser();
+
+  if (!user || !user.id) {
+    updateCreditsUI(0);
+    return;
+  }
+  
+  if (user.role === "pro") {
+    updateCreditsUI(0);
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/user/me/${user.id}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      updateCreditsUI(0);
+      return;
+    }
+
+    localStorage.setItem("easyfix_user", JSON.stringify({
+      ...user,
+      credits: data.user.credits
+    }));
+
+    updateCreditsUI(data.user.credits);
+  } catch (err) {
+    console.error(err);
+    updateCreditsUI(0);
+  }
+}
+
+
+
+function setCreditsModalStatus(message, isError = false) {
+  const el = document.getElementById("creditsModalStatus");
+  if (!el) return;
+
+  el.innerText = message || "";
+  el.className = isError
+    ? "text-sm text-red-600 mt-4"
+    : "text-sm text-gray-500 mt-4";
+}
+
+let selectedCreditPack = 5;
+let buyingCreditsNow = false;
+
+function updateCreditPackUI() {
+  [1, 5, 10].forEach(pack => {
+    const btn = document.getElementById(`packBtn${pack}`);
+    if (!btn) return;
+    btn.classList.toggle("active", selectedCreditPack === pack);
+  });
+
+  const label = document.getElementById("selectedPackLabel");
+  if (label) {
+    label.innerText = `${selectedCreditPack} ${t("credits_unit")}`;
+  }
+}
+
+function selectCreditPack(pack) {
+  selectedCreditPack = Number(pack);
+  updateCreditPackUI();
+  setCreditsModalStatus("");
+}
+
+function openCreditsModal(defaultPack = 5) {
+  selectedCreditPack = Number(defaultPack || 5);
+  const modal = document.getElementById("creditsModal");
+  if (!modal) return;
+
+  applyTranslations(modal);
+  modal.classList.remove("hidden");
+  updateCreditPackUI();
+  setCreditsModalStatus("");
+}
+
+function closeCreditsModal() {
+  const modal = document.getElementById("creditsModal");
+  if (!modal) return;
+
+  modal.classList.add("hidden");
+  buyingCreditsNow = false;
+
+  const btn = document.getElementById("continuePaymentBtn");
+  if (btn) {
+    btn.disabled = false;
+    btn.innerText = t("credits_continue_payment");
+  }
+
+  setCreditsModalStatus("");
+}
+
+function showMessage(msg) {
+  const textEl = document.getElementById("msgText");
+  const modalEl = document.getElementById("msgModal");
+  if (!textEl || !modalEl) return;
+
+  textEl.innerText = msg || "";
+  modalEl.classList.remove("hidden");
+}
+
+function closeMsgModal() {
+  const modalEl = document.getElementById("msgModal");
+  if (!modalEl) return;
+  modalEl.classList.add("hidden");
+}
+
+function openContactModal(contact, alreadyUnlocked = false) {
+  const modal = document.getElementById("contactModal");
+  const info = document.getElementById("contactUnlockInfo");
+  const phoneText = document.getElementById("contactPhoneText");
+  const emailText = document.getElementById("contactEmailText");
+  const callBtn = document.getElementById("callBtn");
+  const smsBtn = document.getElementById("smsBtn");
+  const emailBtn = document.getElementById("emailBtn");
+
+  if (!modal) return;
+
+  info.innerText = alreadyUnlocked
+  ? t("contact_already_unlocked")
+  : t("contact_unlocked_success");
+
+  phoneText.innerText = contact?.phone || "-";
+  emailText.innerText = contact?.email || "-";
+
+  callBtn.href = contact?.callLink || "#";
+  smsBtn.href = contact?.smsLink || "#";
+  emailBtn.href = contact?.mailLink || "#";
+
+  if (!contact?.callLink) callBtn.classList.add("pointer-events-none", "opacity-50");
+  else callBtn.classList.remove("pointer-events-none", "opacity-50");
+
+  if (!contact?.smsLink) smsBtn.classList.add("pointer-events-none", "opacity-50");
+  else smsBtn.classList.remove("pointer-events-none", "opacity-50");
+
+  if (!contact?.mailLink) emailBtn.classList.add("pointer-events-none", "opacity-50");
+  else emailBtn.classList.remove("pointer-events-none", "opacity-50");
+
+  modal.classList.remove("hidden");
+}
+
+function closeContactModal() {
+  const modal = document.getElementById("contactModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+}
+
+async function continueCreditsPayment() {
+  const user = getUser();
+
+  if (!user || !user.id) {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  if (!selectedCreditPack) {
+    setCreditsModalStatus(t("credits_choose_pack"), true);
+    return;
+  }
+
+  if (buyingCreditsNow) return;
+  buyingCreditsNow = true;
+
+  const btn = document.getElementById("continuePaymentBtn");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = t("credits_preparing");
+  }
+
+  try {
+    setCreditsModalStatus(t("credits_preparing_payment"));
+
+    const res = await fetch(`${API_URL}/credits/buy`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        userId: user.id,
+        pack: selectedCreditPack
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setCreditsModalStatus(data.error_code || "Gabim gjatë krijimit të pagesës", true);
+      return;
+    }
+
+    if (!data.checkoutUrl) {
+      setCreditsModalStatus(t("credits_missing_checkout"), true);
+      return;
+    }
+
+    setCreditsModalStatus(t("credits_opening_payment"));
+    await window.EASYFIX_LEMON.openCheckout(data.checkoutUrl);
+  } catch (err) {
+    console.error(err);
+    setCreditsModalStatus(t("api_server_error"), true);
+  } finally {
+    buyingCreditsNow = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = t("credits_continue_payment");
+    }
+  }
+}
+
+/* ================= CONTACT ================= */
+async function handleGetContact(firmId) {
+  const user = getUser();
+
+  if (!user) {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  if (user.role === "pro") {
+    alert(t("pro_cannot_contact_pros"));
+    return;
+  }
+
+  if (!firmId) {
+    showMessage(t("contact_not_available"));
+    return;
+  }
+
+  if (!user.sessionToken) {
+    localStorage.removeItem("easyfix_user");
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  if (window.__loadingContact) return;
+  window.__loadingContact = true;
+
+  try {
+    const res = await fetch(`${API_URL}/contact`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        userId: user.id,
+        firmId: firmId,
+        sessionToken: user.sessionToken
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (data.error_code === "NO_CREDITS") {
+        openCreditsModal(5);
+        setCreditsModalStatus(t("credits_no_credits_choose_pack"), true);
+        return;
+      }
+
+      if (data.error_code === "USER_NOT_FOUND" || data.error_code === "MISSING_FIELDS") {
+        localStorage.removeItem("easyfix_user");
+        window.location.href = "/auth.html";
+        return;
+      }
+
+      showMessage(data.error_code || t("generic_try_again"));
+      return;
+    }
+
+    localStorage.setItem("easyfix_user", JSON.stringify({
+  ...user,
+  credits: data.credits
+}));
+
+saveUnlockedFirmContact(firmId, data.contact);
+
+await loadCredits();
+filterFirms();
+
+
+  } catch (err) {
+    console.error(err);
+    showMessage(t("server_error_try_later"));
+  } finally {
+    window.__loadingContact = false;
+  }
+}
+window.addEventListener("focus", () => {
+  loadCredits();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    loadCredits();
+  }
+});
+
+updateAuthUI();
+loadCredits(); // para init
 init();
+updateCreditPackUI();
 </script>
+
+<!-- BUY CREDITS MODAL -->
+<div id="creditsModal" class="hidden fixed inset-0 z-[100]">
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeCreditsModal()"></div>
+
+  <div class="relative z-[101] flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-lg bg-white rounded-[28px] shadow-2xl overflow-hidden">
+      
+      <div class="bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-5 text-white">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-2xl font-extrabold" data-i18n="account_buy_credits_title">Blej kredi</h3>
+            <p class="text-blue-100 text-sm mt-1" data-i18n="credits_modal_desc">Zhblloko kontaktet e mjeshtrave pa dalë nga EasyFix.</p>
+          </div>
+          <button onclick="closeCreditsModal()" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+        </div>
+      </div>
+
+      <div class="p-6">
+        <div class="grid grid-cols-1 gap-3">
+          
+          <button type="button" onclick="selectCreditPack(1)"
+            id="packBtn1"
+            class="credit-pack-btn group w-full rounded-2xl border border-gray-200 bg-white px-5 py-4 text-left transition hover:border-brand-500 hover:shadow-sm">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <div class="text-lg font-extrabold text-gray-900" data-i18n="credits_pack_1_title">1 Kredi</div>
+                <div class="text-sm text-gray-500 mt-1" data-i18n="credits_pack_1_desc">Për një kontakt të shpejtë</div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-bold text-gray-900" data-i18n="credits_pack_1_badge">Paketa Mini</div>
+              </div>
+            </div>
+          </button>
+
+          <button type="button" onclick="selectCreditPack(5)"
+            id="packBtn5"
+            class="credit-pack-btn group relative w-full rounded-2xl border border-gray-200 bg-white px-5 py-4 text-left transition hover:border-brand-500 hover:shadow-sm">
+            <div class="absolute -top-2 right-4 bg-brand-600 text-white text-[11px] font-extrabold px-3 py-1 rounded-full shadow" data-i18n="credits_pack_popular">
+              MË E PREFERUARA
+            </div>
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <div class="text-lg font-extrabold text-gray-900" data-i18n="credits_pack_5_title">5 Kredi</div>
+                <div class="text-sm text-gray-500 mt-1" data-i18n="credits_pack_5_desc">Për disa kontakte pa u ndal</div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-bold text-gray-900" data-i18n="credits_pack_5_badge">Vlerë e mirë</div>
+              </div>
+            </div>
+          </button>
+
+          <button type="button" onclick="selectCreditPack(10)"
+            id="packBtn10"
+            class="credit-pack-btn group w-full rounded-2xl border border-gray-200 bg-white px-5 py-4 text-left transition hover:border-brand-500 hover:shadow-sm">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <div class="text-lg font-extrabold text-gray-900" data-i18n="credits_pack_10_title">10 Kredi</div>
+                <div class="text-sm text-gray-500 mt-1" data-i18n="credits_pack_10_desc">Paketë për përdorim serioz</div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-bold text-gray-900" data-i18n="credits_pack_10_badge">Më shumë vlerë</div>
+              </div>
+            </div>
+          </button>
+
+        </div>
+
+        <div class="mt-5 rounded-2xl bg-gray-50 border border-gray-100 px-4 py-3">
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-500 font-medium" data-i18n="credits_selected_pack">Paketa e zgjedhur</span>
+            <span id="selectedPackLabel" class="font-extrabold text-gray-900">5 Kredi</span>
+          </div>
+        </div>
+
+        <button id="continuePaymentBtn" type="button"
+          onclick="continueCreditsPayment()"
+          class="w-full mt-5 bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-2xl font-extrabold text-base transition shadow-lg shadow-brand-100"
+          data-i18n="credits_continue_payment">
+          Vazhdo me pagesë
+        </button>
+
+        <p class="text-xs text-gray-400 text-center mt-3" data-i18n="credits_secure_payment">
+          Pagesa përpunohet në mënyrë të sigurt përmes Lemon Squeezy.
+        </p>
+
+        <p id="creditsModalStatus" class="text-sm text-gray-500 mt-4 text-center"></p>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- GLOBAL MESSAGE MODAL -->
+<div id="msgModal" class="hidden fixed inset-0 z-[110]">
+  <div class="absolute inset-0 bg-black/50" onclick="closeMsgModal()"></div>
+
+  <div class="relative z-[111] flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 text-center">
+      <p id="msgText" class="text-gray-800 font-semibold"></p>
+
+      <button onclick="closeMsgModal()"
+        class="mt-4 bg-brand-600 text-white px-6 py-2 rounded-xl font-bold"
+        data-i18n="close">
+        OK
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT MODAL -->
+<div id="contactModal" class="hidden fixed inset-0 z-[120]">
+  <div class="absolute inset-0 bg-black/50" onclick="closeContactModal()"></div>
+
+  <div class="relative z-[121] flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden">
+      <div class="bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-5 text-white">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-2xl font-extrabold" data-i18n="contact_modal_title">Kontakti i mjeshtrit</h3>
+            <p id="contactUnlockInfo" class="text-blue-100 text-sm mt-1"></p>
+          </div>
+          <button onclick="closeContactModal()" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+        </div>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
+          <div class="text-xs uppercase tracking-wide text-gray-400 font-bold" data-i18n="contact_phone_label">Numri i telefonit</div>
+          <div id="contactPhoneText" class="text-lg font-extrabold text-gray-900 mt-1">-</div>
+        </div>
+
+        <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
+          <div class="text-xs uppercase tracking-wide text-gray-400 font-bold" data-i18n="email">Email</div>
+          <div id="contactEmailText" class="text-base font-bold text-gray-900 mt-1 break-all">-</div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <a id="callBtn" href="#" class="bg-green-600 hover:bg-green-700 text-white text-center py-3 rounded-2xl font-bold" data-i18n="call">
+          Call
+          </a>
+          <a id="smsBtn" href="#" class="bg-blue-600 hover:bg-blue-700 text-white text-center py-3 rounded-2xl font-bold" data-i18n="sms">
+          SMS
+          </a>
+         <a id="emailBtn" href="#" class="bg-gray-900 hover:bg-black text-white text-center py-3 rounded-2xl font-bold" data-i18n="email">
+         Email
+        </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
 </body>
 </html>

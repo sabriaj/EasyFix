@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/sabriaj/EasyFix#readme",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "cloudinary": "^1.41.2",
     "cors": "^2.8.5",
     "country-state-city": "^3.2.1",

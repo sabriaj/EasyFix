@@ -649,13 +649,24 @@ function updateAuthUI() {
     };
 
     if (user.role === "client") {
-      if (registerBtnDesktop) registerBtnDesktop.classList.add("hidden");
-      if (registerStickyBar) registerStickyBar.classList.add("hidden");
+      // client: mos shfaq asnjë register button
+      if (registerBtnDesktop) {
+        registerBtnDesktop.classList.add("hidden");
+        registerBtnDesktop.classList.remove("md:inline-flex");
+      }
+      if (registerStickyBar) {
+        registerStickyBar.classList.add("hidden");
+      }
     } else {
-      if (registerBtnDesktop) registerBtnDesktop.classList.remove("hidden");
-      if (registerBtnDesktop) registerBtnDesktop.classList.add("md:inline-flex");
-      if (registerStickyBar) registerStickyBar.classList.remove("hidden");
-      if (registerStickyBar) registerStickyBar.classList.add("md:hidden");
+      // pro: desktop top button only + mobile sticky only
+      if (registerBtnDesktop) {
+        registerBtnDesktop.classList.add("hidden");
+        registerBtnDesktop.classList.add("md:inline-flex");
+      }
+      if (registerStickyBar) {
+        registerStickyBar.classList.remove("hidden");
+        registerStickyBar.classList.add("md:hidden");
+      }
     }
   } else {
     loginBtn.innerText = "Login";
@@ -663,11 +674,15 @@ function updateAuthUI() {
       window.location.href = "/auth.html";
     };
 
-    if (registerBtnDesktop) registerBtnDesktop.classList.remove("hidden");
-    if (registerBtnDesktop) registerBtnDesktop.classList.add("md:inline-flex");
-
-    if (registerStickyBar) registerStickyBar.classList.remove("hidden");
-    if (registerStickyBar) registerStickyBar.classList.add("md:hidden");
+    // logout: desktop top button only + mobile sticky only
+    if (registerBtnDesktop) {
+      registerBtnDesktop.classList.add("hidden");
+      registerBtnDesktop.classList.add("md:inline-flex");
+    }
+    if (registerStickyBar) {
+      registerStickyBar.classList.remove("hidden");
+      registerStickyBar.classList.add("md:hidden");
+    }
   }
 }
 

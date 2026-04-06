@@ -10,7 +10,7 @@
 </head>
 <body class="bg-gray-100 min-h-screen text-gray-800">
 
-  <div class="max-w-5xl mx-auto px-4 py-8 md:py-10">
+  <div class="max-w-5xl mx-auto px-3 sm:px-4 py-5 sm:py-8 md:py-10">
     <div class="text-center mb-8">
       <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900" data-i18n="register_title">Regjistrohu si Mjeshtër</h1>
       <p class="text-gray-600 mt-2 max-w-2xl mx-auto" data-i18n="register_subtitle">
@@ -26,7 +26,7 @@
         </p>
       </div>
 
-      <div class="p-6 md:p-8">
+      <div class="p-4 sm:p-5 md:p-8">
         <div id="statusBox" class="hidden mb-6 rounded-2xl px-4 py-3 text-sm font-semibold"></div>
 
         <form id="registerForm" class="space-y-8">
@@ -98,118 +98,115 @@
 
           <!-- Business -->
           <section>
-            <h3 class="text-xl font-extrabold text-gray-900 mb-4" data-i18n="register_section_listing">3. Të dhënat e listing-ut</h3>
+  <h3 class="text-xl font-extrabold text-gray-900 mb-4" data-i18n="register_section_listing">3. Të dhënat e listing-ut</h3>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="md:col-span-2">
-                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_business_name">Emri i biznesit / profilit</label>
-                <input id="businessName" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" data-i18n-placeholder="register_business_name_placeholder" placeholder="P.sh. Elektro Fix Arbeni">
-              </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+    <div class="md:col-span-2">
+      <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="register_business_name">Emri i biznesit / profilit</label>
+      <input id="businessName" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none focus:border-blue-500" data-i18n-placeholder="register_business_name_placeholder" placeholder="P.sh. Elektro Fix Arbeni">
+    </div>
 
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="phone">Telefoni</label>
-                <input id="phone" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" data-i18n-placeholder="phone" placeholder="+389...">
-              </div>
+    <div>
+      <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="phone">Telefoni</label>
+      <input id="phone" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none focus:border-blue-500" data-i18n-placeholder="phone" placeholder="+389...">
+    </div>
 
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="city">Qyteti</label>
-                <input id="city" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" data-i18n-placeholder="city_placeholder" placeholder="Shkup">
-              </div>
+    <div>
+      <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="city">Qyteti</label>
+      <input id="city" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none focus:border-blue-500" data-i18n-placeholder="city_placeholder" placeholder="Shkup">
+    </div>
 
-              <div class="md:col-span-2">
-                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_business_address">Adresa e biznesit</label>
-                <input id="businessAddress" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" data-i18n-placeholder="register_business_address" placeholder="Adresa e biznesit">
-              </div>
+    <div class="md:col-span-2">
+      <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="register_business_address">Adresa e biznesit</label>
+      <input id="businessAddress" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none focus:border-blue-500" data-i18n-placeholder="register_business_address" placeholder="Adresa e biznesit">
+    </div>
 
-              <div class="col-span-2">
-  <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_work_categories">
-    Kategoritë e punës
+    <div class="md:col-span-2">
+      <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_work_categories">
+        Kategoritë e punës
+      </label>
+
+      <div id="registerCategoryBox" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+
+  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
+    <input type="checkbox" value="plumber" class="reg-category mt-1 shrink-0">
+    <span class="text-sm leading-5 break-words" data-i18n="cat_plumber">Hidraulik</span>
   </label>
 
-  <div id="registerCategoryBox" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
+    <input type="checkbox" value="electrician" class="reg-category mt-1 shrink-0">
+    <span class="text-sm leading-5 break-words" data-i18n="cat_electrician">Elektricist</span>
+  </label>
 
-    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-      <input type="checkbox" value="plumber" class="reg-category">
-      <span data-i18n="cat_plumber">Hidraulik</span>
-    </label>
+  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
+    <input type="checkbox" value="painter" class="reg-category mt-1 shrink-0">
+    <span class="text-sm leading-5 break-words" data-i18n="cat_painter">Bojaxhi</span>
+  </label>
 
-    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-      <input type="checkbox" value="electrician" class="reg-category">
-      <span data-i18n="cat_electrician">Elektricist</span>
-    </label>
+  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
+    <input type="checkbox" value="cleaning" class="reg-category mt-1 shrink-0">
+    <span class="text-sm leading-5 break-words" data-i18n="cat_cleaning">Pastrim</span>
+  </label>
 
-    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-      <input type="checkbox" value="painter" class="reg-category">
-      <span data-i18n="cat_painter">Bojaxhi</span>
-    </label>
+  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
+    <input type="checkbox" value="mason" class="reg-category mt-1 shrink-0">
+    <span class="text-sm leading-5 break-words" data-i18n="cat_mason">Murator</span>
+  </label>
 
-    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-      <input type="checkbox" value="cleaning" class="reg-category">
-      <span data-i18n="cat_cleaning">Pastrim</span>
-    </label>
+  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
+    <input type="checkbox" value="gardener" class="reg-category mt-1 shrink-0">
+    <span class="text-sm leading-5 break-words" data-i18n="cat_gardener">Kopshtar</span>
+  </label>
 
-    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-      <input type="checkbox" value="mason" class="reg-category">
-      <span data-i18n="cat_mason">Murator</span>
-    </label>
+  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
+    <input type="checkbox" value="ac" class="reg-category mt-1 shrink-0">
+    <span class="text-sm leading-5 break-words" data-i18n="cat_ac">Klima</span>
+  </label>
 
-    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-      <input type="checkbox" value="gardener" class="reg-category">
-      <span data-i18n="cat_gardener">Kopshtar</span>
-    </label>
+  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
+    <input type="checkbox" value="gips" class="reg-category mt-1 shrink-0">
+    <span class="text-sm leading-5 break-words" data-i18n="cat_gips">Punime me gips</span>
+  </label>
 
-    <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-  <input type="checkbox" value="ac" class="reg-category">
-  <span data-i18n="cat_ac">Klima </span>
-</label>
+  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
+    <input type="checkbox" value="doors_windows" class="reg-category mt-1 shrink-0">
+    <span class="text-sm leading-5 break-words" data-i18n="cat_doors_windows">Dyer/Dritare</span>
+  </label>
 
-<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-  <input type="checkbox" value="gips" class="reg-category">
-  <span data-i18n="cat_gips">Punime me gips </span>
-</label>
+  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
+    <input type="checkbox" value="tiles" class="reg-category mt-1 shrink-0">
+    <span class="text-sm leading-5 break-words" data-i18n="cat_tiles">Pllaka/Keramik</span>
+  </label>
 
-<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-  <input type="checkbox" value="doors_windows" class="reg-category">
-  <span data-i18n="cat_doors_windows">Dyer/Dritare </span>
-</label>
+  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
+    <input type="checkbox" value="parquet" class="reg-category mt-1 shrink-0">
+    <span class="text-sm leading-5 break-words" data-i18n="cat_parquet">Sallidim parketit</span>
+  </label>
 
-<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-  <input type="checkbox" value="tiles" class="reg-category">
-  <span data-i18n="cat_tiles">Pllaka/Keramik</span>
-</label>
+  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
+    <input type="checkbox" value="facade" class="reg-category mt-1 shrink-0">
+    <span class="text-sm leading-5 break-words" data-i18n="cat_facade">Punime fasade</span>
+  </label>
 
-<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-  <input type="checkbox" value="parquet" class="reg-category">
-  <span data-i18n="cat_parquet">Sallidim parketit </span>
-</label>
+  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
+    <input type="checkbox" value="heating_cooling" class="reg-category mt-1 shrink-0">
+    <span class="text-sm leading-5 break-words" data-i18n="cat_heating_cooling">Ngrohje/Ftohje</span>
+  </label>
 
-<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-  <input type="checkbox" value="facade" class="reg-category">
-  <span data-i18n="cat_facade">Punime fasade </span>
-</label>
-
-<label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-  <input type="checkbox" value="heating_cooling" class="reg-category">
-  <span data-i18n="cat_heating_cooling">Ngrohje/Ftohje </span>
-</label>
-
-    
-
-  </div>
-
+</div>
   <p class="text-xs text-gray-400 mt-2" data-i18n="register_categories_hint">
     Mund të zgjedhësh disa kategori. (FREE: 2 kategori, PREMIUM: më shumë)
   </p>
 </div>
 
               <div class="md:col-span-2">
-                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_description">Përshkrimi</label>
-                <textarea id="description" rows="5" maxlength="1000"
-                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
-                  data-i18n-placeholder="register_description_placeholder"
-                  placeholder="Përshkruaj shkurt shërbimet që ofron..."></textarea>
-                <p class="text-xs text-gray-400 mt-1" data-i18n="register_description_max">Maksimumi 1000 karaktere</p>
-              </div>
+  <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="register_description">Përshkrimi</label>
+  <textarea id="description" rows="6" maxlength="1000"
+    class="w-full border border-gray-300 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none focus:border-blue-500"
+    data-i18n-placeholder="register_description_placeholder"
+    placeholder="Përshkruaj shkurt shërbimet që ofron..."></textarea>
+  <p class="text-xs text-gray-400 mt-1" data-i18n="register_description_max">Maksimumi 1000 karaktere</p>
+</div>
             </div>
           </section>
 

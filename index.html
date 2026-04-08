@@ -205,6 +205,7 @@
 const API_URL = "https://easyfix.onrender.com";
 let allFirms = [];
 const NEAR_RADIUS_KM = 25;
+let activeCountry = "MK";
 let nearMode = false;
 let autoScrollIntervals = [];
 
@@ -216,6 +217,55 @@ function updateLangUI() {
   const lang = getLang() || "sq";
   document.getElementById("langLabel").innerText = LANG_META[lang].label;
   document.getElementById("langFlagImg").src = `https://flagcdn.com/w40/${LANG_META[lang].flag}`;
+}
+
+const COUNTRY_META = {
+  MK: { label: "MK" },
+  XK: { label: "XK" },
+  AL: { label: "AL" },
+  CH: { label: "CH" },
+  DE: { label: "DE" },
+  AT: { label: "AT" },
+  IT: { label: "IT" },
+  SI: { label: "SI" },
+  HR: { label: "HR" },
+  BE: { label: "BE" },
+  FR: { label: "FR" },
+  SE: { label: "SE" },
+  NO: { label: "NO" },
+  DK: { label: "DK" },
+  NL: { label: "NL" },
+  GB: { label: "GB" },
+  US: { label: "US" }
+};
+
+activeCountry = getActiveCountry();
+
+function getActiveCountry() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = (params.get("country") || "").toUpperCase();
+  const fromStorage = (localStorage.getItem("easyfix_country") || "").toUpperCase();
+
+  if (COUNTRY_META[fromUrl]) return fromUrl;
+  if (COUNTRY_META[fromStorage]) return fromStorage;
+  return "MK";
+}
+
+function setActiveCountry(country) {
+  const c = String(country || "").toUpperCase();
+  if (!COUNTRY_META[c]) return;
+
+  activeCountry = c;
+  localStorage.setItem("easyfix_country", c);
+  updateCountryPill();
+}
+
+function updateCountryPill() {
+  const pill = document.getElementById("countryPill");
+  if (!pill) return;
+
+  pill.textContent = activeCountry;
+  pill.classList.remove("hidden");
 }
 
 const langBtn = document.getElementById("langBtn");
@@ -535,7 +585,7 @@ document.getElementById("nearMeBtn").addEventListener("click", () => {
 
   navigator.geolocation.getCurrentPosition(async (pos) => {
     try {
-      const res = await fetch(`${API_URL}/firms/near?country=MK&lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&radius_km=${NEAR_RADIUS_KM}`);
+      const res = await fetch(`${API_URL}/firms/near?country=${encodeURIComponent(activeCountry)}&lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&radius_km=${NEAR_RADIUS_KM}`);
       const data = await res.json();
       allFirms = data.map(normalizeCategories).sort(sortFirms);
       nearMode = true;
@@ -583,9 +633,10 @@ async function init() {
   applyTranslations(document);
   updateLangUI();
   updateCreditPackUI();
+  updateCountryPill();
 
   try {
-    const res = await fetch(`${API_URL}/firms?country=MK`);
+    const res = await fetch(`${API_URL}/firms?country=${encodeURIComponent(activeCountry)}`);
     const data = await res.json();
     allFirms = data.map(normalizeCategories).sort(sortFirms);
     document.getElementById("loadingGrid").classList.add("hidden");

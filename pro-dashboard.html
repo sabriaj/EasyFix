@@ -112,37 +112,37 @@
     </label>
 
     <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-  <input type="checkbox" value="ac" class="reg-category">
+  <input type="checkbox" value="ac" class="pro-category-checkbox">
   <span data-i18n="cat_ac">Klima </span>
 </label>
 
 <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-  <input type="checkbox" value="gips" class="reg-category">
+  <input type="checkbox" value="gips" class="pro-category-checkbox">
   <span data-i18n="cat_gips">Punime me gips </span>
 </label>
 
 <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-  <input type="checkbox" value="doors_windows" class="reg-category">
+  <input type="checkbox" value="doors_windows" class="pro-category-checkbox">
   <span data-i18n="cat_doors_windows">Dyer/Dritare </span>
 </label>
 
 <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-  <input type="checkbox" value="tiles" class="reg-category">
+  <input type="checkbox" value="tiles" class="pro-category-checkbox">
   <span data-i18n="cat_tiles">Pllaka/Keramik</span>
 </label>
 
 <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-  <input type="checkbox" value="parquet" class="reg-category">
+  <input type="checkbox" value="parquet" class="pro-category-checkbox">
   <span data-i18n="cat_parquet">Sallidim parketit </span>
 </label>
 
 <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-  <input type="checkbox" value="facade" class="reg-category">
+  <input type="checkbox" value="facade" class="pro-category-checkbox">
   <span data-i18n="cat_facade">Punime fasade </span>
 </label>
 
 <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-3 bg-white">
-  <input type="checkbox" value="heating_cooling" class="reg-category">
+  <input type="checkbox" value="heating_cooling" class="pro-category-checkbox">
   <span data-i18n="cat_heating_cooling">Ngrohje/Ftohje </span>
 </label>
   </div>
@@ -171,6 +171,44 @@
               </button>
             </div>
           </div>
+
+          
+            <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+  <div class="mb-5">
+    <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="account_security_title">Siguria</h2>
+    <p class="text-sm text-gray-500 mt-1" data-i18n="account_security_desc">Ndrysho password-in e llogarisë.</p>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4">
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="account_current_password">Password aktual</label>
+      <input id="currentPassword" type="password"
+        class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="account_new_password">Password i ri</label>
+      <input id="newPassword" type="password"
+        class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="confirm_password_label">Konfirmo password-in</label>
+      <input id="confirmNewPassword" type="password"
+        class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
+    </div>
+  </div>
+
+  <p id="passwordStatus" class="text-sm font-semibold mt-4"></p>
+
+  <div class="mt-5">
+    <button id="changePasswordBtn"
+      class="bg-gray-900 hover:bg-black text-white px-6 py-3 rounded-2xl font-bold shadow-lg transition"
+      data-i18n="account_change_password">
+      Ndrysho Password
+    </button>
+  </div>
+</div>
 
           <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
             <div class="mb-5">
@@ -661,6 +699,83 @@ function handlePremiumReturn() {
   await loadDashboard();
   handlePremiumReturn();
 })();
+
+
+function showPasswordStatus(msg, isError = false) {
+  const el = document.getElementById("passwordStatus");
+  if (!el) return;
+
+  el.innerText = msg;
+  el.className = isError
+    ? "text-sm font-semibold mt-4 text-red-600"
+    : "text-sm font-semibold mt-4 text-green-600";
+}
+
+async function changePassword() {
+  const user = getUser();
+
+  if (!user || !user.id) {
+    window.location.href = "/auth.html";
+    return;
+  }
+
+  const currentPassword = document.getElementById("currentPassword").value.trim();
+  const newPassword = document.getElementById("newPassword").value.trim();
+  const confirmNewPassword = document.getElementById("confirmNewPassword").value.trim();
+
+  if (!currentPassword || !newPassword || !confirmNewPassword) {
+    showPasswordStatus("Plotëso të gjitha fushat.", true);
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    showPasswordStatus("Password i ri duhet të ketë të paktën 6 karaktere.", true);
+    return;
+  }
+
+  if (newPassword !== confirmNewPassword) {
+    showPasswordStatus("Password-et nuk përputhen.", true);
+    return;
+  }
+
+  const btn = document.getElementById("changePasswordBtn");
+  btn.disabled = true;
+  btn.innerText = "Duke ndryshuar...";
+
+  try {
+    const res = await fetch(`${API_URL}/user/password/${user.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        currentPassword,
+        newPassword
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      showPasswordStatus(data.error_code || "Gabim gjatë ndryshimit të password-it.", true);
+      return;
+    }
+
+    document.getElementById("currentPassword").value = "";
+    document.getElementById("newPassword").value = "";
+    document.getElementById("confirmNewPassword").value = "";
+
+    showPasswordStatus("Password-i u ndryshua me sukses.");
+  } catch (err) {
+    console.error(err);
+    showPasswordStatus("Gabim serveri.", true);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Ndrysho Password";
+  }
+}
+
+document.getElementById("changePasswordBtn").addEventListener("click", changePassword);
 </script>
 
 <script>

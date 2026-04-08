@@ -119,6 +119,49 @@ async function verifyOtp() {
   }
 }
 
+function getPhoneCodeOption() {
+  const select = document.getElementById("phoneCode");
+  return select.options[select.selectedIndex];
+}
+
+function getPhoneConfig() {
+  const option = getPhoneCodeOption();
+  return {
+    dialCode: option.value,
+    maxDigits: Number(option.dataset.max || 9),
+  };
+}
+
+function updatePhoneUi() {
+  const phoneInput = document.getElementById("phone");
+  const phoneHelp = document.getElementById("phoneHelp");
+  const cfg = getPhoneConfig();
+
+  phoneInput.maxLength = cfg.maxDigits;
+  phoneInput.placeholder = "Numri lokal";
+
+  if (phoneHelp) {
+    phoneHelp.textContent = `Shkruaj vetëm numrat lokalë pa ${cfg.dialCode}. Maksimum ${cfg.maxDigits} shifra.`;
+  }
+}
+
+function sanitizePhoneInput() {
+  const phoneInput = document.getElementById("phone");
+  const cfg = getPhoneConfig();
+
+  let value = String(phoneInput.value || "");
+  value = value.replace(/\D/g, "");
+  value = value.slice(0, cfg.maxDigits);
+
+  phoneInput.value = value;
+}
+
+function buildFullPhone() {
+  const cfg = getPhoneConfig();
+  const localPhone = document.getElementById("phone").value.trim();
+  return `${cfg.dialCode}${localPhone}`;
+}
+
 async function submitRegister(e) {
   e.preventDefault();
 
@@ -131,7 +174,9 @@ async function submitRegister(e) {
   const confirmPassword = document.getElementById("confirmPassword").value;
 
   const businessName = document.getElementById("businessName").value.trim();
-  const phone = document.getElementById("phone").value.trim();
+  const localPhone = document.getElementById("phone").value.trim();
+  const selectedCountry = document.getElementById("operatingCountry").value;
+  const phoneCfg = getPhoneConfig();
   const city = document.getElementById("city").value.trim();
   const businessAddress = document.getElementById("businessAddress").value.trim();
   const categories = getSelectedRegisterCategories();
@@ -160,10 +205,22 @@ async function submitRegister(e) {
     return;
   }
 
-  if (!businessName || !phone || !city || !businessAddress || categories.length === 0) {
-    showStatus("Plotëso të gjitha fushat e listing-ut dhe zgjidh të paktën një kategori.");
-    return;
-  }
+  if (!businessName || !localPhone || !city || !businessAddress || categories.length === 0) {
+  showStatus("Plotëso të gjitha fushat e listing-ut dhe zgjidh të paktën një kategori.");
+  return;
+}
+
+if (!/^\d+$/.test(localPhone)) {
+  showStatus("Numri i telefonit duhet të përmbajë vetëm numra.");
+  return;
+}
+
+if (localPhone.length !== phoneCfg.maxDigits) {
+  showStatus(`Numri i telefonit duhet të ketë saktësisht ${phoneCfg.maxDigits} shifra për shtetin e zgjedhur.`);
+  return;
+}
+
+const phone = buildFullPhone();
 
   if (photoFiles.length > 3) {
     showStatus("Mund të ngarkosh maksimumi 3 foto falas.");
@@ -209,7 +266,7 @@ async function submitRegister(e) {
     formData.append("phone", phone);
     formData.append("address", businessAddress);
     formData.append("city", city);
-    formData.append("country", "MK");
+    formData.append("country", selectedCountry);
     formData.append("description", description);
 
     categories.forEach(cat => {
@@ -259,6 +316,20 @@ async function submitRegister(e) {
     submitBtn.disabled = false;
     submitBtn.innerText = "Krijo account dhe listing";
   }
+}
+
+const phoneCodeSelectEl = document.getElementById("phoneCode");
+const phoneInputEl = document.getElementById("phone");
+
+if (phoneCodeSelectEl && phoneInputEl) {
+  phoneCodeSelectEl.addEventListener("change", () => {
+    sanitizePhoneInput();
+    updatePhoneUi();
+  });
+
+  phoneInputEl.addEventListener("input", sanitizePhoneInput);
+
+  updatePhoneUi();
 }
 
 document.getElementById("sendOtpBtn").addEventListener("click", sendOtp);

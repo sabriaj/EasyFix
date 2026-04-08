@@ -106,10 +106,67 @@
       <input id="businessName" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none focus:border-blue-500" data-i18n-placeholder="register_business_name_placeholder" placeholder="P.sh. Elektro Fix Arbeni">
     </div>
 
-    <div>
-      <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="phone">Telefoni</label>
-      <input id="phone" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none focus:border-blue-500" data-i18n-placeholder="phone" placeholder="+389...">
-    </div>
+<div>
+  <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2">
+    Shteti ku operon
+  </label>
+
+  <select id="operatingCountry"
+    class="w-full border border-gray-300 rounded-2xl px-3 py-3.5 text-base leading-6 outline-none focus:border-blue-500 bg-white">
+    <option value="MK">🇲🇰 Macedonia</option>
+    <option value="XK">🇽🇰 Kosovo</option>
+    <option value="AL">🇦🇱 Albania</option>
+    <option value="CH">🇨🇭 Switzerland</option>
+    <option value="DE">🇩🇪 Germany</option>
+    <option value="AT">🇦🇹 Austria</option>
+    <option value="IT">🇮🇹 Italy</option>
+    <option value="SI">🇸🇮 Slovenia</option>
+    <option value="HR">🇭🇷 Croatia</option>
+    <option value="BE">🇧🇪 Belgium</option>
+    <option value="FR">🇫🇷 France</option>
+    <option value="SE">🇸🇪 Sweden</option>
+    <option value="NO">🇳🇴 Norway</option>
+    <option value="DK">🇩🇰 Denmark</option>
+    <option value="NL">🇳🇱 Netherlands</option>
+    <option value="GB">🇬🇧 United Kingdom</option>
+    <option value="US">🇺🇸 United States</option>
+  </select>
+</div>
+
+<div>
+  <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="phone">Telefoni</label>
+
+  <div class="grid grid-cols-[120px_1fr] gap-2">
+    <select id="phoneCode"
+      class="w-full border border-gray-300 rounded-2xl px-3 py-3.5 text-base leading-6 outline-none focus:border-blue-500 bg-white">
+      <option value="+389" data-max="8">🇲🇰 +389</option>
+      <option value="+383" data-max="8">🇽🇰 +383</option>
+      <option value="+355" data-max="9">🇦🇱 +355</option>
+      <option value="+41" data-max="9">🇨🇭 +41</option>
+      <option value="+49" data-max="10">🇩🇪 +49</option>
+      <option value="+43" data-max="10">🇦🇹 +43</option>
+      <option value="+39" data-max="10">🇮🇹 +39</option>
+      <option value="+386" data-max="8">🇸🇮 +386</option>
+      <option value="+385" data-max="9">🇭🇷 +385</option>
+      <option value="+32" data-max="9">🇧🇪 +32</option>
+      <option value="+33" data-max="9">🇫🇷 +33</option>
+      <option value="+46" data-max="9">🇸🇪 +46</option>
+      <option value="+47" data-max="8">🇳🇴 +47</option>
+      <option value="+45" data-max="8">🇩🇰 +45</option>
+      <option value="+31" data-max="9">🇳🇱 +31</option>
+      <option value="+44" data-max="10">🇬🇧 +44</option>
+      <option value="+1" data-max="10">🇺🇸 +1</option>
+    </select>
+
+    <input id="phone" type="text" inputmode="numeric" autocomplete="tel"
+      class="w-full border border-gray-300 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none focus:border-blue-500"
+      placeholder="Numri lokal">
+  </div>
+
+  <p id="phoneHelp" class="text-xs text-gray-400 mt-2">
+    Shkruaj vetëm numrat lokalë pa +.
+  </p>
+</div>
 
     <div>
       <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="city">Qyteti</label>

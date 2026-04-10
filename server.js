@@ -1030,13 +1030,7 @@ return res.json({
 /* ================= PRO SIGNUP ================= */
 app.post("/pro/signup", async (req, res) => {
   try {
-    let {
-      name,
-      surname,
-      address,
-      email,
-      password
-    } = req.body;
+    let { name, surname, address, email, password } = req.body;
 
     email = normalizeEmail(email);
     name = String(name || "").trim();
@@ -1052,40 +1046,125 @@ app.post("/pro/signup", async (req, res) => {
       return sendError(res, 400, "PASSWORD_SHKURT");
     }
 
-    const exists = await User.findOne({ email }).lean();
-    if (exists) {
-      return sendError(res, 409, "EMAIL_EKZISTON");
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      // Lejo reuse vetëm për orphan PRO user pa listing
+      if (existingUser.role !== "pro") {
+        return sendError(res, 409, "EMAIL_EKZISTON");
+      }
+
+      const hasFirm = await Firma.findOne({
+        $or: [
+          { owner_user_id: existingUser._id },
+          { email, is_stub: { $ne: true }, name: { $exists: true, $nin: [null, ""] } }
+        ]
+      }).lean();
+
+      if (hasFirm) {
+        return sendError(res, 409, "EMAIL_EKZISTON");
+      }
+
+      const passwordOk = await bcrypt.compare(password, existingUser.password_hash || "");
+      if (!passwordOk) {
+        return sendError(res, 409, "EMAIL_EKZISTON");
+      }
+
+      existingUser.name = name;
+      existingUser.surname = surname;
+      existingUser.address = address;
+
+      const sessionToken = crypto.randomBytes(32).toString("hex");
+      existingUser.session_token = sessionToken;
+
+      await existingUser.save();
+
+      return res.json({
+        success: true,
+        reused: true,
+        user: {
+          id: String(existingUser._id),
+          name: existingUser.name,
+          surname: existingUser.surname,
+          address: existingUser.address,
+          email: existingUser.email,
+          role: existingUser.role,
+          credits: existingUser.credits,
+        },
+        sessionToken
+      });
     }
 
-   const hash = await bcrypt.hash(password, SALT);
-const sessionToken = crypto.randomBytes(32).toString("hex");
+    const hash = await bcrypt.hash(password, SALT);
+    const sessionToken = crypto.randomBytes(32).toString("hex");
 
-const user = await User.create({
-  name,
-  surname,
-  address,
-  email,
-  password_hash: hash,
-  session_token: sessionToken,
-  role: "pro",
-  credits: 0,
-});
+    const user = await User.create({
+      name,
+      surname,
+      address,
+      email,
+      password_hash: hash,
+      session_token: sessionToken,
+      role: "pro",
+      credits: 0,
+    });
 
-return res.json({
-  success: true,
-  user: {
-    id: String(user._id),
-    name: user.name,
-    surname: user.surname,
-    address: user.address,
-    email: user.email,
-    role: user.role,
-    credits: user.credits,
-  },
-  sessionToken
-});
+    return res.json({
+      success: true,
+      reused: false,
+      user: {
+        id: String(user._id),
+        name: user.name,
+        surname: user.surname,
+        address: user.address,
+        email: user.email,
+        role: user.role,
+        credits: user.credits,
+      },
+      sessionToken
+    });
   } catch (err) {
     errorWithTime("PRO SIGNUP ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+/* ================= pro rollvack signip =================== */
+app.post("/pro/rollback-signup", async (req, res) => {
+  try {
+    const userId = String(req.body?.userId || "").trim();
+    const email = normalizeEmail(req.body?.email);
+
+    if (!userId || !email) {
+      return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    const user = await User.findOne({
+      _id: userId,
+      email,
+      role: "pro"
+    });
+
+    if (!user) {
+      return res.json({ success: true, removed: false });
+    }
+
+    const hasFirm = await Firma.findOne({
+      $or: [
+        { owner_user_id: user._id },
+        { email, is_stub: { $ne: true }, name: { $exists: true, $nin: [null, ""] } }
+      ]
+    }).lean();
+
+    if (hasFirm) {
+      return res.json({ success: true, removed: false });
+    }
+
+    await User.deleteOne({ _id: user._id });
+
+    return res.json({ success: true, removed: true });
+  } catch (err) {
+    errorWithTime("PRO ROLLBACK SIGNUP ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }
 });

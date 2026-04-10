@@ -231,6 +231,9 @@ const phone = buildFullPhone();
   submitBtn.disabled = true;
   submitBtn.innerText = "Duke krijuar account-in...";
 
+  let proUser = null;
+  let reusedProUser = false;
+
   try {
     showStatus("Duke krijuar pro account...", "info");
 
@@ -249,13 +252,14 @@ const phone = buildFullPhone();
     });
 
     const proSignupData = await proSignupRes.json();
+    reuseProUser = !!proSignupData.reused;
 
     if (!proSignupRes.ok || !proSignupData.success) {
       showStatus(proSignupData.error_code || "Gabim gjatë krijimit të pro account.");
       return;
     }
 
-    const proUser = proSignupData.user;
+    proUser = proSignupData.user;
 
     showStatus("Duke krijuar listing-un...", "info");
 
@@ -282,16 +286,33 @@ const phone = buildFullPhone();
     }
 
     const registerRes = await fetch(`${API_URL}/register`, {
-      method: "POST",
-      body: formData
-    });
+  method: "POST",
+  body: formData
+});
 
-    const registerData = await registerRes.json();
+const registerData = await registerRes.json();
 
-    if (!registerRes.ok || !registerData.success) {
-      showStatus(registerData.error_code || "Gabim gjatë krijimit të listing-ut.");
-      return;
+if (!registerRes.ok || !registerData.success) {
+  try {
+    if (!reusedProUser && proUser?.id) {
+      await fetch(`${API_URL}/pro/rollback-signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          userId: proUser.id,
+          email
+        })
+      });
     }
+  } catch (rollbackErr) {
+    console.error("ROLLBACK ERROR:", rollbackErr);
+  }
+
+  showStatus(registerData.error_code || "Gabim gjatë krijimit të listing-ut.");
+  return;
+}
 
     localStorage.setItem("easyfix_user", JSON.stringify({
       id: proUser.id,
@@ -310,9 +331,27 @@ const phone = buildFullPhone();
       window.location.href = "/pro-dashboard.html";
     }, 900);
   } catch (err) {
-    console.error(err);
-    showStatus("Gabim serveri.");
-  } finally {
+  console.error(err);
+
+  try {
+    if (!reusedProUser && proUser?.id && email) {
+      await fetch(`${API_URL}/pro/rollback-signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          userId: proUser.id,
+          email
+        })
+      });
+    }
+  } catch (rollbackErr) {
+    console.error("ROLLBACK ERROR:", rollbackErr);
+  }
+
+  showStatus("Gabim serveri.");
+} finally {
     submitBtn.disabled = false;
     submitBtn.innerText = "Krijo account dhe listing";
   }

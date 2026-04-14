@@ -17,4 +17,4 @@ Commercial use includes, but is not limited to:
 * reselling, sublicensing, or hosting it for commercial benefit
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
-For commercial licensing, contact: [info@easyfix.services](mailto:info@easyfix.services)
+For commercial licensing, contact: [info@easyfix.services](mailto:easyfixservice01@gmail.com)

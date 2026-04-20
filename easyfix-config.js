@@ -3,7 +3,7 @@
   const host = String(window.location.hostname || "").toLowerCase();
   const configuredBasePath = String(window.localStorage.getItem("easyfix_base_path_override") || "").trim();
   const configuredApiUrl = String(window.localStorage.getItem("easyfix_api_url_override") || "").trim();
-  const defaultApiUrl = "https://easyfix-dev-1.onrender.com";
+  const defaultApiUrl = "https://easyfix.onrender.com";
   const apiUrl = configuredApiUrl || defaultApiUrl;
   let basePath = "";
 

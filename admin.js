@@ -1,4 +1,5 @@
 const BACKEND_URL = window.EASYFIX_CONFIG.API_URL;
+const ADMIN_SESSION_KEY = "easyfix_admin_bearer";
 
 const $ = (s) => document.querySelector(s);
 
@@ -32,11 +33,16 @@ function setMsg(el, text, ok = true) {
 
 async function api(path, opts = {}) {
   const headers = opts.headers ? { ...opts.headers } : {};
+  const adminBearer = String(sessionStorage.getItem(ADMIN_SESSION_KEY) || "").trim();
 
   if (opts.json) {
     headers["Content-Type"] = "application/json";
     opts.body = JSON.stringify(opts.json);
     delete opts.json;
+  }
+
+  if (adminBearer && !headers.Authorization) {
+    headers.Authorization = `Bearer ${adminBearer}`;
   }
 
   const res = await fetch(`${BACKEND_URL}${path}`, {
@@ -301,6 +307,8 @@ loginBtn.addEventListener("click", async () => {
       return;
     }
 
+    sessionStorage.setItem(ADMIN_SESSION_KEY, key);
+
     await tryBoot();
   } catch (err) {
     setMsg(loginMsg, `Gabim: ${err.message}`, false);
@@ -311,10 +319,15 @@ logoutBtn.addEventListener("click", async () => {
   try {
     await fetch(`${BACKEND_URL}/admin/logout`, {
       method: "POST",
-      credentials: "include"
+      credentials: "include",
+      headers: (() => {
+        const token = String(sessionStorage.getItem(ADMIN_SESSION_KEY) || "").trim();
+        return token ? { Authorization: `Bearer ${token}` } : {};
+      })()
     });
   } catch {}
 
+  sessionStorage.removeItem(ADMIN_SESSION_KEY);
   showLogin();
   setMsg(loginMsg, "U ckyce.", true);
 });

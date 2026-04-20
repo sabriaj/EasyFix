@@ -321,6 +321,7 @@ const phone = buildFullPhone();
     }
 
     proUser = proSignupData.user;
+    const proSessionToken = String(proSignupData.sessionToken || "").trim();
 
     showStatus("Duke krijuar listing-un...", "info");
 
@@ -346,8 +347,14 @@ const phone = buildFullPhone();
       formData.append("photos", file);
     }
 
+    const registerHeaders = {};
+    if (proSessionToken) {
+      registerHeaders.Authorization = `Bearer ${proSessionToken}`;
+    }
+
     const registerRes = await apiFetch(`${API_URL}/register`, {
       method: "POST",
+      headers: registerHeaders,
       body: formData
     });
 

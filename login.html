@@ -4,8 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EasyFix - Login / Signup</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
   <script src="i18n.js"></script>
+  <script src="easyfix-config.js"></script>
+  <script src="auth-client.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
@@ -63,18 +65,21 @@
     </div>
 
     <div class="text-center mt-4">
-      <a href="/auth.html" class="text-sm text-gray-500 hover:text-gray-700" data-i18n="back">Kthehu mbrapa</a>
+      <a id="backAuthLink" href="auth.html" class="text-sm text-gray-500 hover:text-gray-700" data-i18n="back">Kthehu mbrapa</a>
     </div>
   </div>
 
 <script>
-const API_URL = "https://easyfix.onrender.com";
+const API_URL = window.EASYFIX_CONFIG.API_URL;
+const { pagePath, goToPage } = window.EASYFIX_CONFIG;
 const { t, applyTranslations, getLang } = window.EASYFIX_I18N;
+const { setUser, apiFetch, apiAuthFetch, translateApiError } = window.EASYFIX_AUTH;
 let mode = "login";
 
 function applyPageTranslations() {
   applyTranslations(document);
   document.documentElement.setAttribute("lang", getLang());
+  document.getElementById("backAuthLink").href = pagePath("auth.html");
   updateTexts();
 }
 
@@ -142,7 +147,7 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
     try {
       showStatus(t("login_logging_in"), "info");
 
-      const res = await fetch(`${API_URL}/user/login`, {
+      const res = await apiAuthFetch(`${API_URL}/user/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
@@ -151,7 +156,7 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
       const data = await res.json();
 
       if (!res.ok) {
-        showStatus(data.error_code || t("login_error"));
+        showStatus(translateApiError(data.error_code, "login_error"));
         return;
       }
 
@@ -160,8 +165,8 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
         return;
       }
 
-      localStorage.setItem("easyfix_user", JSON.stringify({
-        id: data.user.id,
+      setUser({
+        id: data.user.id || data.user._id,
         name: data.user.name,
         surname: data.user.surname,
         address: data.user.address,
@@ -169,12 +174,12 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
         role: data.user.role,
         credits: data.user.credits,
         sessionToken: data.sessionToken
-      }));
+      });
 
       showStatus(t("login_success"), "success");
 
       setTimeout(() => {
-        window.location.href = "/";
+        goToPage("index.html");
       }, 700);
     } catch (err) {
       console.error(err);
@@ -207,7 +212,7 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
   try {
     showStatus(t("login_creating_account"), "info");
 
-    const res = await fetch(`${API_URL}/user/signup`, {
+    const res = await apiAuthFetch(`${API_URL}/user/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -222,12 +227,12 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
     const data = await res.json();
 
     if (!res.ok) {
-      showStatus(data.error_code || t("login_signup_error"));
+      showStatus(translateApiError(data.error_code, "login_signup_error"));
       return;
     }
 
-    localStorage.setItem("easyfix_user", JSON.stringify({
-      id: data.user.id,
+    setUser({
+      id: data.user.id || data.user._id,
       name: data.user.name,
       surname: data.user.surname,
       address: data.user.address,
@@ -235,12 +240,12 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
       role: data.user.role,
       credits: data.user.credits,
       sessionToken: data.sessionToken
-    }));
+    });
 
     showStatus(t("login_account_created"), "success");
 
     setTimeout(() => {
-      window.location.href = "/";
+      goToPage("index.html");
     }, 700);
   } catch (err) {
     console.error(err);

@@ -3,26 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EasyFix - Regjistrohu si Mjeshtër</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>EasyFix - Regjistrohu si Mjeshter</title>
+  <link rel="stylesheet" href="styles.css">
   <script src="i18n.js"></script>
+  <script src="easyfix-config.js"></script>
+  <script src="auth-client.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-800">
+<body class="bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 min-h-screen text-gray-800">
 
   <div class="max-w-5xl mx-auto px-3 sm:px-4 py-5 sm:py-8 md:py-10">
     <div class="text-center mb-8">
-      <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900" data-i18n="register_title">Regjistrohu si Mjeshtër</h1>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900" data-i18n="register_title">Regjistrohu si Mjeshter</h1>
       <p class="text-gray-600 mt-2 max-w-2xl mx-auto" data-i18n="register_subtitle">
-        Krijo account-in tënd profesional në EasyFix. Regjistrimi është falas. Premium/boost e shton më vonë nga dashboard-i yt.
+        Krijo account-in tend profesional ne EasyFix. Regjistrimi eshte falas. Premium ose boost e shton me vone nga dashboard-i yt.
       </p>
     </div>
 
-    <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
-      <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-6 text-white">
-        <h2 class="text-2xl font-extrabold" data-i18n="register_account_listing">Account + Listing</h2>
-        <p class="text-blue-100 mt-1 text-sm" data-i18n="register_account_listing_desc">
-          Plotëso të dhënat personale dhe të biznesit. Mund të shtosh logo dhe deri 3 foto falas.
+    <div class="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/60 overflow-hidden">
+      <div class="bg-blue-600 px-6 py-5 text-white border-b border-blue-500">
+        <h2 class="text-xl md:text-2xl font-extrabold" data-i18n="register_account_listing">Account + Listing</h2>
+        <p class="text-blue-100 mt-1 text-sm max-w-2xl" data-i18n="register_account_listing_desc">
+          Ploteso te dhenat personale dhe te biznesit. Mund te shtosh logo dhe deri ne 3 foto falas.
         </p>
       </div>
 
@@ -30,64 +32,61 @@
         <div id="statusBox" class="hidden mb-6 rounded-2xl px-4 py-3 text-sm font-semibold"></div>
 
         <form id="registerForm" class="space-y-8">
-          <!-- Account -->
-          <section>
-            <h3 class="text-xl font-extrabold text-gray-900 mb-4"data-i18n="register_section_account">1. Të dhënat e account-it</h3>
+          <section class="rounded-3xl border border-gray-100 bg-gray-50/80 p-4 sm:p-5 md:p-6">
+            <h3 class="text-xl font-extrabold text-gray-900 mb-4" data-i18n="register_section_account">1. Te dhenat e account-it</h3>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="name_label">Emri</label>
-                <input id="ownerName" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" data-i18n-placeholder="name_label" placeholder="Emri">
+                <input id="ownerName" type="text" class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-i18n-placeholder="name_label" placeholder="Emri">
               </div>
 
               <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="surname_label">Mbiemri</label>
-                <input id="ownerSurname" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" data-i18n-placeholder="surname_label" placeholder="Mbiemri">
+                <input id="ownerSurname" type="text" class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-i18n-placeholder="surname_label" placeholder="Mbiemri">
               </div>
 
               <div class="md:col-span-2">
-                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_personal_address" >Adresa personale</label>
-                <input id="ownerAddress" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" data-i18n-placeholder="register_personal_address" placeholder="Adresa personale">
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_personal_address">Adresa personale</label>
+                <input id="ownerAddress" type="text" class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-i18n-placeholder="register_personal_address" placeholder="Adresa personale">
               </div>
 
               <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="email">Email</label>
-                <input id="email" type="email" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" data-i18n-placeholder="email" placeholder="Email">
+                <input id="email" type="email" class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-i18n-placeholder="email" placeholder="Email">
               </div>
 
               <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="password_label">Password</label>
-                <input id="password" type="password" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" data-i18n-placeholder="password_label" placeholder="Minimum 6 karaktere">
+                <input id="password" type="password" class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-i18n-placeholder="password_label" placeholder="Minimum 6 karaktere">
               </div>
 
               <div class="md:col-span-2">
                 <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="confirm_password_label">Konfirmo password-in</label>
-                <input id="confirmPassword" type="password" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" data-i18n-placeholder="confirm_password_label" placeholder="Konfirmo password-in">
+                <input id="confirmPassword" type="password" class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-i18n-placeholder="confirm_password_label" placeholder="Konfirmo password-in">
               </div>
             </div>
           </section>
 
-          <!-- OTP -->
-          <section>
+          <section class="rounded-3xl border border-gray-100 bg-gray-50/80 p-4 sm:p-5 md:p-6">
             <h3 class="text-xl font-extrabold text-gray-900 mb-4" data-i18n="register_section_verify">2. Verifiko email-in</h3>
 
             <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-end">
               <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_otp_code">Kodi OTP</label>
-                <input id="otpCode" type="text" maxlength="6" class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500" data-i18n-placeholder="register_otp_placeholder" placeholder="Shkruaj kodin 6-shifror">
+                <input id="otpCode" type="text" maxlength="6" class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-i18n-placeholder="register_otp_placeholder" placeholder="Shkruaj kodin 6-shifror">
               </div>
 
               <button type="button" id="sendOtpBtn"
-                class="bg-gray-900 hover:bg-black text-white px-5 py-3 rounded-2xl font-bold transition"
+                class="w-full md:w-auto bg-gray-900 hover:bg-black text-white px-5 py-3 rounded-2xl font-bold shadow-lg transition"
                 data-i18n="send_code_btn">
-                
-                Dërgo kodin
+                Dergo kodin
               </button>
             </div>
 
             <div class="mt-3">
               <button type="button" id="verifyOtpBtn"
-                class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-2xl font-bold transition"
+                class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-2xl font-bold shadow-lg shadow-blue-100 transition"
                 data-i18n="verify_btn">
                 Verifiko email-in
               </button>
@@ -96,199 +95,197 @@
             <p id="otpInfo" class="text-sm text-gray-500 mt-3"></p>
           </section>
 
-          <!-- Business -->
-          <section>
-  <h3 class="text-xl font-extrabold text-gray-900 mb-4" data-i18n="register_section_listing">3. Të dhënat e listing-ut</h3>
+          <section class="rounded-3xl border border-gray-100 bg-gray-50/80 p-4 sm:p-5 md:p-6">
+            <h3 class="text-xl font-extrabold text-gray-900 mb-4" data-i18n="register_section_listing">3. Te dhenat e listing-ut</h3>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-    <div class="md:col-span-2">
-      <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="register_business_name">Emri i biznesit / profilit</label>
-      <input id="businessName" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none focus:border-blue-500" data-i18n-placeholder="register_business_name_placeholder" placeholder="P.sh. Elektro Fix Arbeni">
-    </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              <div class="md:col-span-2">
+                <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="register_business_name">Emri i biznesit / profilit</label>
+                <input id="businessName" type="text" class="w-full border border-gray-200 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-i18n-placeholder="register_business_name_placeholder" placeholder="P.sh. Elektro Fix Arbeni">
+              </div>
 
-<div>
-  <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2">
-    Shteti ku operon
-  </label>
+              <div>
+                <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2">
+                  Shteti ku operon
+                </label>
 
-  <select id="operatingCountry"
-    class="w-full border border-gray-300 rounded-2xl px-3 py-3.5 text-base leading-6 outline-none focus:border-blue-500 bg-white">
-    <option value="MK">🇲🇰 Macedonia</option>
-    <option value="XK">🇽🇰 Kosovo</option>
-    <option value="AL">🇦🇱 Albania</option>
-    <option value="CH">🇨🇭 Switzerland</option>
-    <option value="DE">🇩🇪 Germany</option>
-    <option value="AT">🇦🇹 Austria</option>
-    <option value="IT">🇮🇹 Italy</option>
-    <option value="SI">🇸🇮 Slovenia</option>
-    <option value="HR">🇭🇷 Croatia</option>
-    <option value="BE">🇧🇪 Belgium</option>
-    <option value="FR">🇫🇷 France</option>
-    <option value="SE">🇸🇪 Sweden</option>
-    <option value="NO">🇳🇴 Norway</option>
-    <option value="DK">🇩🇰 Denmark</option>
-    <option value="NL">🇳🇱 Netherlands</option>
-    <option value="GB">🇬🇧 United Kingdom</option>
-    <option value="US">🇺🇸 United States</option>
-  </select>
-</div>
+                <select id="operatingCountry"
+                  class="w-full border border-gray-200 rounded-2xl px-3 py-3.5 text-base leading-6 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                  <option value="MK">North Macedonia</option>
+                  <option value="XK">Kosovo</option>
+                  <option value="AL">Albania</option>
+                  <option value="CH">Switzerland</option>
+                  <option value="DE">Germany</option>
+                  <option value="AT">Austria</option>
+                  <option value="IT">Italy</option>
+                  <option value="SI">Slovenia</option>
+                  <option value="HR">Croatia</option>
+                  <option value="BE">Belgium</option>
+                  <option value="FR">France</option>
+                  <option value="SE">Sweden</option>
+                  <option value="NO">Norway</option>
+                  <option value="DK">Denmark</option>
+                  <option value="NL">Netherlands</option>
+                  <option value="GB">United Kingdom</option>
+                  <option value="US">United States</option>
+                </select>
+              </div>
 
-<div>
-  <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="phone">Telefoni</label>
+              <div>
+                <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="phone">Telefoni</label>
 
-  <div class="grid grid-cols-[120px_1fr] gap-2">
-    <select id="phoneCode"
-      class="w-full border border-gray-300 rounded-2xl px-3 py-3.5 text-base leading-6 outline-none focus:border-blue-500 bg-white">
-      <option value="+389" data-max="8">🇲🇰 +389</option>
-      <option value="+383" data-max="8">🇽🇰 +383</option>
-      <option value="+355" data-max="9">🇦🇱 +355</option>
-      <option value="+41" data-max="9">🇨🇭 +41</option>
-      <option value="+49" data-max="10">🇩🇪 +49</option>
-      <option value="+43" data-max="10">🇦🇹 +43</option>
-      <option value="+39" data-max="10">🇮🇹 +39</option>
-      <option value="+386" data-max="8">🇸🇮 +386</option>
-      <option value="+385" data-max="9">🇭🇷 +385</option>
-      <option value="+32" data-max="9">🇧🇪 +32</option>
-      <option value="+33" data-max="9">🇫🇷 +33</option>
-      <option value="+46" data-max="9">🇸🇪 +46</option>
-      <option value="+47" data-max="8">🇳🇴 +47</option>
-      <option value="+45" data-max="8">🇩🇰 +45</option>
-      <option value="+31" data-max="9">🇳🇱 +31</option>
-      <option value="+44" data-max="10">🇬🇧 +44</option>
-      <option value="+1" data-max="10">🇺🇸 +1</option>
-    </select>
+                <div class="grid grid-cols-[120px_1fr] gap-2">
+                  <select id="phoneCode"
+                    class="w-full border border-gray-200 rounded-2xl px-3 py-3.5 text-base leading-6 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                    <option value="+389" data-max="8">MK +389</option>
+                    <option value="+383" data-max="8">XK +383</option>
+                    <option value="+355" data-max="9">AL +355</option>
+                    <option value="+41" data-max="9">CH +41</option>
+                    <option value="+49" data-max="10">DE +49</option>
+                    <option value="+43" data-max="10">AT +43</option>
+                    <option value="+39" data-max="10">IT +39</option>
+                    <option value="+386" data-max="8">SI +386</option>
+                    <option value="+385" data-max="9">HR +385</option>
+                    <option value="+32" data-max="9">BE +32</option>
+                    <option value="+33" data-max="9">FR +33</option>
+                    <option value="+46" data-max="9">SE +46</option>
+                    <option value="+47" data-max="8">NO +47</option>
+                    <option value="+45" data-max="8">DK +45</option>
+                    <option value="+31" data-max="9">NL +31</option>
+                    <option value="+44" data-max="10">GB +44</option>
+                    <option value="+1" data-max="10">US +1</option>
+                  </select>
 
-    <input id="phone" type="text" inputmode="numeric" autocomplete="tel"
-      class="w-full border border-gray-300 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none focus:border-blue-500"
-      placeholder="Numri lokal">
-  </div>
+                  <input id="phone" type="text" inputmode="numeric" autocomplete="tel"
+                    class="w-full border border-gray-200 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Numri lokal">
+                </div>
 
-  <p id="phoneHelp" class="text-xs text-gray-400 mt-2">
-    Shkruaj vetëm numrat lokalë pa +.
-  </p>
-</div>
+                <p id="phoneHelp" class="text-xs text-gray-400 mt-2">
+                  Shkruaj vetem numrat lokal pa +.
+                </p>
+                <p id="registerCategoriesStatus" class="text-xs font-semibold mt-2 hidden"></p>
+              </div>
 
-    <div>
-      <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="city">Qyteti</label>
-      <input id="city" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none focus:border-blue-500" data-i18n-placeholder="city_placeholder" placeholder="Shkup">
-    </div>
-
-    <div class="md:col-span-2">
-      <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="register_business_address">Adresa e biznesit</label>
-      <input id="businessAddress" type="text" class="w-full border border-gray-300 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none focus:border-blue-500" data-i18n-placeholder="register_business_address" placeholder="Adresa e biznesit">
-    </div>
-
-    <div class="md:col-span-2">
-      <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_work_categories">
-        Kategoritë e punës
-      </label>
-
-      <div id="registerCategoryBox" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-
-  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
-    <input type="checkbox" value="plumber" class="reg-category mt-1 shrink-0">
-    <span class="text-sm leading-5 break-words" data-i18n="cat_plumber">Hidraulik</span>
-  </label>
-
-  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
-    <input type="checkbox" value="electrician" class="reg-category mt-1 shrink-0">
-    <span class="text-sm leading-5 break-words" data-i18n="cat_electrician">Elektricist</span>
-  </label>
-
-  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
-    <input type="checkbox" value="painter" class="reg-category mt-1 shrink-0">
-    <span class="text-sm leading-5 break-words" data-i18n="cat_painter">Bojaxhi</span>
-  </label>
-
-  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
-    <input type="checkbox" value="cleaning" class="reg-category mt-1 shrink-0">
-    <span class="text-sm leading-5 break-words" data-i18n="cat_cleaning">Pastrim</span>
-  </label>
-
-  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
-    <input type="checkbox" value="mason" class="reg-category mt-1 shrink-0">
-    <span class="text-sm leading-5 break-words" data-i18n="cat_mason">Murator</span>
-  </label>
-
-  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
-    <input type="checkbox" value="gardener" class="reg-category mt-1 shrink-0">
-    <span class="text-sm leading-5 break-words" data-i18n="cat_gardener">Kopshtar</span>
-  </label>
-
-  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
-    <input type="checkbox" value="ac" class="reg-category mt-1 shrink-0">
-    <span class="text-sm leading-5 break-words" data-i18n="cat_ac">Klima</span>
-  </label>
-
-  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
-    <input type="checkbox" value="gips" class="reg-category mt-1 shrink-0">
-    <span class="text-sm leading-5 break-words" data-i18n="cat_gips">Punime me gips</span>
-  </label>
-
-  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
-    <input type="checkbox" value="doors_windows" class="reg-category mt-1 shrink-0">
-    <span class="text-sm leading-5 break-words" data-i18n="cat_doors_windows">Dyer/Dritare</span>
-  </label>
-
-  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
-    <input type="checkbox" value="tiles" class="reg-category mt-1 shrink-0">
-    <span class="text-sm leading-5 break-words" data-i18n="cat_tiles">Pllaka/Keramik</span>
-  </label>
-
-  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
-    <input type="checkbox" value="parquet" class="reg-category mt-1 shrink-0">
-    <span class="text-sm leading-5 break-words" data-i18n="cat_parquet">Sallidim parketit</span>
-  </label>
-
-  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
-    <input type="checkbox" value="facade" class="reg-category mt-1 shrink-0">
-    <span class="text-sm leading-5 break-words" data-i18n="cat_facade">Punime fasade</span>
-  </label>
-
-  <label class="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-3 bg-white min-h-[72px]">
-    <input type="checkbox" value="heating_cooling" class="reg-category mt-1 shrink-0">
-    <span class="text-sm leading-5 break-words" data-i18n="cat_heating_cooling">Ngrohje/Ftohje</span>
-  </label>
-
-</div>
-  <p class="text-xs text-gray-400 mt-2" data-i18n="register_categories_hint">
-    Mund të zgjedhësh disa kategori. (FREE: 2 kategori, PREMIUM: më shumë)
-  </p>
-</div>
+              <div>
+                <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="city">Qyteti</label>
+                <input id="city" type="text" class="w-full border border-gray-200 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-i18n-placeholder="city_placeholder" placeholder="Shkup">
+              </div>
 
               <div class="md:col-span-2">
-  <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="register_description">Përshkrimi</label>
-  <textarea id="description" rows="6" maxlength="1000"
-    class="w-full border border-gray-300 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none focus:border-blue-500"
-    data-i18n-placeholder="register_description_placeholder"
-    placeholder="Përshkruaj shkurt shërbimet që ofron..."></textarea>
-  <p class="text-xs text-gray-400 mt-1" data-i18n="register_description_max">Maksimumi 1000 karaktere</p>
-</div>
+                <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="register_business_address">Adresa e biznesit</label>
+                <input id="businessAddress" type="text" class="w-full border border-gray-200 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-i18n-placeholder="register_business_address" placeholder="Adresa e biznesit">
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_work_categories">
+                  Kategorite e punes
+                </label>
+
+                <div id="registerCategoryBox" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
+                    <input type="checkbox" value="plumber" class="reg-category mt-1 shrink-0">
+                    <span class="text-sm leading-5 break-words" data-i18n="cat_plumber">Hidraulik</span>
+                  </label>
+
+                  <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
+                    <input type="checkbox" value="electrician" class="reg-category mt-1 shrink-0">
+                    <span class="text-sm leading-5 break-words" data-i18n="cat_electrician">Elektricist</span>
+                  </label>
+
+                  <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
+                    <input type="checkbox" value="painter" class="reg-category mt-1 shrink-0">
+                    <span class="text-sm leading-5 break-words" data-i18n="cat_painter">Bojaxhi</span>
+                  </label>
+
+                  <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
+                    <input type="checkbox" value="cleaning" class="reg-category mt-1 shrink-0">
+                    <span class="text-sm leading-5 break-words" data-i18n="cat_cleaning">Pastrim</span>
+                  </label>
+
+                  <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
+                    <input type="checkbox" value="mason" class="reg-category mt-1 shrink-0">
+                    <span class="text-sm leading-5 break-words" data-i18n="cat_mason">Murator</span>
+                  </label>
+
+                  <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
+                    <input type="checkbox" value="gardener" class="reg-category mt-1 shrink-0">
+                    <span class="text-sm leading-5 break-words" data-i18n="cat_gardener">Kopshtar</span>
+                  </label>
+
+                  <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
+                    <input type="checkbox" value="ac" class="reg-category mt-1 shrink-0">
+                    <span class="text-sm leading-5 break-words" data-i18n="cat_ac">Klima</span>
+                  </label>
+
+                  <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
+                    <input type="checkbox" value="gips" class="reg-category mt-1 shrink-0">
+                    <span class="text-sm leading-5 break-words" data-i18n="cat_gips">Punime me gips</span>
+                  </label>
+
+                  <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
+                    <input type="checkbox" value="doors_windows" class="reg-category mt-1 shrink-0">
+                    <span class="text-sm leading-5 break-words" data-i18n="cat_doors_windows">Dyer/Dritare</span>
+                  </label>
+
+                  <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
+                    <input type="checkbox" value="tiles" class="reg-category mt-1 shrink-0">
+                    <span class="text-sm leading-5 break-words" data-i18n="cat_tiles">Pllaka/Keramik</span>
+                  </label>
+
+                  <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
+                    <input type="checkbox" value="parquet" class="reg-category mt-1 shrink-0">
+                    <span class="text-sm leading-5 break-words" data-i18n="cat_parquet">Sallidim parketit</span>
+                  </label>
+
+                  <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
+                    <input type="checkbox" value="facade" class="reg-category mt-1 shrink-0">
+                    <span class="text-sm leading-5 break-words" data-i18n="cat_facade">Punime fasade</span>
+                  </label>
+
+                  <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
+                    <input type="checkbox" value="heating_cooling" class="reg-category mt-1 shrink-0">
+                    <span class="text-sm leading-5 break-words" data-i18n="cat_heating_cooling">Ngrohje/Ftohje</span>
+                  </label>
+                </div>
+
+                <p class="text-xs text-gray-400 mt-2" data-i18n="register_categories_hint">
+                  Mund te zgjedhesh disa kategori. (FREE: 2 kategori, PREMIUM: me shume)
+                </p>
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="register_description">Pershkrimi</label>
+                <textarea id="description" rows="6" maxlength="1000"
+                  class="w-full border border-gray-200 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  data-i18n-placeholder="register_description_placeholder"
+                  placeholder="Pershkruaj shkurt sherbimet qe ofron..."></textarea>
+                <p class="text-xs text-gray-400 mt-1" data-i18n="register_description_max">Maksimumi 1000 karaktere</p>
+              </div>
             </div>
           </section>
 
-          <!-- Media -->
-          <section>
+          <section class="rounded-3xl border border-gray-100 bg-gray-50/80 p-4 sm:p-5 md:p-6">
             <h3 class="text-xl font-extrabold text-gray-900 mb-4" data-i18n="register_section_media">4. Logo dhe foto</h3>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_logo">Logo</label>
                 <input id="logo" type="file" accept="image/*"
-                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white">
-                <p class="text-xs text-gray-400 mt-2" data-i18n="register_logo_hint">Një logo opsionale për profilin tënd.</p>
+                  class="w-full border border-gray-200 rounded-2xl px-4 py-3 bg-white">
+                <p class="text-xs text-gray-400 mt-2" data-i18n="register_logo_hint">Nje logo opsionale per profilin tend.</p>
               </div>
 
               <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_photos">Foto (max 3 falas)</label>
                 <input id="photos" type="file" accept="image/*" multiple
-                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 bg-white">
-                <p class="text-xs text-gray-400 mt-2" data-i18n="register_photos_hint">Mund të zgjedhësh deri në 3 foto.</p>
+                  class="w-full border border-gray-200 rounded-2xl px-4 py-3 bg-white">
+                <p class="text-xs text-gray-400 mt-2" data-i18n="register_photos_hint">Mund te zgjedhesh deri ne 3 foto.</p>
               </div>
             </div>
           </section>
 
-          <div class="pt-2">
+          <div class="pt-2 border-t border-gray-100">
             <button type="submit" id="submitBtn"
               class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-extrabold text-lg transition shadow-lg shadow-blue-100"
               data-i18n="register_submit">
@@ -298,17 +295,17 @@
         </form>
 
         <div class="text-center mt-6">
-          <a href="/auth.html" class="text-sm text-gray-500 hover:text-gray-700" data-i18n="back">Kthehu mbrapa</a>
+          <a id="backAuthLink" href="auth.html" class="text-sm text-gray-500 hover:text-gray-700" data-i18n="back">Kthehu mbrapa</a>
         </div>
       </div>
     </div>
   </div>
 
-
   <script>
     const { applyTranslations, getLang } = window.EASYFIX_I18N;
     applyTranslations(document);
     document.documentElement.setAttribute("lang", getLang());
+    document.getElementById("backAuthLink").href = window.EASYFIX_CONFIG.pagePath("auth.html");
   </script>
   <script src="code.js"></script>
 </body>

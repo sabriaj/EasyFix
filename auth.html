@@ -4,8 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EasyFix - Auth</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
   <script src="i18n.js"></script>
+  <script src="easyfix-config.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
@@ -70,20 +71,22 @@
     </div>
 
     <div class="text-center mt-8">
-      <a href="/" class="text-blue-600 font-bold hover:underline" data-i18n="back">Kthehu mbrapa</a>
+      <a id="backHomeLink" href="index.html" class="text-blue-600 font-bold hover:underline" data-i18n="back">Kthehu mbrapa</a>
     </div>
   </div>
 
 <script>
 const { getLang, applyTranslations } = window.EASYFIX_I18N;
+const { pagePath, goToPage } = window.EASYFIX_CONFIG;
 
 function applyPageTranslations() {
   applyTranslations(document);
   document.documentElement.setAttribute("lang", getLang());
+  document.getElementById("backHomeLink").href = pagePath("index.html");
 }
 
 function goVisitor() {
-  window.location.href = "/login.html";
+  goToPage("login.html");
 }
 
 function showProOptions() {
@@ -97,11 +100,11 @@ function backToMain() {
 }
 
 function goProLogin() {
-  window.location.href = "/pro-login.html";
+  goToPage("pro-login.html");
 }
 
 function goProRegister() {
-  window.location.href = "/register.html";
+  goToPage("register.html");
 }
 
 applyPageTranslations();

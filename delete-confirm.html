@@ -1,22 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
-  <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-CWDYCJ09D8"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-CWDYCJ09D8');
-</script>
-
-
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
   <title>EasyFix - Confirm Deletion</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
 
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
   <meta name="theme-color" content="#1d4ed8">
@@ -25,7 +14,7 @@
   <header class="bg-blue-700 text-white py-6 shadow-md">
     <div class="container mx-auto px-4 flex items-center justify-between">
       <h1 class="text-2xl font-extrabold">EasyFix</h1>
-      <a href="index.html" class="underline">Back to Home</a>
+      <a id="backHomeLink" href="index.html" class="underline">Back to Home</a>
     </div>
   </header>
 
@@ -39,15 +28,15 @@
 
     <div class="bg-white rounded-xl shadow p-6 space-y-4">
       <div class="text-sm text-gray-700">
-        <div><b>Email:</b> <span id="emailLabel">—</span></div>
-        <div class="text-xs text-gray-500 mt-2">If the link is expired, request a new one from <a class="underline text-blue-700" href="delete.html">Data Deletion</a>.</div>
+        <div><b>Email:</b> <span id="emailLabel">&mdash;</span></div>
+        <div class="text-xs text-gray-500 mt-2">If the link is expired, request a new one from <a id="deleteRequestLink" class="underline text-blue-700" href="delete.html">Data Deletion</a>.</div>
       </div>
 
       <button id="confirmBtn" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold">
         Confirm and delete my listing
       </button>
 
-      <a href="index.html" class="block text-center text-sm underline text-blue-700">Cancel</a>
+      <a id="cancelLink" href="index.html" class="block text-center text-sm underline text-blue-700">Cancel</a>
     </div>
   </main>
 
@@ -55,8 +44,15 @@
     &copy; 2025 EasyFix
   </footer>
 
+  <script src="easyfix-config.js"></script>
+  <script src="auth-client.js"></script>
   <script>
-    const API_URL = "https://easyfix.onrender.com";
+    const { API_URL, pagePath } = window.EASYFIX_CONFIG;
+    const { apiFetch } = window.EASYFIX_AUTH;
+    document.getElementById("backHomeLink").href = pagePath("index.html");
+    document.getElementById("cancelLink").href = pagePath("index.html");
+    document.getElementById("deleteRequestLink").href = pagePath("delete.html");
+
     const msg = document.getElementById("msg");
     const emailLabel = document.getElementById("emailLabel");
     const confirmBtn = document.getElementById("confirmBtn");
@@ -70,28 +66,58 @@
     }
 
     const params = new URLSearchParams(window.location.search);
-    const email = (params.get("email") || "").trim();
-    const token = (params.get("token") || "").trim();
-    emailLabel.textContent = email || "—";
+    let token = (params.get("token") || "").trim();
 
-    if (!email || !token) {
+    async function startDeleteSession() {
+      try {
+        window.history.replaceState({}, document.title, pagePath("delete-confirm.html"));
+        const r = await apiFetch(`${API_URL}/delete/session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token })
+        });
+
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.success) {
+          confirmBtn.disabled = true;
+          confirmBtn.classList.add("opacity-60");
+          show("err", j?.error || "Invalid or expired link. Please request a new one.");
+          return;
+        }
+
+        emailLabel.textContent = j.email || "—";
+        token = "";
+        confirmBtn.disabled = false;
+        confirmBtn.classList.remove("opacity-60");
+        msg.classList.add("hidden");
+      } catch (e) {
+        confirmBtn.disabled = true;
+        confirmBtn.classList.add("opacity-60");
+        show("err", "Network error. Please try again.");
+      }
+    }
+
+    if (!token) {
       confirmBtn.disabled = true;
       confirmBtn.classList.add("opacity-60");
-      show("err", "Missing email or token. Please request a new deletion link.");
+      show("err", "Missing token. Please request a new deletion link.");
+    } else {
+      confirmBtn.disabled = true;
+      confirmBtn.classList.add("opacity-60");
+      show("ok", "Verifying link...");
+      startDeleteSession();
     }
 
     confirmBtn.addEventListener("click", async () => {
-      if (!email || !token) return;
+      if (token) return;
 
       confirmBtn.disabled = true;
       confirmBtn.classList.add("opacity-70");
       show("ok", "Deleting...");
 
       try {
-        const r = await fetch(`${API_URL}/delete-confirm`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, token })
+        const r = await apiFetch(`${API_URL}/delete-confirm`, {
+          method: "POST"
         });
 
         const j = await r.json().catch(() => ({}));

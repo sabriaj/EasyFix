@@ -4,8 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EasyFix - Account</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
   <script src="i18n.js"></script>
+  <script src="easyfix-config.js"></script>
+  <script src="auth-client.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
   <style>
     .glass-card {
@@ -19,20 +21,21 @@
   <div class="max-w-5xl mx-auto px-4 py-8 md:py-12">
     <!-- Top bar -->
     <div class="flex items-center justify-between mb-6">
-      <a href="/" class="inline-flex items-center gap-2 text-sm font-bold text-blue-700 hover:text-blue-800">
-        <span>←</span>
+      <a id="backHomeLink" href="index.html" class="inline-flex items-center gap-2 text-sm font-bold text-blue-700 hover:text-blue-800">
         <span data-i18n="back">Kthehu mbrapa</span>
       </a>
 
       <div class="text-right">
-        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">EasyFix</div>
-        <div class="text-sm font-bold text-gray-700" data-i18n="account_page_title">Llogaria ime</div>
+        <div class="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wider text-blue-700 shadow-sm border border-blue-100">
+          <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+          EasyFix Account
+        </div>
       </div>
     </div>
 
     <!-- Loading -->
     <div id="loadingBox" class="glass-card rounded-3xl shadow-xl border border-white/60 p-8 text-center text-gray-500 font-semibold" data-i18n="account_loading">
-      Duke ngarkuar të dhënat...
+      Duke ngarkuar te dhenat...
     </div>
 
     <!-- Error -->
@@ -51,7 +54,7 @@
             </div>
 
             <div class="bg-white/15 rounded-2xl px-5 py-4 border border-white/20 min-w-[180px]">
-              <div class="text-xs uppercase tracking-wider text-blue-100 font-bold" data-i18n="account_current_credits">Kreditë aktuale</div>
+              <div class="text-xs uppercase tracking-wider text-blue-100 font-bold" data-i18n="account_current_credits">Kredite aktuale</div>
               <div id="credits" class="text-3xl font-extrabold mt-1">0</div>
             </div>
           </div>
@@ -59,7 +62,7 @@
 
         <div class="px-6 py-5 bg-white">
           <p class="text-sm text-gray-500" data-i18n="account_hero_desc">
-            Menaxho të dhënat e profilit, kreditë dhe sigurinë e llogarisë tënde.
+            Menaxho te dhenat e profilit, kredite dhe sigurine e llogarise tende.
           </p>
         </div>
       </div>
@@ -72,7 +75,7 @@
             <div class="flex items-center justify-between mb-5">
               <div>
                 <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="account_profile_title">Profili im</h2>
-                <p class="text-sm text-gray-500 mt-1" data-i18n="account_profile_desc">Përditëso informacionet personale.</p>
+                <p class="text-sm text-gray-500 mt-1" data-i18n="account_profile_desc">Perditeso informacionet personale.</p>
               </div>
             </div>
 
@@ -117,7 +120,7 @@
           <div class="glass-card rounded-3xl shadow-xl border border-white/60 p-6 md:p-7">
             <div class="mb-5">
               <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="account_security_title">Siguria</h2>
-              <p class="text-sm text-gray-500 mt-1" data-i18n="account_security_desc">Ndrysho password-in e llogarisë.</p>
+              <p class="text-sm text-gray-500 mt-1" data-i18n="account_security_desc">Ndrysho password-in e llogarise.</p>
             </div>
 
             <div class="grid grid-cols-1 gap-4">
@@ -155,11 +158,11 @@
         <!-- Right column -->
         <div class="space-y-6">
           <!-- Credits card -->
-          <div class="glass-card rounded-3xl shadow-xl border border-white/60 p-6">
+          <div class="rounded-3xl shadow-xl border border-green-100 bg-gradient-to-br from-white to-green-50 p-6">
             <div class="text-sm font-bold text-blue-600 uppercase tracking-wider" data-i18n="account_credits_label">EasyFix Credits</div>
-            <h3 class="text-2xl font-extrabold text-gray-900 mt-2" data-i18n="account_buy_credits_title">Blej më shumë kredi</h3>
+            <h3 class="text-2xl font-extrabold text-gray-900 mt-2" data-i18n="account_buy_credits_title">Blej me shume kredi</h3>
             <p class="text-sm text-gray-500 mt-2" data-i18n="account_buy_credits_desc">
-              Përdori kreditë për me kontaktu mjeshtrat direkt nga platforma.
+              Perdori kredite per te kontaktuar mjeshtrat direkt nga platforma.
             </p>
 
             <a href="/buy-credits.html"
@@ -170,8 +173,8 @@
           </div>
 
           <!-- Account summary -->
-          <div class="glass-card rounded-3xl shadow-xl border border-white/60 p-6">
-            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="account_summary">Përmbledhje</div>
+          <div class="rounded-3xl shadow-xl border border-gray-100 bg-white p-6">
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="account_summary">Permbledhje</div>
 
             <div class="mt-4 space-y-4">
               <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
@@ -187,9 +190,9 @@
           </div>
 
           <!-- Logout -->
-          <div class="glass-card rounded-3xl shadow-xl border border-white/60 p-6">
+          <div class="rounded-3xl shadow-xl border border-red-100 bg-gradient-to-br from-white to-red-50 p-6">
             <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="account_session">Sesioni</div>
-            <p class="text-sm text-gray-500 mt-2" data-i18n="account_session_desc">Dil nga llogaria jote në këtë pajisje.</p>
+            <p class="text-sm text-gray-500 mt-2" data-i18n="account_session_desc">Dil nga llogaria jote ne kete pajisje.</p>
 
             <button id="logoutBtn"
               class="mt-5 w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-2xl font-bold shadow-lg shadow-red-100 transition"
@@ -207,24 +210,19 @@ const { applyTranslations, getLang, t } = window.EASYFIX_I18N;
 applyTranslations(document);
 document.documentElement.setAttribute("lang", getLang());
 
-const API_URL = "https://easyfix.onrender.com";
-
-function getUser() {
-  return JSON.parse(localStorage.getItem("easyfix_user"));
-}
-
-function setUser(user) {
-  localStorage.setItem("easyfix_user", JSON.stringify(user));
-}
+const API_URL = window.EASYFIX_CONFIG.API_URL;
+const { pagePath, goToPage } = window.EASYFIX_CONFIG;
+const { getUser, setUser, clearUser, apiFetch, translateApiError } = window.EASYFIX_AUTH;
+document.getElementById("backHomeLink").href = pagePath("index.html");
 
 const currentUser = getUser();
 
 if (!currentUser || !currentUser.id) {
-  window.location.href = "/auth.html";
+  goToPage("auth.html");
 }
 
 if (currentUser.role === "pro") {
-  window.location.href = "/pro-dashboard.html";
+  goToPage("pro-dashboard.html");
 }
 
 function showError(msg) {
@@ -254,21 +252,41 @@ function showPasswordStatus(msg, isError = false) {
     : "text-sm font-semibold mt-4 text-green-600";
 }
 
+function validateProfileFields(name, surname, address) {
+  if (!name || !surname || !address) {
+    return t("msg_fill_all");
+  }
+
+  if (String(name).trim().length < 2) {
+    return "Emri duhet te kete te pakten 2 karaktere.";
+  }
+
+  if (String(surname).trim().length < 2) {
+    return "Mbiemri duhet te kete te pakten 2 karaktere.";
+  }
+
+  if (String(address).trim().length < 5) {
+    return "Adresa duhet te kete te pakten 5 karaktere.";
+  }
+
+  return "";
+}
+
 async function loadAccount() {
   const user = getUser();
 
   if (!user || !user.id) {
-    window.location.href = "/auth.html";
+    goToPage("auth.html");
     return;
   }
 
   try {
-    const res = await fetch(`${API_URL}/user/me/${user.id}`);
+    const res = await apiFetch(`${API_URL}/user/me/${user.id}`);
     const data = await res.json();
 
     if (!res.ok || !data.success) {
-      localStorage.removeItem("easyfix_user");
-      window.location.href = "/auth.html";
+      clearUser();
+      goToPage("auth.html");
       return;
     }
 
@@ -285,7 +303,7 @@ async function loadAccount() {
 
     setUser({
       ...user,
-      id: data.user.id,
+      id: data.user.id || data.user._id,
       name: data.user.name,
       surname: data.user.surname,
       address: data.user.address,
@@ -305,7 +323,7 @@ async function saveProfile() {
   const user = getUser();
 
   if (!user || !user.id) {
-    window.location.href = "/auth.html";
+    goToPage("auth.html");
     return;
   }
 
@@ -313,8 +331,9 @@ async function saveProfile() {
   const surname = document.getElementById("surname").value.trim();
   const address = document.getElementById("address").value.trim();
 
-  if (!name || !surname || !address) {
-    showStatus(t("msg_fill_all"), true);
+  const profileError = validateProfileFields(name, surname, address);
+  if (profileError) {
+    showStatus(profileError, true);
     return;
   }
 
@@ -323,7 +342,7 @@ async function saveProfile() {
   saveBtn.innerText = t("account_saving");
 
   try {
-    const res = await fetch(`${API_URL}/user/me/${user.id}`, {
+    const res = await apiFetch(`${API_URL}/user/me/${user.id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json"
@@ -338,13 +357,18 @@ async function saveProfile() {
     const data = await res.json();
 
     if (!res.ok || !data.success) {
-      showStatus(data.error_code || t("account_save_error"), true);
+      if (data.error_code === "INVALID_FIELDS") {
+        showStatus("Kontrollo emrin, mbiemrin dhe adresen. Adresa duhet te kete te pakten 5 karaktere.", true);
+        return;
+      }
+
+      showStatus(translateApiError(data.error_code, "account_save_error"), true);
       return;
     }
 
     setUser({
       ...user,
-      id: data.user.id,
+      id: data.user.id || data.user._id,
       name: data.user.name,
       surname: data.user.surname,
       address: data.user.address,
@@ -371,7 +395,7 @@ async function changePassword() {
   const user = getUser();
 
   if (!user || !user.id) {
-    window.location.href = "/auth.html";
+    goToPage("auth.html");
     return;
   }
 
@@ -399,7 +423,7 @@ async function changePassword() {
   btn.innerText = t("account_changing_password");
 
   try {
-    const res = await fetch(`${API_URL}/user/password/${user.id}`, {
+    const res = await apiFetch(`${API_URL}/user/password/${user.id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json"
@@ -413,7 +437,7 @@ async function changePassword() {
     const data = await res.json();
 
     if (!res.ok || !data.success) {
-      showPasswordStatus(data.error_code || t("account_password_change_error"), true);
+      showPasswordStatus(translateApiError(data.error_code, "account_password_change_error"), true);
       return;
     }
 
@@ -433,9 +457,12 @@ async function changePassword() {
 
 document.getElementById("saveBtn").addEventListener("click", saveProfile);
 
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  localStorage.removeItem("easyfix_user");
-  window.location.href = "/auth.html";
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  clearUser();
+  try {
+    await apiFetch(`${API_URL}/auth/logout`, { method: "POST" });
+  } catch {}
+  goToPage("auth.html");
 });
 
 document.getElementById("changePasswordBtn").addEventListener("click", changePassword);
@@ -445,3 +472,4 @@ loadAccount();
 
 </body>
 </html>
+

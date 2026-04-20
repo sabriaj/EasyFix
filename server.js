@@ -1,4 +1,5 @@
-// server.js (FINAL - 4 months free trial + reminder emails + paid reminder/expired emails + pay-now flow + delete after 180 days + EMAIL OTP VERIFY + GEO FIX + DATA DELETION FIX + MULTI CATEGORY + STUB FILTER + TRIAL ONCE)
+// Main backend entrypoint. Legacy trial-era compatibility still exists in some fields/routes,
+// but the live model is free listings plus optional premium upgrades.
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -8,9 +9,61 @@ import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { Resend } from "resend";
 import bcrypt from "bcrypt";
+import { createRequireAdmin } from "./lib/admin-auth.js";
+import { registerAdminRoutes } from "./lib/admin-routes.js";
+import { createRequireUserSession, requireRole } from "./lib/auth.js";
+import {
+  isFirmVisibleStatus,
+  isRealFirmRecord,
+  unlockFirmContact
+} from "./lib/contact-unlock.js";
+import { sendError } from "./lib/http.js";
+import { registerOwnerRoutes } from "./lib/owner-routes.js";
+import { registerPayNowRoutes } from "./lib/pay-now-routes.js";
+import { runCleanup as runCleanupMaintenance } from "./lib/maintenance.js";
+import { processPaymentWebhook } from "./lib/payment-webhook.js";
+import { applyCategoryPlanLimit, parseCategoriesFromBody } from "./lib/plan-helpers.js";
+import { createPaymentVariantHelpers } from "./lib/payment-variants.js";
+import { createRateLimiter, getRateLimitClientIp } from "./lib/rate-limit.js";
+import {
+  appendResponseCookie,
+  COOKIE_NAMES,
+  getCookieValue,
+  serializeCookie
+} from "./lib/cookies.js";
+import {
+  normalizeEmail,
+  hasText,
+  isValidEmail,
+  isValidObjectId,
+  validateNameLike,
+  validateAddressLike,
+  validatePasswordValue,
+  validateDescriptionValue
+} from "./lib/validation.js";
 dotenv.config();
 
 const app = express();
+const jsonBodyParser = express.json();
+const FRONTEND_ORIGIN = (() => {
+  try {
+    return new URL(String(process.env.FRONTEND_BASE_URL || "https://easyfix.services/")).origin;
+  } catch {
+    return "https://easyfix.services";
+  }
+})();
+const COOKIE_SECURE = FRONTEND_ORIGIN.startsWith("https://");
+const COOKIE_SAME_SITE = COOKIE_SECURE ? "None" : "Lax";
+const allowedOrigins = new Set([
+  FRONTEND_ORIGIN,
+  "https://sabriaj.github.io",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:4173",
+  "http://127.0.0.1:4173",
+  "http://localhost:5500",
+  "http://127.0.0.1:5500"
+]);
 
 /* ================= CORS (FIXED for x-lang + preflight) ================= */
 /*
@@ -19,7 +72,13 @@ const app = express();
 */
 /* ================= CORS (FIXED for x-lang + preflight) ================= */
 const corsOptions = {
-  origin: true,
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.has(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-lang"],
   optionsSuccessStatus: 204,
@@ -29,6 +88,76 @@ const corsOptions = {
 app.use(cors(corsOptions));
 // Express v5 s'e pranon "*" si path, prandaj regex:
 app.options(/.*/, cors(corsOptions));
+
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "geolocation=(self), camera=(), microphone=()");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+
+  const csp = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://app.lemonsqueezy.com",
+    "connect-src 'self' https:",
+    "frame-src https://app.lemonsqueezy.com",
+    "form-action 'self' https://app.lemonsqueezy.com"
+  ].join("; ");
+
+  res.setHeader("Content-Security-Policy", csp);
+  next();
+});
+
+function appendCookie(res, name, value, maxAgeSeconds) {
+  appendResponseCookie(res, serializeCookie(name, value, {
+    httpOnly: true,
+    secure: COOKIE_SECURE,
+    sameSite: COOKIE_SAME_SITE,
+    path: "/",
+    maxAge: maxAgeSeconds
+  }));
+}
+
+function clearCookie(res, name) {
+  appendResponseCookie(res, serializeCookie(name, "", {
+    httpOnly: true,
+    secure: COOKIE_SECURE,
+    sameSite: COOKIE_SAME_SITE,
+    path: "/",
+    expires: new Date(0),
+    maxAge: 0
+  }));
+}
+
+function appendUserSessionCookie(res, token) {
+  appendCookie(res, COOKIE_NAMES.userSession, token, 60 * 60 * 24 * 30);
+}
+
+function appendAdminSessionCookie(res, token) {
+  appendCookie(res, COOKIE_NAMES.adminSession, token, 60 * 60 * 8);
+}
+
+function appendOwnerSessionCookie(res, tokenHash, expiresAt) {
+  const ttlSeconds = Math.max(60, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
+  appendCookie(res, COOKIE_NAMES.ownerSession, tokenHash, ttlSeconds);
+}
+
+function appendPaySessionCookie(res, tokenHash, expiresAt) {
+  const ttlSeconds = Math.max(60, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
+  appendCookie(res, COOKIE_NAMES.paySession, tokenHash, ttlSeconds);
+}
+
+function appendDeleteSessionCookie(res, tokenHash, expiresAt) {
+  const ttlSeconds = Math.max(60, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
+  appendCookie(res, COOKIE_NAMES.deleteSession, tokenHash, ttlSeconds);
+}
 
 
 
@@ -61,8 +190,6 @@ const LEMON_WEBHOOK_SECRET = process.env.LEMON_WEBHOOK_SECRET || "";
 const LEMON_API_KEY = process.env.LEMON_API_KEY || "";
 const LEMON_STORE_ID = String(process.env.LEMON_STORE_ID || "");
 
-const VARIANT_BASIC = String(process.env.VARIANT_BASIC || "");
-const VARIANT_STANDARD = String(process.env.VARIANT_STANDARD || "");
 const VARIANT_PREMIUM = String(process.env.VARIANT_PREMIUM || "");
 
 /*===============variantat per credit ============== */
@@ -123,10 +250,6 @@ function uploadBufferToCloudinary(buffer, folder = "easyfix") {
 }
 
 /* ================= HELPERS ================= */
-function normalizeEmail(e) {
-  return String(e || "").trim().toLowerCase();
-}
-
 function sha256Hex(s) {
   return crypto.createHash("sha256").update(String(s)).digest("hex");
 }
@@ -157,15 +280,6 @@ function normalizePhone(raw) {
   if (digits.length === 9 && digits.startsWith("0")) return "+389" + digits.slice(1);
 
   return null;
-}
-
-/* ===== API ERROR HELPER ===== */
-function sendError(res, status, code, extra = {}) {
-  return res.status(status).json({
-    success: false,
-    error_code: code,
-    ...extra,
-  });
 }
 
 /* ===== OTP HELPERS ===== */
@@ -285,7 +399,7 @@ deleted_at: Date,
   { timestamps: true }
 );
 
-// Index për /firms dhe admin filters
+// Index per /firms dhe admin filters
 firmaSchema.index({ payment_status: 1, country: 1, plan: 1, createdAt: -1 });
 
 // Partial 2dsphere index - only index docs that have valid coordinates
@@ -296,7 +410,7 @@ firmaSchema.index(
 
 const Firma = mongoose.model("Firma", firmaSchema);
 
-/* ===== TRIAL USAGE (trial only once per email) ===== */
+/* ===== LEGACY TRIAL USAGE COMPATIBILITY ===== */
 const trialUsageSchema = new mongoose.Schema(
   {
     email: { type: String, unique: true, required: true, index: true },
@@ -307,402 +421,129 @@ const trialUsageSchema = new mongoose.Schema(
 );
 const TrialUsage = mongoose.model("TrialUsage", trialUsageSchema);
 
+const webhookReceiptSchema = new mongoose.Schema(
+  {
+    event_key: { type: String, unique: true, required: true, index: true },
+    event_name: { type: String, required: true },
+    processed_at: { type: Date, default: Date.now },
+  },
+  { timestamps: true }
+);
+const WebhookReceipt = mongoose.model("WebhookReceipt", webhookReceiptSchema);
+
 /* ================= PLAN RULES ================= */
 const planPhotoLimit = { free: 3, premium: 10 };
-const planCategoryLimit = { free: 2, premium: 7 };
+const { planToVariant, creditsPackToVariant, variantToCredits } = createPaymentVariantHelpers({
+  premiumVariant: VARIANT_PREMIUM,
+  credits1Variant: VARIANT_CREDITS_1,
+  credits5Variant: VARIANT_CREDITS_5,
+  credits10Variant: VARIANT_CREDITS_10
+});
 
-/* ================= CATEGORY HELPERS ================= */
-function normalizeCategoryKey(raw) {
-  return String(raw || "").trim().toLowerCase();
-}
+const authRateLimiter = createRateLimiter({
+  sendError,
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  getKey: (req) => getRateLimitClientIp(req),
+  errorCode: "AUTH_RATE_LIMIT"
+});
 
-function parseCategoriesFromBody(body) {
-  const b = body || {};
-  let v = b.categories ?? b.category ?? null;
+const emailOtpStartLimiter = createRateLimiter({
+  sendError,
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  getKey: (req) => `${getRateLimitClientIp(req)}:${normalizeEmail(req.body?.email) || "no-email"}`,
+  errorCode: "OTP_START_RATE_LIMIT"
+});
 
-  if (v == null) return [];
+const emailOtpVerifyLimiter = createRateLimiter({
+  sendError,
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+  getKey: (req) => `${getRateLimitClientIp(req)}:${normalizeEmail(req.body?.email) || "no-email"}`,
+  errorCode: "OTP_VERIFY_RATE_LIMIT"
+});
 
-  if (Array.isArray(v)) {
-    return v.map(normalizeCategoryKey).filter(Boolean);
-  }
+const emailActionLimiter = createRateLimiter({
+  sendError,
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  getKey: (req) => `${getRateLimitClientIp(req)}:${normalizeEmail(req.body?.email) || "no-email"}`,
+  errorCode: "EMAIL_ACTION_RATE_LIMIT"
+});
 
-  const s = String(v).trim();
-  if (!s) return [];
+const contactLimiter = createRateLimiter({
+  sendError,
+  windowMs: 5 * 60 * 1000,
+  max: 20,
+  getKey: (req) => `${getRateLimitClientIp(req)}:${String(req.authUser?._id || req.body?.userId || "anon")}`,
+  errorCode: "CONTACT_RATE_LIMIT"
+});
 
-  if (s.startsWith("[") && s.endsWith("]")) {
-    try {
-      const arr = JSON.parse(s);
-      if (Array.isArray(arr)) return arr.map(normalizeCategoryKey).filter(Boolean);
-    } catch {}
-  }
-
-  if (s.includes(",")) {
-    return s.split(",").map(normalizeCategoryKey).filter(Boolean);
-  }
-
-  return [normalizeCategoryKey(s)].filter(Boolean);
-}
-
-function applyCategoryPlanLimit(categories, plan) {
-  const p = String(plan || "").toLowerCase();
-  const max = planCategoryLimit[p] ?? 1;
-
-  const out = [];
-  const seen = new Set();
-  for (const c of (categories || [])) {
-    const k = normalizeCategoryKey(c);
-    if (!k) continue;
-    if (seen.has(k)) continue;
-    seen.add(k);
-    out.push(k);
-  }
-
-  return out.slice(0, max);
-}
-
-function detectPlanFromVariant(variantId) {
-  const v = String(variantId || "");
-  if (v && v === VARIANT_PREMIUM) return "premium";
-  return null;
-}
-
-function planToVariant(plan) {
-  if (plan === "premium") return VARIANT_PREMIUM;
-  return null;
-}
-
-/* ================= helper per credit page ================= */
-function creditsPackToVariant(pack) {
-  const p = Number(pack);
-
-  if (p === 1) return VARIANT_CREDITS_1;
-  if (p === 5) return VARIANT_CREDITS_5;
-  if (p === 10) return VARIANT_CREDITS_10;
-
-  return null;
-}
-
-function variantToCredits(variantId) {
-  const v = String(variantId || "");
-
-  if (v === VARIANT_CREDITS_1) return 1;
-  if (v === VARIANT_CREDITS_5) return 5;
-  if (v === VARIANT_CREDITS_10) return 10;
-
-  return 0;
-}
+const adminRouteLimiter = createRateLimiter({
+  sendError,
+  windowMs: 5 * 60 * 1000,
+  max: 120,
+  getKey: (req) => getRateLimitClientIp(req),
+  errorCode: "ADMIN_RATE_LIMIT"
+});
 
 /* ================= ADMIN AUTH ================= */
 const ADMIN_KEY = String(process.env.ADMIN_KEY || "").trim();
+const requireAdmin = createRequireAdmin({ adminKey: ADMIN_KEY, sendError });
 
-function requireAdmin(req, res, next) {
+/* ================= JSON (SKIP WEBHOOK RAW BODY) ================= */
+app.use((req, res, next) => {
+  if (req.path === "/webhook") {
+    return next();
+  }
+  return jsonBodyParser(req, res, next);
+});
+
+/* ================= ADMIN SESSION ================= */
+app.post("/admin/session", adminRouteLimiter, async (req, res) => {
   try {
+    const adminKey = String(req.body?.adminKey || "").trim();
+
     if (!ADMIN_KEY) {
       return res.status(500).json({ success: false, error: "ADMIN_KEY is not configured on server" });
     }
-    const auth = String(req.headers.authorization || "");
-    const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
-    if (!token || token !== ADMIN_KEY) {
+
+    if (!adminKey || adminKey !== ADMIN_KEY) {
+      clearCookie(res, COOKIE_NAMES.adminSession);
       return res.status(401).json({ success: false, error: "Unauthorized" });
     }
-    next();
-  } catch {
-    return res.status(500).json({ success: false, error: "Admin auth error" });
-  }
-}
 
-/* ================= ADMIN: STATS ================= */
-app.get("/admin/stats", requireAdmin, async (req, res) => {
-  try {
-    // Count only "real firms" (name exists) by default - FIXED
-    const base = { name: { $exists: true, $nin: [null, ""] } };
-    const total = await Firma.countDocuments(base);
-    const active = await Firma.countDocuments({ ...base, payment_status: "active" });
-    const premium = await Firma.countDocuments({ ...base, plan: "premium" });
-    const free = await Firma.countDocuments({ ...base, plan: "free" });
-
-return res.json({
-  success: true,
-  stats: { total, active, premium, free },
-});
-  } catch (err) {
-    errorWithTime("ADMIN STATS ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-/* ================= ADMIN: DELETE FIRM ================= */
-app.delete("/admin/firms/:id", requireAdmin, async (req, res) => {
-  try {
-    const id = String(req.params.id || "").trim();
-    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
-
-    const deleted = await Firma.findByIdAndDelete(id).lean();
-    if (!deleted) return res.status(404).json({ success: false, error: "Not found" });
-
+    appendAdminSessionCookie(res, ADMIN_KEY);
     return res.json({ success: true });
   } catch (err) {
-    errorWithTime("ADMIN DELETE ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
+    errorWithTime("ADMIN SESSION ERROR:", err);
+    return sendError(res, 500, "ADMIN_AUTH_ERROR");
   }
 });
 
-/* ================= ADMIN: EXPIRE ================= */
-app.post("/admin/firms/:id/expire", requireAdmin, async (req, res) => {
-  try {
-    const id = String(req.params.id || "").trim();
-    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
-
-    const nowD = new Date();
-
-    const updated = await Firma.findByIdAndUpdate(
-  id,
-  {
-    $set: {
-      payment_status: "active",
-      plan: "free",
-      is_boosted: false,
-      boost_expires_at: null,
-      expires_at: nowD
-    }
-  },
-  { new: true }
-).lean();
-
-    if (!updated) return res.status(404).json({ success: false, error: "Not found" });
-
-    return res.json({ success: true, firm: updated });
-  } catch (err) {
-    errorWithTime("ADMIN EXPIRE ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
+app.post("/admin/logout", (_req, res) => {
+  clearCookie(res, COOKIE_NAMES.adminSession);
+  return res.json({ success: true });
 });
 
-/* ================= ADMIN: MARK PAID ================= */
-app.post("/admin/firms/:id/mark-paid", requireAdmin, async (req, res) => {
-  try {
-    const id = String(req.params.id || "").trim();
-    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
 
-    const daysRaw = req.body?.days;
-    let days = Number(daysRaw);
-    if (!Number.isFinite(days) || days <= 0) days = 30;
-    days = Math.min(3650, Math.max(1, Math.floor(days)));
 
-    const nowD = new Date();
-    const expires = new Date(nowD.getTime() + days * 24 * 60 * 60 * 1000);
-
-    const updated = await Firma.findByIdAndUpdate(
-      id,
-      {
-        $set: {
-  payment_status: "active",
-  plan: "premium",
-  is_boosted: true,
-  boost_expires_at: expires,
-  paid_at: nowD,
-  expires_at: expires,
-  deleted_at: null
-},
-      },
-      { new: true }
-    ).lean();
-
-    if (!updated) return res.status(404).json({ success: false, error: "Not found" });
-
-    return res.json({ success: true, firm: updated });
-  } catch (err) {
-    errorWithTime("ADMIN MARK-PAID ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
+registerAdminRoutes({
+  app,
+  adminRouteLimiter,
+  requireAdmin,
+  Firma,
+  sendMail,
+  normalizeEmail,
+  runCleanup,
+  errorWithTime,
+  normalizePhone,
+  normalizeCountry,
+  parseCategoriesFromBody,
+  applyCategoryPlanLimit
 });
 
-/* ================= ADMIN: TEST EMAIL ================= */
-app.post("/admin/test-email", requireAdmin, async (req, res) => {
-  try {
-    const to = normalizeEmail(req.body?.to);
-    if (!to) return res.status(400).json({ success: false, error: "Missing to" });
-    await sendMail({
-      to,
-      subject: "EasyFix - Test Email",
-      text: "Ky është test email nga EasyFix (Resend).",
-      html: "<p>Ky është <b>test email</b> nga EasyFix (Resend).</p>",
-    });
-    return res.json({ success: true });
-  } catch (err) {
-    errorWithTime("ADMIN TEST EMAIL ERROR:", err);
-    return res.status(500).json({ success: false, error: String(err?.message || err) });
-  }
-});
-
-/* ================= ADMIN: RUN SCHEDULER NOW ================= */
-app.post("/admin/run-scheduler", requireAdmin, async (req, res) => {
-  try {
-    await runCleanup();
-    return res.json({ success: true });
-  } catch (err) {
-    errorWithTime("ADMIN RUN SCHEDULER ERROR:", err);
-    return res.status(500).json({ success: false, error: String(err?.message || err) });
-  }
-});
-
-/* ================= ADMIN: MIGRATE LEGACY FIRMS ================= */
-app.post("/admin/migrate-legacy-firms", requireAdmin, async (req, res) => {
-  try {
-    const firms = await Firma.find({
-  name: { $exists: true, $nin: [null, ""] },
-  is_stub: { $ne: true }
-}).select("_id plan payment_status is_boosted boost_expires_at name").lean();
-
-    let updatedCount = 0;
-
-    for (const firm of firms) {
-      const oldPlan = String(firm.plan || "").toLowerCase();
-      const oldStatus = String(firm.payment_status || "").toLowerCase();
-
-      const update = {};
-
-      // krejt firmat reale i kalojmë në logjikën e re aktive
-      if (["pending", "paid", "trial", "expired", "active", ""].includes(oldStatus)) {
-        update.payment_status = "active";
-      }
-
-      // planet e vjetra -> planet e reja
-      if (oldPlan === "premium") {
-        update.plan = "premium";
-        update.is_boosted = true;
-      } else {
-        update.plan = "free";
-        update.is_boosted = false;
-        update.boost_expires_at = null;
-      }
-
-      if (Object.keys(update).length > 0) {
-        await Firma.updateOne({ _id: firm._id }, { $set: update });
-        updatedCount++;
-      }
-    }
-
-    return res.json({
-      success: true,
-      updatedCount
-    });
-  } catch (err) {
-    errorWithTime("ADMIN MIGRATE LEGACY FIRMS ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-/* ================= ADMIN: LIST FIRMS ================= */
-app.get("/admin/firms", requireAdmin, async (req, res) => {
-  try {
-    const status = String(req.query.status || "all").toLowerCase();
-    const plan = String(req.query.plan || "all").toLowerCase();
-    const country = String(req.query.country || "all").toUpperCase();
-    const search = String(req.query.search || "").trim().toLowerCase();
-    const includeStubs = String(req.query.include_stubs || "") === "1";
-
-    const q = {};
-    if (status !== "all") q.payment_status = status;
-    if (plan !== "all") q.plan = plan;
-    if (country !== "ALL") q.country = country;
-
-    let firms = await Firma.find(q).select("-__v").sort({ createdAt: -1 }).lean();
-
-    // ✅ Hide OTP stubs by default (they have no name)
-    if (!includeStubs) {
-      firms = firms.filter(f => String(f?.name || "").trim().length > 0);
-    }
-
-    if (search) {
-      firms = firms.filter(f => {
-        const hay = [
-          f.name,
-          f.email,
-          f.phone,
-          f.category,
-          (Array.isArray(f.categories) ? f.categories.join(",") : ""),
-          f.address,
-          f.city,
-          f.country
-        ].map(x => String(x || "").toLowerCase()).join(" | ");
-        return hay.includes(search);
-      });
-    }
-
-    return res.json({ success: true, firms });
-  } catch (err) {
-    errorWithTime("ADMIN FIRMS ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-/* ================= ADMIN: UPDATE FIRM ================= */
-app.put("/admin/firms/:id", requireAdmin, async (req, res) => {
-  try {
-    const id = String(req.params.id || "").trim();
-    if (!id) return res.status(400).json({ success: false, error: "Missing id" });
-
-    const patch = {};
-    const allow = ["name", "phone", "address", "city", "category", "categories", "plan", "country", "payment_status", "expires_at", "trial_ends_at"];
-    for (const k of allow) {
-      if (req.body?.[k] !== undefined) patch[k] = req.body[k];
-    }
-
-    if (patch.phone !== undefined) {
-      const phoneNorm = normalizePhone(patch.phone);
-      if (!phoneNorm) return res.status(400).json({ success: false, error: "Invalid phone" });
-      patch.phone = phoneNorm;
-    }
-
-    if (patch.plan !== undefined) {
-      const p = String(patch.plan || "").toLowerCase();
-      if (!["free", "premium"].includes(p)) {
-        return res.status(400).json({ success: false, error: "Invalid plan" });
-      }
-      patch.plan = p;
-    }
-
-    if (patch.payment_status !== undefined) {
-      const s = String(patch.payment_status || "").toLowerCase();
-      if (!["active", "expired"].includes(s)) {
-        return res.status(400).json({ success: false, error: "Invalid payment_status" });
-      }
-      patch.payment_status = s;
-    }
-
-    if (patch.country !== undefined) {
-      patch.country = normalizeCountry(patch.country);
-    }
-
-    // ✅ categories admin patch
-    if (patch.categories !== undefined || patch.category !== undefined) {
-      let effectivePlan = patch.plan;
-      if (!effectivePlan) {
-        const existing = await Firma.findById(id).select("plan").lean();
-        effectivePlan = String(existing?.plan || "free").toLowerCase();
-      }
-
-      const parsed = parseCategoriesFromBody({
-        categories: patch.categories,
-        category: patch.category
-      });
-
-      const limited = applyCategoryPlanLimit(parsed, effectivePlan);
-
-      patch.categories = limited.length ? limited : undefined;
-      patch.category = limited[0] || (patch.category ? String(patch.category) : null);
-    }
-
-    const updated = await Firma.findByIdAndUpdate(id, { $set: patch }, { new: true }).select("-__v").lean();
-    if (!updated) return res.status(404).json({ success: false, error: "Not found" });
-
-    return res.json({ success: true, firm: updated });
-  } catch (err) {
-    errorWithTime("ADMIN UPDATE ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
 
 /* ================= CREATE CHECKOUT (LEMON API) ================= */
 async function createLemonCheckout({ variantId, email, firmId }) {
@@ -752,174 +593,25 @@ async function createLemonCheckout({ variantId, email, firmId }) {
 /* ================= WEBHOOK (RAW BODY) ================= */
 app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
-    let signature = req.headers["x-signature"] || req.headers["x-signature-256"] || "";
-    signature = String(signature || "").trim();
-
-    const hmac = crypto
-      .createHmac("sha256", LEMON_WEBHOOK_SECRET)
-      .update(req.body)
-      .digest("hex");
-
-    if (signature.startsWith("sha256=")) signature = signature.slice(7);
-
-    if (!signature || signature !== hmac) {
-      log("❌ Invalid signature", { received: signature, computed: hmac });
-      return res.status(400).send("Invalid signature");
-    }
-
-    const payload = JSON.parse(req.body.toString());
-    const event = payload?.meta?.event_name || payload?.event || "unknown";
-
-    const emailRaw =
-      payload?.data?.attributes?.checkout_data?.custom?.email ||
-      payload?.data?.attributes?.checkout_data?.email ||
-      payload?.data?.attributes?.user_email ||
-      payload?.data?.attributes?.customer_email ||
-      null;
-
-    const email = normalizeEmail(emailRaw);
-
-    const variantId =
-      payload?.data?.attributes?.first_order_item?.variant_id ||
-      payload?.data?.attributes?.variant_id ||
-      payload?.data?.attributes?.subscription?.variant_id ||
-      null;
-
-    const firmIdRaw =
-      payload?.meta?.custom_data?.firmId ||
-      payload?.data?.attributes?.checkout_data?.custom?.firmId ||
-      payload?.data?.attributes?.checkout_data?.custom?.firm_id ||
-      null;
-
-    const firmId = firmIdRaw ? String(firmIdRaw) : null;
-    const detectedPlan = detectPlanFromVariant(variantId);
-
-    const userIdRaw =
-      payload?.meta?.custom_data?.userId ||
-      payload?.data?.attributes?.checkout_data?.custom?.userId ||
-      null;
-
-    const creditPackRaw =
-      payload?.meta?.custom_data?.creditPack ||
-      payload?.data?.attributes?.checkout_data?.custom?.creditPack ||
-      null;
-
-    const userId = userIdRaw ? String(userIdRaw) : null;
-    const creditPack = Number(creditPackRaw || 0);
-    const creditAmountFromVariant = variantToCredits(variantId);
-    const finalCreditsToAdd = creditAmountFromVariant || creditPack;
-
-    log("🔔 Webhook", {
-      event,
-      email,
-      variantId,
-      detectedPlan,
-      firmId,
-      userId,
-      finalCreditsToAdd
+    const result = await processPaymentWebhook({
+      rawBody: req.body,
+      signature: req.headers["x-signature"] || req.headers["x-signature-256"] || "",
+      webhookSecret: LEMON_WEBHOOK_SECRET,
+      sha256Hex,
+      WebhookReceipt,
+      normalizeEmail,
+      variantToCredits,
+      User,
+      Firma,
+      log
     });
 
-    // ================= ORDER CREATED =================
-    // Lemon te ti po përdoret me order_created si event kryesor
-    if (event === "order_created") {
-      // 1) CREDITS for client
-      if (userId && finalCreditsToAdd > 0) {
-        const updatedUser = await User.findByIdAndUpdate(
-          userId,
-          { $inc: { credits: finalCreditsToAdd } },
-          { new: true }
-        );
-
-        if (!updatedUser) {
-          log("⚠️ Credits webhook but user not found", { userId, finalCreditsToAdd });
-        } else {
-          log("✅ Credits added:", {
-            userId: updatedUser._id,
-            email: updatedUser.email,
-            added: finalCreditsToAdd,
-            total: updatedUser.credits
-          });
-        }
-
-        return res.status(200).send("OK");
-      }
-
-      // 2) PREMIUM for firm
-      if (firmId || email) {
-        const premiumEnds = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-        const update = {
-          payment_status: "active",
-          plan: "premium",
-          is_boosted: true,
-          boost_expires_at: premiumEnds,
-          paid_at: new Date(),
-          expires_at: premiumEnds,
-          deleted_at: null,
-        };
-
-        let updated = null;
-
-        if (firmId) {
-          updated = await Firma.findByIdAndUpdate(firmId, { $set: update }, { new: true });
-        } else if (email) {
-          updated = await Firma.findOneAndUpdate(
-            { email },
-            { $set: update },
-            { upsert: false, new: true }
-          );
-        }
-
-        if (!updated) {
-          log("⚠️ Premium webhook but firm not found", { firmId, email });
-        } else {
-          log("✅ Firm upgraded to premium:", {
-            id: updated._id,
-            email: updated.email,
-            plan: updated.plan
-          });
-        }
-
-        return res.status(200).send("OK");
-      }
-
-      return res.status(200).send("No matching target");
-    }
-
-    // ================= DOWNGRADE EVENTS =================
-    if (event === "subscription_cancelled" || event === "subscription_expired" || event === "order_refunded") {
-      if (firmId) {
-        await Firma.findByIdAndUpdate(firmId, {
-          $set: {
-            payment_status: "active",
-            plan: "free",
-            is_boosted: false,
-            boost_expires_at: null
-          }
-        });
-      } else if (email) {
-        await Firma.findOneAndUpdate({ email }, {
-          $set: {
-            payment_status: "active",
-            plan: "free",
-            is_boosted: false,
-            boost_expires_at: null
-          }
-        });
-      }
-
-      return res.status(200).send("OK");
-    }
-
-    return res.status(200).send("Ignored");
+    return res.status(result.status).send(result.text);
   } catch (err) {
     errorWithTime("WEBHOOK ERROR:", err);
     return res.status(500).send("Webhook error");
   }
 });
-
-/* ================= JSON (AFTER WEBHOOK) ================= */
-app.use(express.json());
 
 
 /* ================= CONTACT UNLOCKS ================= */
@@ -968,9 +660,11 @@ const User = mongoose.model("User", userSchema);
 
 const SALT = 10;
 
+const requireUserSession = createRequireUserSession({ User, sendError, errorWithTime });
+
 
 /* ================= USER SIGNUP (CLIENT) ================= */
-app.post("/user/signup", async (req, res) => {
+app.post("/user/signup", authRateLimiter, async (req, res) => {
   try {
     let { name, surname, address, email, password } = req.body;
 
@@ -984,7 +678,15 @@ app.post("/user/signup", async (req, res) => {
       return sendError(res, 400, "PLOTESO_TEDHENAT");
     }
 
-    if (password.length < 6) {
+    if (!validateNameLike(name) || !validateNameLike(surname) || !validateAddressLike(address)) {
+      return sendError(res, 400, "INVALID_FIELDS");
+    }
+
+    if (!isValidEmail(email)) {
+      return sendError(res, 400, "INVALID_EMAIL");
+    }
+
+    if (!validatePasswordValue(password)) {
       return sendError(res, 400, "PASSWORD_SHKURT");
     }
 
@@ -1007,8 +709,11 @@ const user = await User.create({
   credits: 3,
 });
 
+appendUserSessionCookie(res, sessionToken);
+
 return res.json({
   success: true,
+  sessionToken,
   user: {
     id: String(user._id),
     name: user.name,
@@ -1017,8 +722,7 @@ return res.json({
     email: user.email,
     role: user.role,
     credits: user.credits,
-  },
-  sessionToken
+  }
 });
   } catch (err) {
     errorWithTime("USER SIGNUP ERROR:", err);
@@ -1028,7 +732,7 @@ return res.json({
 
 
 /* ================= PRO SIGNUP ================= */
-app.post("/pro/signup", async (req, res) => {
+app.post("/pro/signup", authRateLimiter, async (req, res) => {
   try {
     let { name, surname, address, email, password } = req.body;
 
@@ -1042,14 +746,21 @@ app.post("/pro/signup", async (req, res) => {
       return sendError(res, 400, "PLOTESO_TEDHENAT");
     }
 
-    if (password.length < 6) {
+    if (!validateNameLike(name) || !validateNameLike(surname) || !validateAddressLike(address)) {
+      return sendError(res, 400, "INVALID_FIELDS");
+    }
+
+    if (!isValidEmail(email)) {
+      return sendError(res, 400, "INVALID_EMAIL");
+    }
+
+    if (!validatePasswordValue(password)) {
       return sendError(res, 400, "PASSWORD_SHKURT");
     }
 
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      // Lejo reuse vetëm për orphan PRO user pa listing
       if (existingUser.role !== "pro") {
         return sendError(res, 409, "EMAIL_EKZISTON");
       }
@@ -1078,10 +789,12 @@ app.post("/pro/signup", async (req, res) => {
       existingUser.session_token = sessionToken;
 
       await existingUser.save();
+      appendUserSessionCookie(res, sessionToken);
 
       return res.json({
         success: true,
         reused: true,
+        sessionToken,
         user: {
           id: String(existingUser._id),
           name: existingUser.name,
@@ -1090,8 +803,7 @@ app.post("/pro/signup", async (req, res) => {
           email: existingUser.email,
           role: existingUser.role,
           credits: existingUser.credits,
-        },
-        sessionToken
+        }
       });
     }
 
@@ -1109,9 +821,12 @@ app.post("/pro/signup", async (req, res) => {
       credits: 0,
     });
 
+    appendUserSessionCookie(res, sessionToken);
+
     return res.json({
       success: true,
       reused: false,
+      sessionToken,
       user: {
         id: String(user._id),
         name: user.name,
@@ -1120,8 +835,7 @@ app.post("/pro/signup", async (req, res) => {
         email: user.email,
         role: user.role,
         credits: user.credits,
-      },
-      sessionToken
+      }
     });
   } catch (err) {
     errorWithTime("PRO SIGNUP ERROR:", err);
@@ -1129,14 +843,17 @@ app.post("/pro/signup", async (req, res) => {
   }
 });
 
-/* ================= pro rollvack signip =================== */
-app.post("/pro/rollback-signup", async (req, res) => {
+app.post("/pro/rollback-signup", authRateLimiter, async (req, res) => {
   try {
     const userId = String(req.body?.userId || "").trim();
     const email = normalizeEmail(req.body?.email);
 
     if (!userId || !email) {
       return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    if (!isValidObjectId(mongoose, userId) || !isValidEmail(email)) {
+      return sendError(res, 400, "INVALID_FIELDS");
     }
 
     const user = await User.findOne({
@@ -1170,7 +887,7 @@ app.post("/pro/rollback-signup", async (req, res) => {
 });
 
 /* ================= USER LOGIN ================= */
-app.post("/user/login", async (req, res) => {
+app.post("/user/login", authRateLimiter, async (req, res) => {
   try {
     let { email, password } = req.body;
 
@@ -1179,6 +896,10 @@ app.post("/user/login", async (req, res) => {
 
     if (!email || !password) {
       return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    if (!isValidEmail(email) || !validatePasswordValue(password)) {
+      return sendError(res, 400, "INVALID_CREDENTIALS");
     }
 
     const user = await User.findOne({ email });
@@ -1190,9 +911,11 @@ if (!ok) return sendError(res, 400, "INVALID_CREDENTIALS");
 const sessionToken = crypto.randomBytes(32).toString("hex");
 user.session_token = sessionToken;
 await user.save();
+appendUserSessionCookie(res, sessionToken);
 
 return res.json({
   success: true,
+  sessionToken,
   user: {
     id: String(user._id),
     name: user.name,
@@ -1201,8 +924,7 @@ return res.json({
     email: user.email,
     role: user.role,
     credits: user.credits,
-  },
-  sessionToken
+  }
 });
   } catch (err) {
     errorWithTime("USER LOGIN ERROR:", err);
@@ -1210,24 +932,39 @@ return res.json({
   }
 });
 
-/* ================= user/me/id ================= */
-app.get("/user/me/:id", async (req, res) => {
+app.post("/auth/logout", async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).lean();
+    const sessionToken = getCookieValue(req, COOKIE_NAMES.userSession);
+    if (sessionToken) {
+      await User.updateOne(
+        { session_token: sessionToken },
+        { $unset: { session_token: "" } }
+      );
+    }
+  } catch (err) {
+    errorWithTime("AUTH LOGOUT ERROR:", err);
+  }
+  clearCookie(res, COOKIE_NAMES.userSession);
+  return res.json({ success: true });
+});
 
-    if (!user) {
-      return sendError(res, 404, "USER_NOT_FOUND");
+/* ================= user/me/id ================= */
+app.get("/user/me/:id", requireUserSession, async (req, res) => {
+  try {
+    const requestedUserId = String(req.params.id || "").trim();
+    if (!requestedUserId || String(req.authUser._id) !== requestedUserId) {
+      return sendError(res, 403, "FORBIDDEN");
     }
 
     return res.json({
       success: true,
       user: {
-        id: String(user._id),
-        name: user.name,
-        surname: user.surname,
-        address: user.address,
-        email: user.email,
-        credits: user.credits,
+        id: String(req.authUser._id),
+        name: req.authUser.name,
+        surname: req.authUser.surname,
+        address: req.authUser.address,
+        email: req.authUser.email,
+        credits: req.authUser.credits,
       },
     });
   } catch (err) {
@@ -1238,7 +975,7 @@ app.get("/user/me/:id", async (req, res) => {
 
 
 /* ================= UPDATE USER PROFILE ================= */
-app.put("/user/me/:id", async (req, res) => {
+app.put("/user/me/:id", requireUserSession, async (req, res) => {
   try {
     const userId = String(req.params.id || "").trim();
     let { name, surname, address } = req.body || {};
@@ -1251,8 +988,20 @@ app.put("/user/me/:id", async (req, res) => {
       return sendError(res, 400, "MISSING_USER_ID");
     }
 
+    if (!isValidObjectId(mongoose, userId)) {
+      return sendError(res, 400, "INVALID_USER_ID");
+    }
+
+    if (String(req.authUser._id) !== userId) {
+      return sendError(res, 403, "FORBIDDEN");
+    }
+
     if (!name || !surname || !address) {
       return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    if (!validateNameLike(name) || !validateNameLike(surname) || !validateAddressLike(address)) {
+      return sendError(res, 400, "INVALID_FIELDS");
     }
 
     const updatedUser = await User.findByIdAndUpdate(
@@ -1289,7 +1038,7 @@ app.put("/user/me/:id", async (req, res) => {
 });
 
 /* ================= CHANGE USER PASSWORD ================= */
-app.put("/user/password/:id", async (req, res) => {
+app.put("/user/password/:id", requireUserSession, async (req, res) => {
   try {
     const userId = String(req.params.id || "").trim();
     let { currentPassword, newPassword } = req.body || {};
@@ -1301,7 +1050,15 @@ app.put("/user/password/:id", async (req, res) => {
       return sendError(res, 400, "MISSING_FIELDS");
     }
 
-    if (newPassword.length < 6) {
+    if (!isValidObjectId(mongoose, userId)) {
+      return sendError(res, 400, "INVALID_USER_ID");
+    }
+
+    if (String(req.authUser._id) !== userId) {
+      return sendError(res, 403, "FORBIDDEN");
+    }
+
+    if (!validatePasswordValue(currentPassword) || !validatePasswordValue(newPassword)) {
       return sendError(res, 400, "PASSWORD_TOO_SHORT");
     }
 
@@ -1336,7 +1093,7 @@ app.put("/user/password/:id", async (req, res) => {
 });
 
 /* ================= BUY CREDITS ================= */
-app.post("/credits/buy", async (req, res) => {
+app.post("/credits/buy", requireUserSession, requireRole("client"), async (req, res) => {
   try {
     const { userId, pack } = req.body;
 
@@ -1344,12 +1101,17 @@ app.post("/credits/buy", async (req, res) => {
       return sendError(res, 400, "MISSING_FIELDS");
     }
 
+    if (!isValidObjectId(mongoose, userId)) {
+      return sendError(res, 400, "INVALID_USER_ID");
+    }
+
+    if (String(req.authUser._id) !== String(userId).trim()) {
+      return sendError(res, 403, "FORBIDDEN");
+    }
+
     const user = await User.findById(userId);
     if (!user) {
       return sendError(res, 404, "USER_NOT_FOUND");
-    }
-    if (user.role !== "client") {
-      return sendError(res, 403, "ONLY_CLIENTS_CAN_BUY_CREDITS")
     }
 
     log("USER BUY INTENT:", {
@@ -1432,102 +1194,23 @@ app.post("/credits/buy", async (req, res) => {
 
 /* ================= CONTACT SYSTEM ================= */
 /* ================= CONTACT ================= */
-app.post("/contact", async (req, res) => {
+app.post("/contact", contactLimiter, requireUserSession, requireRole("client"), async (req, res) => {
   try {
-    const { userId, firmId, sessionToken } = req.body || {};
-
-    const safeUserId = String(userId || "").trim();
-    const safeFirmId = String(firmId || "").trim();
-    const safeSessionToken = String(sessionToken || "").trim();
-
-    if (!safeUserId || !safeFirmId || !safeSessionToken) {
-      return sendError(res, 400, "MISSING_FIELDS");
-    }
-
-    const user = await User.findOne({
-      _id: safeUserId,
-      session_token: safeSessionToken
+    const result = await unlockFirmContact({
+      body: req.body,
+      authUser: req.authUser,
+      User,
+      Firma,
+      ContactUnlock,
+      isValidObjectId: (value) => isValidObjectId(mongoose, value)
     });
 
-    if (user.role !== "client") {
-      return sendError(res, 403, "ONLY_CLIENT_CAN_CONTACT");
+    if (!result.body.success) {
+      return sendError(res, result.status, result.body.error_code);
     }
 
-    const firm = await Firma.findById(safeFirmId).lean();
-    if (!firm) {
-      return sendError(res, 404, "FIRM_NOT_FOUND");
-    }
-
-    const existingUnlock = await ContactUnlock.findOne({
-      user_id: user._id,
-      firm_id: firm._id
-    }).lean();
-
-    if (existingUnlock) {
-      return res.json({
-        success: true,
-        alreadyUnlocked: true,
-        credits: user.credits,
-        contact: {
-          phone: firm.phone || "",
-          email: firm.email || "",
-          callLink: firm.phone ? `tel:${firm.phone}` : "",
-          smsLink: firm.phone ? `sms:${firm.phone}` : "",
-          mailLink: firm.email ? `mailto:${firm.email}` : ""
-        }
-      });
-    }
-
-    if ((user.credits || 0) < 1) {
-      return sendError(res, 400, "NO_CREDITS");
-    }
-
-    const updatedUser = await User.findOneAndUpdate(
-      { _id: user._id, credits: { $gte: 1 } },
-      { $inc: { credits: -1 } },
-      { new: true }
-    );
-
-    if (!updatedUser) {
-      return sendError(res, 400, "NO_CREDITS");
-    }
-
-    await ContactUnlock.create({
-      user_id: user._id,
-      firm_id: firm._id
-    });
-
-    return res.json({
-      success: true,
-      alreadyUnlocked: false,
-      credits: updatedUser.credits,
-      contact: {
-        phone: firm.phone || "",
-        email: firm.email || "",
-        callLink: firm.phone ? `tel:${firm.phone}` : "",
-        smsLink: firm.phone ? `sms:${firm.phone}` : "",
-        mailLink: firm.email ? `mailto:${firm.email}` : ""
-      }
-    });
+    return res.status(result.status).json(result.body);
   } catch (err) {
-    if (err?.code === 11000) {
-      const user = await User.findById(req.body?.userId).lean();
-      const firm = await Firma.findById(req.body?.firmId).lean();
-
-      return res.json({
-        success: true,
-        alreadyUnlocked: true,
-        credits: user?.credits || 0,
-        contact: {
-          phone: firm?.phone || "",
-          email: firm?.email || "",
-          callLink: firm?.phone ? `tel:${firm.phone}` : "",
-          smsLink: firm?.phone ? `sms:${firm.phone}` : "",
-          mailLink: firm?.email ? `mailto:${firm.email}` : ""
-        }
-      });
-    }
-
     errorWithTime("CONTACT ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }
@@ -1535,66 +1218,59 @@ app.post("/contact", async (req, res) => {
 
 /* ================= OWNER MANAGE ================= */
 
-app.post("/owner/request-link", async (req, res) => {
-  try {
+registerOwnerRoutes({
+  app,
+  Firma,
+  resend,
+  sendMail,
+  FRONTEND_BASE_URL,
+  emailActionLimiter,
+  normalizeEmail,
+  isValidEmail,
+  validateNameLike,
+  validateAddressLike,
+  normalizePhone,
+  normalizeCountry,
+  parseCategoriesFromBody,
+  applyCategoryPlanLimit,
+  makeToken,
+  sha256Hex,
+  getCookieValue,
+  appendOwnerSessionCookie,
+  clearCookie,
+  COOKIE_NAMES,
+  sendError,
+  errorWithTime,
+  isRealFirmRecord
+});
 
-    const email = normalizeEmail(req.body?.email);
-
-    if (!email) {
-      return res.status(400).json({ success:false, error:"Missing email" });
-    }
-
-    const firm = await Firma.findOne({ email }).select("_id email").lean();
-
-    if (!firm) {
-      return res.json({ success:true });
-    }
-
-    if (!resend) {
-      return res.status(500).json({ success:false, error:"Email service not configured" });
-    }
-
-    const token = makeToken();
-    const tokenHash = sha256Hex(token);
-    const expires = new Date(Date.now() + 60 * 60 * 1000);
-
-    await Firma.updateOne(
-      { _id: firm._id },
-      {
-        $set:{
-          owner_token_hash: tokenHash,
-          owner_token_expires: expires
-        }
-      }
-    );
-
-    const link =
-      `${FRONTEND_BASE_URL}/manage.html?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
-
-    await sendMail({
-      to: email,
-      subject: "EasyFix - Manage your listing",
-      text: `Për me menaxhu profilin tënd përdor këtë link: ${link}`,
-      html: `
-        <div style="font-family:Arial">
-        <h2>EasyFix</h2>
-        <p>Kliko linkun për me menaxhu profilin tënd:</p>
-        <p><a href="${link}">${link}</a></p>
-        <p>Linku skadon për 1 orë.</p>
-        </div>
-      `
-    });
-
-    return res.json({ success:true });
-
-  } catch(err) {
-    console.error("OWNER REQUEST LINK ERROR", err);
-    return res.status(500).json({ success:false });
-  }
+registerPayNowRoutes({
+  app,
+  emailActionLimiter,
+  Firma,
+  resend,
+  sendMail,
+  FRONTEND_BASE_URL,
+  PAY_TOKEN_MINUTES,
+  makeToken,
+  sha256Hex,
+  getCookieValue,
+  appendPaySessionCookie,
+  clearCookie,
+  COOKIE_NAMES,
+  normalizeEmail,
+  isValidEmail,
+  isRealFirmRecord,
+  planToVariant,
+  createLemonCheckout,
+  sendError,
+  errorWithTime,
+  isValidObjectId: (value) => isValidObjectId(mongoose, value),
+  isFirmVisibleStatus
 });
 
 /* ================= DATA DELETION ================= */
-app.post("/delete-request", async (req, res) => {
+app.post("/delete-request", emailActionLimiter, async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
     const reason = String(req.body?.reason || "").trim().slice(0, 500);
@@ -1618,21 +1294,19 @@ app.post("/delete-request", async (req, res) => {
     );
 
     const confirmUrl =
-      `${FRONTEND_BASE_URL}/delete-confirm.html?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+      `${FRONTEND_BASE_URL}/delete-confirm.html?token=${encodeURIComponent(token)}`;
 
     await sendMail({
       to: email,
       subject: "EasyFix - Confirm data deletion",
-      text:
-        `Për me konfirmu fshirjen e listing-ut, kliko linkun:\n${confirmUrl}\n\n` +
-        `Ky link skadon për ${DELETE_TOKEN_HOURS} orë.\n` +
+      text:`Per me konfirmu fshirjen e listing-ut, kliko linkun:\n${confirmUrl}\n\n` +`Ky link skadon per ${DELETE_TOKEN_HOURS} ore.\n` +
         (reason ? `Arsyeja: ${reason}\n` : ""),
       html: `
         <div style="font-family:Arial;line-height:1.6">
           <h2>EasyFix</h2>
-          <p>Për me konfirmu fshirjen e listing-ut, kliko:</p>
+          <p>Per me konfirmu fshirjen e listing-ut, kliko:</p>
           <p><a href="${confirmUrl}">${confirmUrl}</a></p>
-          <p style="color:#666">Ky link skadon për ${DELETE_TOKEN_HOURS} orë.</p>
+          <p style="color:#666">Ky link skadon per ${DELETE_TOKEN_HOURS} ore.</p>
           ${reason ? `<p><b>Arsyeja:</b> ${reason}</p>` : ""}
         </div>
       `,
@@ -1645,22 +1319,20 @@ app.post("/delete-request", async (req, res) => {
   }
 });
 
-app.post("/delete-confirm", async (req, res) => {
+app.post("/delete-confirm", emailActionLimiter, async (req, res) => {
   try {
-    const email = normalizeEmail(req.body?.email);
-    const token = String(req.body?.token || "").trim();
-
-    if (!email || !token) return res.status(400).json({ success: false, error: "Missing email/token" });
-
-    const tokenHash = sha256Hex(token);
+    const tokenHash = getCookieValue(req, COOKIE_NAMES.deleteSession);
+    if (!tokenHash) return res.status(400).json({ success: false, error: "Missing delete session" });
 
     const firm = await Firma.findOne({
-      email,
       delete_token_hash: tokenHash,
       delete_token_expires: { $gt: new Date() },
     }).select("_id").lean();
 
-    if (!firm) return res.status(400).json({ success: false, error: "Invalid or expired link" });
+    if (!firm) {
+      clearCookie(res, COOKIE_NAMES.deleteSession);
+      return res.status(400).json({ success: false, error: "Invalid or expired link" });
+    }
 
     const nowD = new Date();
 
@@ -1676,6 +1348,7 @@ app.post("/delete-confirm", async (req, res) => {
       }
     );
 
+    clearCookie(res, COOKIE_NAMES.deleteSession);
     return res.json({ success: true });
   } catch (err) {
     errorWithTime("DELETE CONFIRM ERROR:", err);
@@ -1683,8 +1356,35 @@ app.post("/delete-confirm", async (req, res) => {
   }
 });
 
+app.post("/delete/session", emailActionLimiter, async (req, res) => {
+  try {
+    const token = String(req.body?.token || "").trim();
+    if (!token) return res.status(400).json({ success: false, error: "Missing token" });
+
+    const tokenHash = sha256Hex(token);
+    const firm = await Firma.findOne({
+      delete_token_hash: tokenHash,
+      delete_token_expires: { $gt: new Date() }
+    }).select("_id email delete_token_expires").lean();
+
+    if (!firm) {
+      clearCookie(res, COOKIE_NAMES.deleteSession);
+      return res.status(400).json({ success: false, error: "Invalid or expired link" });
+    }
+
+    appendDeleteSessionCookie(res, tokenHash, firm.delete_token_expires);
+    return res.json({
+      success: true,
+      email: firm.email
+    });
+  } catch (err) {
+    errorWithTime("DELETE SESSION ERROR:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
 /* ================= EMAIL OTP VERIFY ================= */
-app.post("/auth/email/start", async (req, res) => {
+app.post("/auth/email/start", emailOtpStartLimiter, async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
     if (!email) return sendError(res, 400, "MISSING_EMAIL");
@@ -1741,13 +1441,13 @@ app.post("/auth/email/start", async (req, res) => {
     await sendMail({
       to: email,
       subject: "EasyFix - Kodi i verifikimit",
-      text: `Kodi yt i verifikimit është: ${otp} (skadon për ${EMAIL_OTP_EXPIRES_MINUTES} minuta).`,
+      text: `Kodi yt i verifikimit eshte: ${otp} (skadon per ${EMAIL_OTP_EXPIRES_MINUTES} minuta).`,
       html: `
         <div style="font-family:Arial;line-height:1.6">
           <h2>EasyFix</h2>
-          <p>Kodi yt i verifikimit është:</p>
+          <p>Kodi yt i verifikimit eshte:</p>
           <p style="font-size:28px;font-weight:700;letter-spacing:2px">${otp}</p>
-          <p style="color:#666">Skadon për ${EMAIL_OTP_EXPIRES_MINUTES} minuta.</p>
+          <p style="color:#666">Skadon per ${EMAIL_OTP_EXPIRES_MINUTES} minuta.</p>
         </div>
       `,
     });
@@ -1759,7 +1459,7 @@ app.post("/auth/email/start", async (req, res) => {
   }
 });
 
-app.post("/auth/email/verify", async (req, res) => {
+app.post("/auth/email/verify", emailOtpVerifyLimiter, async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
     const code = String(req.body?.code || "").trim();
@@ -1811,90 +1511,6 @@ app.post("/auth/email/verify", async (req, res) => {
   }
 });
 
-/* ================= PAY NOW (MAGIC LINK) ================= */
-app.post("/pay-now/request", async (req, res) => {
-  try {
-    const email = normalizeEmail(req.body?.email);
-    if (!email) return res.status(400).json({ success: false, error: "Missing email" });
-
-    const firm = await Firma.findOne({ email }).select("_id email").lean();
-
-    if (!firm) return res.json({ success: true, message: "If the email exists, we sent a link." });
-    if (!resend) return res.status(500).json({ success: false, error: "Email service not configured" });
-
-    const token = makeToken();
-    const tokenHash = sha256Hex(token);
-    const expires = new Date(Date.now() + PAY_TOKEN_MINUTES * 60 * 1000);
-
-    await Firma.updateOne(
-      { _id: firm._id },
-      { $set: { pay_token_hash: tokenHash, pay_token_expires: expires } }
-    );
-
-    const payUrl = `${FRONTEND_BASE_URL}/pay.html?token=${encodeURIComponent(token)}`;
-
-    await sendMail({
-      to: email,
-      subject: "EasyFix - Pay now link",
-      text: `Për me vazhdu me u shfaq në EasyFix, përdor këtë link: ${payUrl}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.5">
-          <h2>EasyFix - Pay now</h2>
-          <p>Për me vazhdu me u shfaq në EasyFix, kliko linkun:</p>
-          <p><a href="${payUrl}">${payUrl}</a></p>
-          <p style="color:#666">Ky link skadon për ${PAY_TOKEN_MINUTES} minuta.</p>
-        </div>
-      `,
-    });
-
-    return res.json({ success: true, message: "If the email exists, we sent a link." });
-  } catch (err) {
-    errorWithTime("PAY-NOW REQUEST ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-app.get("/pay-now/checkout", async (req, res) => {
-  try {
-    const token = String(req.query.token || "").trim();
-    const plan = String(req.query.plan || "").trim().toLowerCase();
-
-    if (!token) return res.status(400).json({ success: false, error: "Missing token" });
-    if (plan !== "premium") {
-  return res.status(400).json({ success: false, error: "Invalid plan" });
-}
-
-    const tokenHash = sha256Hex(token);
-
-    const firm = await Firma.findOne({
-      pay_token_hash: tokenHash,
-      pay_token_expires: { $gt: new Date() },
-    }).lean();
-
-    if (!firm) return res.status(400).json({ success: false, error: "Invalid or expired link" });
-
-    await Firma.updateOne(
-  { _id: firm._id },
-  {
-    $set: { payment_status: "active", plan: "free" },
-    $unset: { pay_token_hash: "", pay_token_expires: "" },
-  }
-);
-
-    const variantId = planToVariant(plan);
-    const checkoutUrl = await createLemonCheckout({
-      variantId,
-      email: firm.email,
-      firmId: String(firm._id),
-    });
-
-    return res.json({ success: true, checkoutUrl });
-  } catch (err) {
-    errorWithTime("PAY-NOW CHECKOUT ERROR:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
 /* ================= HEALTH ================= */
 app.get("/health", (req, res) => {
   const rs = mongoose.connection.readyState;
@@ -1911,6 +1527,8 @@ app.get("/health", (req, res) => {
 /* ================= REGISTER (FREE PRO LISTING) ================= */
 app.post(
   "/register",
+  requireUserSession,
+  requireRole("pro"),
   upload.fields([
     { name: "logo", maxCount: 1 },
     { name: "photos", maxCount: 10 },
@@ -1944,6 +1562,18 @@ app.post(
 
       if (!name || !email || !phoneNorm || !address || !cityNorm || !primaryCategory) {
         return sendError(res, 400, "MISSING_FIELDS");
+      }
+
+      if (!isValidEmail(email) || !validateNameLike(name) || !validateAddressLike(address) || !hasText(cityNorm, 2, 80) || !validateDescriptionValue(descriptionNorm)) {
+        return sendError(res, 400, "INVALID_FIELDS");
+      }
+
+      if (!isValidObjectId(mongoose, owner_user_id)) {
+        return sendError(res, 400, "INVALID_OWNER_USER_ID");
+      }
+
+      if (!owner_user_id || String(req.authUser._id) !== String(owner_user_id).trim()) {
+        return sendError(res, 403, "FORBIDDEN");
       }
 
       const existing = await Firma.findOne({ email })
@@ -2048,7 +1678,7 @@ app.post(
 /* ================= PUBLIC ================= */
 app.get("/firms", async (req, res) => {
   try {
-    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
 
     const qCountry = String(req.query.country || "").trim().toUpperCase();
 
@@ -2114,12 +1744,16 @@ app.get("/firms", async (req, res) => {
 
 
 /* ================= GET PRO FIRM BY USER ================= */
-app.get("/pro/firma/me/:userId", async (req, res) => {
+app.get("/pro/firma/me/:userId", requireUserSession, requireRole("pro"), async (req, res) => {
   try {
     const userId = String(req.params.userId || "").trim();
 
     if (!userId) {
       return sendError(res, 400, "MISSING_USER_ID");
+    }
+
+    if (String(req.authUser._id) !== userId) {
+      return sendError(res, 403, "FORBIDDEN");
     }
 
     const firm = await Firma.findOne({ owner_user_id: userId })
@@ -2141,7 +1775,7 @@ app.get("/pro/firma/me/:userId", async (req, res) => {
 });
 
 /* ================= PRO PREMIUM CHECKOUT ================= */
-app.post("/pro/premium/checkout", async (req, res) => {
+app.post("/pro/premium/checkout", requireUserSession, requireRole("pro"), async (req, res) => {
   try {
     const { userId, firmId } = req.body || {};
 
@@ -2150,6 +1784,14 @@ app.post("/pro/premium/checkout", async (req, res) => {
 
     if (!safeUserId || !safeFirmId) {
       return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    if (!isValidObjectId(mongoose, safeUserId) || !isValidObjectId(mongoose, safeFirmId)) {
+      return sendError(res, 400, "INVALID_FIELDS");
+    }
+
+    if (String(req.authUser._id) !== safeUserId) {
+      return sendError(res, 403, "FORBIDDEN");
     }
 
     const user = await User.findById(safeUserId).select("_id email role").lean();
@@ -2242,7 +1884,7 @@ app.post("/pro/premium/checkout", async (req, res) => {
   }
 });
 /* ================= UPDATE PRO FIRM ================= */
-app.put("/pro/firma/:id", async (req, res) => {
+app.put("/pro/firma/:id", requireUserSession, requireRole("pro"), async (req, res) => {
   try {
     const firmId = String(req.params.id || "").trim();
 
@@ -2269,6 +1911,14 @@ app.put("/pro/firma/:id", async (req, res) => {
     description = String(description || "").trim().slice(0, 1000);
     country = normalizeCountry(country);
 
+    if (!isValidObjectId(mongoose, firmId) || !isValidObjectId(mongoose, owner_user_id)) {
+      return sendError(res, 400, "INVALID_FIELDS");
+    }
+
+    if (String(req.authUser._id) !== owner_user_id) {
+      return sendError(res, 403, "FORBIDDEN");
+    }
+
     const phoneNorm = normalizePhone(phone);
 
     const existing = await Firma.findById(firmId).select("_id owner_user_id plan").lean();
@@ -2287,6 +1937,10 @@ app.put("/pro/firma/:id", async (req, res) => {
 
     if (!name || !phoneNorm || !address || !city || !primaryCategory) {
       return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    if (!validateNameLike(name) || !validateAddressLike(address) || !hasText(city, 2, 80) || !validateDescriptionValue(description)) {
+      return sendError(res, 400, "INVALID_FIELDS");
     }
 
     const geo = await geocodeNominatim({
@@ -2333,6 +1987,8 @@ app.put("/pro/firma/:id", async (req, res) => {
 /* ================= UPDATE PRO FIRM MEDIA ================= */
 app.put(
   "/pro/firma/:id/media",
+  requireUserSession,
+  requireRole("pro"),
   upload.fields([
     { name: "logo", maxCount: 1 },
     { name: "photos", maxCount: 10 },
@@ -2344,6 +2000,14 @@ app.put(
 
       if (!firmId) {
         return sendError(res, 400, "MISSING_FIRM_ID");
+      }
+
+      if (!isValidObjectId(mongoose, firmId) || !isValidObjectId(mongoose, owner_user_id)) {
+        return sendError(res, 400, "INVALID_FIELDS");
+      }
+
+      if (String(req.authUser._id) !== owner_user_id) {
+        return sendError(res, 403, "FORBIDDEN");
       }
 
       const firm = await Firma.findById(firmId).select("_id owner_user_id plan photos logoUrl").lean();
@@ -2397,7 +2061,7 @@ app.put(
 /* ================= NEAR ME ================= */
 app.get("/firms/near", async (req, res) => {
   try {
-    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
 
     const qCountry = String(req.query.country || "").trim().toUpperCase();
     const lat = Number(req.query.lat);
@@ -2485,7 +2149,7 @@ app.get("/firms/near", async (req, res) => {
 /* ================= TRIAL NOTIFICATIONS ================= */
 async function runTrialNotifications() {
   if (!resend) {
-    log("⚠️ TrialNotifications skipped: Resend not configured");
+    log("[warn] TrialNotifications skipped: Resend not configured");
     return;
   }
 
@@ -2507,21 +2171,21 @@ async function runTrialNotifications() {
     ...notSent7,
   }).select("_id email name trial_ends_at").lean();
 
-  log("📨 TrialNotifications 7d candidates:", list7.length);
+  log("[mail] TrialNotifications 7d candidates:", list7.length);
 
   for (const f of list7) {
     try {
       await sendMail({
         to: f.email,
-        subject: "EasyFix - Trial po mbaron (7 ditë)",
+        subject: "EasyFix - Trial po mbaron (7 dite)",
         text:
-          `Trial-i yt po mbaron më ${new Date(f.trial_ends_at).toLocaleString("sq-AL")}. ` +
-          `Nëse do me vazhdu me u shfaq në EasyFix, shko te: ${FRONTEND_BASE_URL}/pay.html`,
+          `Trial-i yt po mbaron me ${new Date(f.trial_ends_at).toLocaleString("sq-AL")}. ` +
+          `Nese do me vazhdu me u shfaq ne EasyFix, shko te: ${FRONTEND_BASE_URL}/pay.html`,
         html: `
           <div style="font-family:Arial;line-height:1.5">
             <h2>Trial po mbaron</h2>
-            <p>Trial-i yt mbaron më <b>${new Date(f.trial_ends_at).toLocaleString("sq-AL")}</b>.</p>
-            <p>Nëse do me vazhdu me u shfaq në EasyFix, duhet me pagu.</p>
+            <p>Trial-i yt mbaron me <b>${new Date(f.trial_ends_at).toLocaleString("sq-AL")}</b>.</p>
+            <p>Nese do me vazhdu me u shfaq ne EasyFix, duhet me pagu.</p>
             <p><a href="${FRONTEND_BASE_URL}/pay.html">Pay now</a></p>
           </div>`,
       });
@@ -2530,7 +2194,7 @@ async function runTrialNotifications() {
         { _id: f._id },
         { $set: { trial_reminder_7d_sent_at: new Date() } }
       );
-      log("✅ Sent 7d reminder:", f.email);
+      log("[ok] Sent 7d reminder:", f.email);
     } catch (e) {
       errorWithTime("TRIAL 7D EMAIL ERROR:", f.email, e);
     }
@@ -2542,20 +2206,20 @@ async function runTrialNotifications() {
     ...notSent1,
   }).select("_id email name trial_ends_at").lean();
 
-  log("📨 TrialNotifications 1d candidates:", list1.length);
+  log("[mail] TrialNotifications 1d candidates:", list1.length);
 
   for (const f of list1) {
     try {
       await sendMail({
         to: f.email,
-        subject: "EasyFix - Trial po mbaron nesër",
+        subject: "EasyFix - Trial po mbaron neser",
         text:
           `Trial-i yt mbaron nesër (${new Date(f.trial_ends_at).toLocaleString("sq-AL")}). ` +
-          `Nëse do me vazhdu me u shfaq, shko te: ${FRONTEND_BASE_URL}/pay.html`,
+          `Nese do me vazhdu me u shfaq, shko te: ${FRONTEND_BASE_URL}/pay.html`,
         html: `
           <div style="font-family:Arial;line-height:1.5">
-            <h2>Trial po mbaron nesër</h2>
-            <p>Mbaron më <b>${new Date(f.trial_ends_at).toLocaleString("sq-AL")}</b>.</p>
+            <h2>Trial po mbaron neser</h2>
+            <p>Mbaron me <b>${new Date(f.trial_ends_at).toLocaleString("sq-AL")}</b>.</p>
             <p><a href="${FRONTEND_BASE_URL}/pay.html">Pay now</a></p>
           </div>`,
       });
@@ -2564,7 +2228,7 @@ async function runTrialNotifications() {
         { _id: f._id },
         { $set: { trial_reminder_1d_sent_at: new Date() } }
       );
-      log("✅ Sent 1d reminder:", f.email);
+      log("[ok] Sent 1d reminder:", f.email);
     } catch (e) {
       errorWithTime("TRIAL 1D EMAIL ERROR:", f.email, e);
     }
@@ -2574,7 +2238,7 @@ async function runTrialNotifications() {
 /* ================= PAID NOTIFICATIONS ================= */
 async function runPaidNotifications() {
   if (!resend) {
-    log("⚠️ PaidNotifications skipped: Resend not configured");
+    log("[warn] PaidNotifications skipped: Resend not configured");
     return;
   }
 
@@ -2591,26 +2255,27 @@ async function runPaidNotifications() {
   const notSent1 = { $or: [{ paid_reminder_1d_sent_at: { $exists: false } }, { paid_reminder_1d_sent_at: null }] };
 
   const list7 = await Firma.find({
-    payment_status: "paid",
+    payment_status: "active",
+    plan: "premium",
     expires_at: { $gte: w7_from, $lte: w7_to },
     ...notSent7,
   }).select("_id email name expires_at").lean();
 
-  log("📨 PaidNotifications 7d candidates:", list7.length);
+  log("[mail] PaidNotifications 7d candidates:", list7.length);
 
   for (const f of list7) {
     try {
       await sendMail({
         to: f.email,
-        subject: "EasyFix - Abonimi po skadon (7 ditë)",
+        subject: "EasyFix - Abonimi po skadon (7 dite)",
         text:
-          `Abonimi yt po skadon më ${new Date(f.expires_at).toLocaleString("sq-AL")}. ` +
-          `Për me vazhdu me u shfaq në EasyFix: ${FRONTEND_BASE_URL}/pay.html`,
+          `Abonimi yt po skadon me ${new Date(f.expires_at).toLocaleString("sq-AL")}. ` +
+          `Per me vazhdu me u shfaq ne EasyFix: ${FRONTEND_BASE_URL}/pay.html`,
         html: `
           <div style="font-family:Arial;line-height:1.5">
             <h2>Abonimi po skadon</h2>
-            <p>Abonimi yt skadon më <b>${new Date(f.expires_at).toLocaleString("sq-AL")}</b>.</p>
-            <p>Për me vazhdu me u shfaq në EasyFix:</p>
+            <p>Abonimi yt skadon me <b>${new Date(f.expires_at).toLocaleString("sq-AL")}</b>.</p>
+            <p>Per me vazhdu me u shfaq ne EasyFix:</p>
             <p><a href="${FRONTEND_BASE_URL}/pay.html">Pay now</a></p>
           </div>`,
       });
@@ -2619,32 +2284,33 @@ async function runPaidNotifications() {
         { _id: f._id },
         { $set: { paid_reminder_7d_sent_at: new Date() } }
       );
-      log("✅ Sent paid 7d reminder:", f.email);
+      log("[ok] Sent paid 7d reminder:", f.email);
     } catch (e) {
       errorWithTime("PAID 7D EMAIL ERROR:", f.email, e);
     }
   }
 
   const list1 = await Firma.find({
-    payment_status: "paid",
+    payment_status: "active",
+    plan: "premium",
     expires_at: { $gte: w1_from, $lte: w1_to },
     ...notSent1,
   }).select("_id email name expires_at").lean();
 
-  log("📨 PaidNotifications 1d candidates:", list1.length);
+  log("[mail] PaidNotifications 1d candidates:", list1.length);
 
   for (const f of list1) {
     try {
       await sendMail({
         to: f.email,
-        subject: "EasyFix - Abonimi po skadon nesër",
+        subject: "EasyFix - Abonimi po skadon neser",
         text:
           `Abonimi yt po skadon nesër (${new Date(f.expires_at).toLocaleString("sq-AL")}). ` +
-          `Për me vazhdu me u shfaq në EasyFix: ${FRONTEND_BASE_URL}/pay.html`,
+          `Per me vazhdu me u shfaq ne EasyFix: ${FRONTEND_BASE_URL}/pay.html`,
         html: `
           <div style="font-family:Arial;line-height:1.5">
-            <h2>Abonimi po skadon nesër</h2>
-            <p>Skadon më <b>${new Date(f.expires_at).toLocaleString("sq-AL")}</b>.</p>
+            <h2>Abonimi po skadon neser</h2>
+            <p>Skadon me <b>${new Date(f.expires_at).toLocaleString("sq-AL")}</b>.</p>
             <p><a href="${FRONTEND_BASE_URL}/pay.html">Pay now</a></p>
           </div>`,
       });
@@ -2653,57 +2319,19 @@ async function runPaidNotifications() {
         { _id: f._id },
         { $set: { paid_reminder_1d_sent_at: new Date() } }
       );
-      log("✅ Sent paid 1d reminder:", f.email);
+      log("[ok] Sent paid 1d reminder:", f.email);
     } catch (e) {
       errorWithTime("PAID 1D EMAIL ERROR:", f.email, e);
     }
   }
 }
 
-/* ================= CLEANUP ================= */
 async function runCleanup() {
-  const nowDate = new Date();
-
-  // delete OTP stubs only
-  const stubCutoff = new Date(Date.now() - STUB_DELETE_AFTER_HOURS * 60 * 60 * 1000);
-
-  const stubsDel = await Firma.deleteMany({
-    createdAt: { $lte: stubCutoff },
-    is_stub: true,
-    $and: [
-      { $or: [{ name: { $exists: false } }, { name: null }, { name: "" }] },
-      { $or: [{ email_verified: { $exists: false } }, { email_verified: false }] },
-    ],
+  return runCleanupMaintenance({
+    Firma,
+    stubDeleteAfterHours: STUB_DELETE_AFTER_HOURS,
+    log
   });
-
-  if (stubsDel?.deletedCount) log("🧹 Deleted OTP stubs:", stubsDel.deletedCount);
-
-  // downgrade expired premium listings back to free
-  const expiredBoosts = await Firma.find({
-    plan: "premium",
-    is_boosted: true,
-    boost_expires_at: { $lte: nowDate }
-  }).select("_id email").lean();
-
-  if (expiredBoosts.length) {
-    await Firma.updateMany(
-      {
-        plan: "premium",
-        is_boosted: true,
-        boost_expires_at: { $lte: nowDate }
-      },
-      {
-        $set: {
-          plan: "free",
-          is_boosted: false,
-          boost_expires_at: null,
-          payment_status: "active"
-        }
-      }
-    );
-
-    log("⬇️ Downgraded expired premium firms to free:", expiredBoosts.length);
-  }
 }
 
 /* ================= MONGO + START ================= */
@@ -2717,7 +2345,7 @@ async function connectMongo() {
     socketTimeoutMS: 45000,
   });
 
-  log("✅ MongoDB Connected");
+  log("[ok] MongoDB Connected");
 }
 
 async function start() {
@@ -2728,7 +2356,7 @@ async function start() {
 
     try {
       await runCleanup();
-      log("✅ Initial scheduler run completed");
+      log("[ok] Initial scheduler run completed");
     } catch (e) {
       errorWithTime("Initial scheduler error:", e);
     }
@@ -2741,9 +2369,9 @@ async function start() {
       }
     }, CHECK_INTERVAL_MINUTES * 60 * 1000);
 
-    app.listen(PORT, () => log(`🚀 Server running on port ${PORT}`));
+    app.listen(PORT, () => log(`[ok] Server running on port ${PORT}`));
   } catch (err) {
-    errorWithTime("❌ Failed to start server:", err);
+    errorWithTime("[fatal] Failed to start server:", err);
     process.exit(1);
   }
 }

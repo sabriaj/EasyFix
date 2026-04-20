@@ -1,11 +1,65 @@
-const API_URL = "https://easyfix.onrender.com";
+const API_URL = window.EASYFIX_CONFIG.API_URL;
+const { goToPage } = window.EASYFIX_CONFIG;
+const { setUser, apiFetch, apiAuthFetch, translateApiError } = window.EASYFIX_AUTH;
 
 let emailVerified = false;
+const REGISTER_CATEGORY_LIMIT = 2;
+
+function tr(key, vars = {}) {
+  return window.EASYFIX_I18N?.t ? window.EASYFIX_I18N.t(key, vars) : key;
+}
+
+function getRegisterPlanLabel() {
+  return tr("plan_basic_title");
+}
+
+function setRegisterCategoriesStatus(message = "", isError = false) {
+  const el = document.getElementById("registerCategoriesStatus");
+  if (!el) return;
+
+  if (!message) {
+    el.classList.add("hidden");
+    el.textContent = "";
+    return;
+  }
+
+  el.className = isError
+    ? "text-xs font-semibold mt-2 text-red-600"
+    : "text-xs font-semibold mt-2 text-gray-500";
+  el.classList.remove("hidden");
+  el.textContent = message;
+}
 
 
 function getSelectedRegisterCategories() {
   return Array.from(document.querySelectorAll(".reg-category:checked"))
     .map(el => el.value);
+}
+
+function enforceRegisterCategoryLimit(changedEl) {
+  const checked = Array.from(document.querySelectorAll(".reg-category:checked"));
+
+  if (checked.length <= REGISTER_CATEGORY_LIMIT) {
+    setRegisterCategoriesStatus(tr("categories_limit_hint", {
+      n: REGISTER_CATEGORY_LIMIT,
+      plan: getRegisterPlanLabel()
+    }));
+    return true;
+  }
+
+  if (changedEl) {
+    changedEl.checked = false;
+  } else {
+    checked.slice(REGISTER_CATEGORY_LIMIT).forEach(el => {
+      el.checked = false;
+    });
+  }
+
+  setRegisterCategoriesStatus(tr("msg_max_categories", {
+    n: REGISTER_CATEGORY_LIMIT,
+    plan: getRegisterPlanLabel()
+  }), true);
+  return false;
 }
 
 function showStatus(message, type = "error") {
@@ -62,7 +116,7 @@ async function sendOtp() {
     const data = await res.json();
 
     if (!res.ok) {
-      setOtpInfo(data.error_code || "Gabim gjatë dërgimit të OTP.", "error");
+      setOtpInfo(translateApiError(data.error_code, "api_server_error"), "error");
       return;
     }
 
@@ -103,7 +157,7 @@ async function verifyOtp() {
 
     if (!res.ok) {
       emailVerified = false;
-      setOtpInfo(data.error_code || "OTP i pavlefshëm.", "error");
+      setOtpInfo(translateApiError(data.error_code, "api_invalid_code"), "error");
       return;
     }
 
@@ -210,6 +264,14 @@ async function submitRegister(e) {
   return;
 }
 
+if (categories.length > REGISTER_CATEGORY_LIMIT) {
+  showStatus(tr("msg_max_categories", {
+    n: REGISTER_CATEGORY_LIMIT,
+    plan: getRegisterPlanLabel()
+  }));
+  return;
+}
+
 if (!/^\d+$/.test(localPhone)) {
   showStatus("Numri i telefonit duhet të përmbajë vetëm numra.");
   return;
@@ -230,14 +292,13 @@ const phone = buildFullPhone();
   const submitBtn = document.getElementById("submitBtn");
   submitBtn.disabled = true;
   submitBtn.innerText = "Duke krijuar account-in...";
-
   let proUser = null;
   let reusedProUser = false;
 
   try {
     showStatus("Duke krijuar pro account...", "info");
 
-    const proSignupRes = await fetch(`${API_URL}/pro/signup`, {
+    const proSignupRes = await apiAuthFetch(`${API_URL}/pro/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -252,14 +313,15 @@ const phone = buildFullPhone();
     });
 
     const proSignupData = await proSignupRes.json();
-    reuseProUser = !!proSignupData.reused;
+    reusedProUser = !!proSignupData.reused;
 
     if (!proSignupRes.ok || !proSignupData.success) {
-      showStatus(proSignupData.error_code || "Gabim gjatë krijimit të pro account.");
+      showStatus(translateApiError(proSignupData.error_code, "api_server_error"));
       return;
     }
 
     proUser = proSignupData.user;
+    const proSessionToken = String(proSignupData.sessionToken || "").trim();
 
     showStatus("Duke krijuar listing-un...", "info");
 
@@ -285,37 +347,42 @@ const phone = buildFullPhone();
       formData.append("photos", file);
     }
 
-    const registerRes = await fetch(`${API_URL}/register`, {
-  method: "POST",
-  body: formData
-});
-
-const registerData = await registerRes.json();
-
-if (!registerRes.ok || !registerData.success) {
-  try {
-    if (!reusedProUser && proUser?.id) {
-      await fetch(`${API_URL}/pro/rollback-signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          userId: proUser.id,
-          email
-        })
-      });
+    const registerHeaders = {};
+    if (proSessionToken) {
+      registerHeaders.Authorization = `Bearer ${proSessionToken}`;
     }
-  } catch (rollbackErr) {
-    console.error("ROLLBACK ERROR:", rollbackErr);
-  }
 
-  showStatus(registerData.error_code || "Gabim gjatë krijimit të listing-ut.");
-  return;
-}
+    const registerRes = await apiFetch(`${API_URL}/register`, {
+      method: "POST",
+      headers: registerHeaders,
+      body: formData
+    });
 
-    localStorage.setItem("easyfix_user", JSON.stringify({
-      id: proUser.id,
+    const registerData = await registerRes.json();
+
+    if (!registerRes.ok || !registerData.success) {
+      try {
+        if (!reusedProUser && proUser?.id) {
+          await apiFetch(`${API_URL}/pro/rollback-signup`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              userId: proUser.id,
+              email
+            })
+          });
+        }
+      } catch (rollbackErr) {
+        console.error("ROLLBACK ERROR:", rollbackErr);
+      }
+      showStatus(translateApiError(registerData.error_code, "api_server_error"));
+      return;
+    }
+
+    setUser({
+      id: proUser.id || proUser._id,
       name: proUser.name,
       surname: proUser.surname,
       address: proUser.address,
@@ -323,35 +390,33 @@ if (!registerRes.ok || !registerData.success) {
       role: proUser.role,
       credits: proUser.credits,
       sessionToken: proSignupData.sessionToken
-    }));
+    });
 
     showStatus("Account dhe listing u krijuan me sukses.", "success");
 
     setTimeout(() => {
-      window.location.href = "/pro-dashboard.html";
+      goToPage("pro-dashboard.html");
     }, 900);
   } catch (err) {
-  console.error(err);
-
-  try {
-    if (!reusedProUser && proUser?.id && email) {
-      await fetch(`${API_URL}/pro/rollback-signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          userId: proUser.id,
-          email
-        })
-      });
+    console.error(err);
+    try {
+      if (!reusedProUser && proUser?.id && email) {
+        await apiFetch(`${API_URL}/pro/rollback-signup`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            userId: proUser.id,
+            email
+          })
+        });
+      }
+    } catch (rollbackErr) {
+      console.error("ROLLBACK ERROR:", rollbackErr);
     }
-  } catch (rollbackErr) {
-    console.error("ROLLBACK ERROR:", rollbackErr);
-  }
-
-  showStatus("Gabim serveri.");
-} finally {
+    showStatus("Gabim serveri.");
+  } finally {
     submitBtn.disabled = false;
     submitBtn.innerText = "Krijo account dhe listing";
   }
@@ -374,3 +439,12 @@ if (phoneCodeSelectEl && phoneInputEl) {
 document.getElementById("sendOtpBtn").addEventListener("click", sendOtp);
 document.getElementById("verifyOtpBtn").addEventListener("click", verifyOtp);
 document.getElementById("registerForm").addEventListener("submit", submitRegister);
+document.querySelectorAll(".reg-category").forEach(el => {
+  el.addEventListener("change", () => enforceRegisterCategoryLimit(el));
+});
+setRegisterCategoriesStatus(tr("categories_limit_hint", {
+  n: REGISTER_CATEGORY_LIMIT,
+  plan: getRegisterPlanLabel()
+}));
+
+

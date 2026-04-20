@@ -16,7 +16,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EasyFix - Data Deletion Request</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
 
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
@@ -30,8 +30,8 @@
     <div class="container mx-auto px-4 flex items-center justify-between">
       <h1 class="text-2xl font-extrabold">EasyFix</h1>
       <div class="text-sm opacity-95 flex gap-4">
-        <a href="privacy.html" class="underline">Privacy Policy</a>
-        <a href="index.html" class="underline">Back to Home</a>
+        <a id="privacyLink" href="privacy.html" class="underline">Privacy Policy</a>
+        <a id="backHomeLink" href="index.html" class="underline">Back to Home</a>
       </div>
     </div>
   </header>
@@ -67,7 +67,7 @@
       </form>
 
       <div class="text-xs text-gray-500 pt-2">
-        Need to update your listing instead? Use <a class="underline text-blue-700" href="manage.html">Manage Listing</a>.
+        Need to update your listing instead? Use <a id="manageLink" class="underline text-blue-700" href="manage.html">Manage Listing</a>.
       </div>
     </div>
   </main>
@@ -76,8 +76,12 @@
     &copy; 2025 EasyFix
   </footer>
 
+  <script src="easyfix-config.js"></script>
   <script>
-    const API_URL = "https://easyfix.onrender.com";
+    const { API_URL, pagePath } = window.EASYFIX_CONFIG;
+    document.getElementById("privacyLink").href = pagePath("privacy.html");
+    document.getElementById("backHomeLink").href = pagePath("index.html");
+    document.getElementById("manageLink").href = pagePath("manage.html");
 
     const form = document.getElementById("delForm");
     const msg = document.getElementById("msg");

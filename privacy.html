@@ -17,7 +17,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EasyFix - Privacy Policy</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="easyfix-config.js"></script>
 
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
@@ -30,7 +31,7 @@
   <header class="bg-blue-700 text-white py-6 shadow-md">
     <div class="container mx-auto px-4 flex items-center justify-between">
       <h1 class="text-2xl font-extrabold">EasyFix</h1>
-      <a href="index.html" class="underline">Back to Home</a>
+      <a id="backHomeLink" href="index.html" class="underline">Back to Home</a>
     </div>
   </header>
 
@@ -47,7 +48,7 @@
       <h3 class="text-xl font-bold text-blue-900">1) Information we collect</h3>
       <ul class="list-disc pl-6 space-y-2">
         <li><b>Business registration data</b>: company name, address, category, email, phone number.</li>
-        <li><b>Media uploads (optional)</b>: company logo and service photos (for Standard/Premium plans).</li>
+        <li><b>Media uploads (optional)</b>: company logo and service photos (free and premium accounts).</li>
         <li><b>Payment-related metadata</b>: plan type, payment status, timestamps (paid_at, expires_at). Payments are processed by LemonSqueezy.</li>
         <li><b>Basic technical data</b>: IP-based country detection (used for country filtering and defaults). This may be provided by third-party IP geolocation services.</li>
       </ul>
@@ -55,7 +56,7 @@
       <h3 class="text-xl font-bold text-blue-900">2) How we use information</h3>
       <ul class="list-disc pl-6 space-y-2">
         <li>To display registered businesses to users (filtered by country and category).</li>
-        <li>To process registrations and verify subscription/payment status.</li>
+        <li>To process registrations, account activity, credit usage, and premium subscription status.</li>
         <li>To provide customer support and handle requests (including data deletion requests).</li>
         <li>To prevent abuse and maintain the security and integrity of the Service.</li>
       </ul>
@@ -97,13 +98,13 @@
       <h3 class="text-xl font-bold text-blue-900">8) Data deletion requests</h3>
       <p>
         To request deletion, use our Data Deletion page:
-        <a href="delete.html" class="text-blue-700 underline font-semibold">Delete data</a>.
+        <a id="deleteLink" href="delete.html" class="text-blue-700 underline font-semibold">Delete data</a>.
       </p>
 
       <h3 class="text-xl font-bold text-blue-900">9) Contact</h3>
       <p>
         If you have questions, contact us via:
-        <a href="contact.html" class="text-blue-700 underline font-semibold">Contact page</a>.
+        <a id="contactLink" href="contact.html" class="text-blue-700 underline font-semibold">Contact page</a>.
       </p>
     </div>
   </main>
@@ -113,6 +114,11 @@
   </footer>
 
   <script>
+    const { pagePath } = window.EASYFIX_CONFIG;
+    document.getElementById("backHomeLink").href = pagePath("index.html");
+    document.getElementById("deleteLink").href = pagePath("delete.html");
+    document.getElementById("contactLink").href = pagePath("contact.html");
+
     // put a real date when you publish if you want
     document.getElementById("lastUpdated").textContent = new Date().toISOString().slice(0, 10);
   </script>

@@ -4,15 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EasyFix - Pro Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
   <script src="i18n.js"></script>
+  <script src="easyfix-config.js"></script>
+  <script src="auth-client.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
 </head>
 <body class="bg-gray-100 min-h-screen text-gray-800">
 
   <div class="max-w-6xl mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-6">
-      <a href="/" class="text-sm font-bold text-blue-600 hover:underline" data-i18n="back_home">← Kthehu te faqja kryesore</a>
+      <a id="backHomeLink" href="index.html" class="text-sm font-bold text-blue-600 hover:underline" data-i18n="back_home">← Kthehu te faqja kryesore</a>
       <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-bold" data-i18n="account_logout">
         Logout
       </button>
@@ -298,21 +300,20 @@
   </div>
 
 <script>
-const API_URL = "https://easyfix.onrender.com";
+const API_URL = window.EASYFIX_CONFIG.API_URL;
+const { pagePath, goToPage } = window.EASYFIX_CONFIG;
+const { getUser, clearUser, apiFetch } = window.EASYFIX_AUTH;
 let currentFirm = null;
+document.getElementById("backHomeLink").href = pagePath("index.html");
 
 const currentUser = getUser();
 if (!currentUser || !currentUser.id) {
-  window.location.href = "/auth.html";
+  goToPage("auth.html");
 }
 if (currentUser.role !== "pro") {
-  window.location.href = "/account.html";
+  goToPage("account.html");
 }
 
-
-function getUser() {
-  return JSON.parse(localStorage.getItem("easyfix_user"));
-}
 
 function showError(msg) {
   const loadingBox = document.getElementById("loadingBox");
@@ -480,12 +481,12 @@ async function loadDashboard() {
   const user = getUser();
 
   if (!user || !user.id || user.role !== "pro") {
-    window.location.href = "/auth.html";
+    goToPage("auth.html");
     return;
   }
 
   try {
-    const res = await fetch(`${API_URL}/pro/firma/me/${user.id}`);
+    const res = await apiFetch(`${API_URL}/pro/firma/me/${user.id}`);
     const data = await res.json();
 
     if (!res.ok || !data.success || !data.firm) {
@@ -507,7 +508,7 @@ async function saveListing() {
   const user = getUser();
 
   if (!user || !user.id || user.role !== "pro" || !currentFirm?._id) {
-    window.location.href = "/auth.html";
+    goToPage("auth.html");
     return;
   }
 
@@ -528,7 +529,7 @@ async function saveListing() {
   btn.innerText = "Duke ruajtur...";
 
   try {
-    const res = await fetch(`${API_URL}/pro/firma/${currentFirm._id}`, {
+    const res = await apiFetch(`${API_URL}/pro/firma/${currentFirm._id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json"
@@ -567,7 +568,7 @@ async function saveMedia() {
   const user = getUser();
 
   if (!user || !user.id || user.role !== "pro" || !currentFirm?._id) {
-    window.location.href = "/auth.html";
+    goToPage("auth.html");
     return;
   }
 
@@ -595,7 +596,7 @@ async function saveMedia() {
       formData.append("photos", file);
     });
 
-    const res = await fetch(`${API_URL}/pro/firma/${currentFirm._id}/media`, {
+    const res = await apiFetch(`${API_URL}/pro/firma/${currentFirm._id}/media`, {
       method: "PUT",
       body: formData
     });
@@ -628,7 +629,7 @@ document.getElementById("boostBtn").addEventListener("click", async () => {
   const user = getUser();
 
   if (!user || !user.id || user.role !== "pro") {
-    window.location.href = "/auth.html";
+    goToPage("auth.html");
     return;
   }
 
@@ -642,7 +643,7 @@ document.getElementById("boostBtn").addEventListener("click", async () => {
   btn.innerText = "Duke hapur pagesën...";
 
   try {
-    const res = await fetch(`${API_URL}/pro/premium/checkout`, {
+    const res = await apiFetch(`${API_URL}/pro/premium/checkout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -674,9 +675,12 @@ document.getElementById("boostBtn").addEventListener("click", async () => {
   }
 });
 
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  localStorage.removeItem("easyfix_user");
-  window.location.href = "/auth.html";
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  clearUser();
+  try {
+    await apiFetch(`${API_URL}/auth/logout`, { method: "POST" });
+  } catch {}
+  goToPage("auth.html");
 });
 
 
@@ -715,7 +719,7 @@ async function changePassword() {
   const user = getUser();
 
   if (!user || !user.id) {
-    window.location.href = "/auth.html";
+    goToPage("auth.html");
     return;
   }
 
@@ -743,7 +747,7 @@ async function changePassword() {
   btn.innerText = "Duke ndryshuar...";
 
   try {
-    const res = await fetch(`${API_URL}/user/password/${user.id}`, {
+    const res = await apiFetch(`${API_URL}/user/password/${user.id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json"

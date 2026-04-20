@@ -1,4 +1,3 @@
-<!-- success.html (MODIFIED - treats TRIAL as active too) -->
 <!DOCTYPE html>
 <html lang="sq">
 <head>
@@ -16,10 +15,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pagesa u Krye - EasyFix</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 
-  <!-- i18n (NEW) - non-defer se ke inline script poshtë -->
+  <!-- i18n - non-defer because inline script below depends on it -->
   <script src="i18n.js"></script>
+  <script src="easyfix-config.js"></script>
 
   <!-- logo per tabs -->
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
@@ -37,7 +37,7 @@
       <div class="flex items-center gap-3">
         <h1 class="text-3xl font-extrabold">EasyFix</h1>
 
-        <!-- Language Switch (NEW) -->
+        <!-- Language Switch -->
         <div class="flex items-center gap-1">
           <button id="langSQ" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">SQ</button>
           <button id="langMK" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">MK</button>
@@ -45,7 +45,7 @@
         </div>
       </div>
 
-      <a href="index.html" class="text-white underline" data-i18n="home">Faqja Kryesore</a>
+      <a id="backHomeLink" href="index.html" class="text-white underline" data-i18n="home">Faqja Kryesore</a>
     </div>
   </header>
 
@@ -53,21 +53,21 @@
     <h2 class="text-3xl md:text-4xl font-bold text-blue-900 mb-4 text-center" data-i18n="thanks">Faleminderit!</h2>
 
     <p id="subtitle" class="text-center text-gray-700" data-i18n="verifying_sub">
-      Po verifikojmë pagesën dhe aktivizimin e firmës suaj…
+      Po verifikojme pagesen dhe aktivizimin e firmes suaj...
     </p>
 
     <div id="card" class="bg-white rounded-xl shadow p-6 mt-6">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm text-gray-500">Status</p>
-          <p id="statusText" class="text-lg font-semibold text-blue-700" data-i18n="status_verifying">Duke verifikuar…</p>
+          <p id="statusText" class="text-lg font-semibold text-blue-700" data-i18n="status_verifying">Duke verifikuar...</p>
         </div>
         <div id="spinner" class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-700"></div>
       </div>
 
       <div class="mt-4 text-sm text-gray-600">
         <p id="hint" data-i18n="hint_activation">
-          Nëse sapo e kryet pagesën, zakonisht aktivizimi vjen brenda pak sekondash.
+          Nese sapo e kryet pagesen, zakonisht aktivizimi vjen brenda pak sekondash.
         </p>
         <p id="emailLine" class="mt-2"></p>
       </div>
@@ -96,24 +96,20 @@
   </main>
 
   <footer class="bg-blue-700 text-white text-center py-6 mt-auto" data-i18n="footer">
-    &copy; 2025 EasyFix.services - Ndihma për çdo shtëpi
+    &copy; 2025 EasyFix.services - Ndihma per cdo shtepi
   </footer>
 
   <script>
     const { t, setLang, applyTranslations, setLangButtonsUI } = window.EASYFIX_I18N;
 
-    // lang buttons
     function wireLang() {
       document.getElementById("langSQ")?.addEventListener("click", () => { setLang("sq"); applyTranslations(); setLangButtonsUI(); repaintDynamicTexts(); });
       document.getElementById("langMK")?.addEventListener("click", () => { setLang("mk"); applyTranslations(); setLangButtonsUI(); repaintDynamicTexts(); });
       document.getElementById("langEN")?.addEventListener("click", () => { setLang("en"); applyTranslations(); setLangButtonsUI(); repaintDynamicTexts(); });
     }
 
-    const isDev =
-  window.location.hostname.includes("main") ||
-  window.location.hostname.includes("easyfix.services");
-
-    const API_URL = "https://easyfix.onrender.com";
+    const { API_URL, pagePath } = window.EASYFIX_CONFIG;
+    document.getElementById("backHomeLink").href = pagePath("index.html");
     const params = new URLSearchParams(window.location.search);
     const email = params.get("email");
 
@@ -138,7 +134,7 @@
       errorBox.classList.remove("hidden");
       errorBox.textContent = t("missing_email_err");
       retryBtn.textContent = t("back_home_btn");
-      retryBtn.addEventListener("click", () => window.location.href = "index.html");
+      retryBtn.addEventListener("click", () => window.location.href = pagePath("index.html"));
     }
 
     let tries = 0;
@@ -161,21 +157,21 @@
 
         if (!data?.success || !firma) throw new Error("Not found");
 
-        if (firma.payment_status === "paid" || firma.payment_status === "trial") {
+        if (firma.payment_status === "active" || firma.payment_status === "paid" || firma.payment_status === "trial") {
           spinner.classList.add("hidden");
 
-          if (firma.payment_status === "paid") {
+          if (firma.plan === "premium") {
             statusText.textContent = t("active_paid");
             subtitle.textContent = t("activated_ok");
           } else {
-            statusText.textContent = "Aktive (trial)";
-            subtitle.textContent = "Trial-i yt është aktiv. Pas 4 muajsh duhet me pagu për me vazhdu me u shfaq.";
+            statusText.textContent = "Aktive";
+            subtitle.textContent = "Listing-u yt eshte aktiv.";
           }
 
           goBtn.disabled = false;
           goBtn.onclick = () => {
             const cc = String((firma?.country || "MK")).toUpperCase();
-            window.location.href = `index.html?country=${encodeURIComponent(cc)}&focus=${encodeURIComponent(email)}`;
+            window.location.href = `${pagePath("index.html")}?country=${encodeURIComponent(cc)}&focus=${encodeURIComponent(email)}`;
           };
 
           return true;
@@ -183,12 +179,10 @@
 
         spinner.classList.remove("hidden");
         statusText.textContent = t("in_process", { status: (firma.payment_status || "pending") });
-
         return false;
-
-      } catch (err) {
+      } catch (error) {
         errorBox.classList.remove("hidden");
-        errorBox.textContent = "Error: " + err.message;
+        errorBox.textContent = "Error: " + error.message;
         return false;
       }
     }
@@ -196,7 +190,7 @@
     async function startPolling() {
       tries = 0;
 
-      let ok = await checkStatus();
+      const ok = await checkStatus();
       if (ok) return;
 
       const timer = setInterval(async () => {
@@ -218,7 +212,6 @@
       await startPolling();
     });
 
-    // init i18n
     applyTranslations();
     setLangButtonsUI();
     wireLang();

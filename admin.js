@@ -1,4 +1,4 @@
-const BACKEND_URL = "https://easyfix.onrender.com";
+const BACKEND_URL = window.EASYFIX_CONFIG.API_URL;
 
 const $ = (s) => document.querySelector(s);
 
@@ -30,22 +30,8 @@ function setMsg(el, text, ok = true) {
   el.style.color = ok ? "#374151" : "#dc2626";
 }
 
-function getToken() {
-  return localStorage.getItem("easyfix_admin_token") || "";
-}
-
-function setToken(t) {
-  localStorage.setItem("easyfix_admin_token", t);
-}
-
-function clearToken() {
-  localStorage.removeItem("easyfix_admin_token");
-}
-
 async function api(path, opts = {}) {
-  const token = getToken();
   const headers = opts.headers ? { ...opts.headers } : {};
-  headers["Authorization"] = `Bearer ${token}`;
 
   if (opts.json) {
     headers["Content-Type"] = "application/json";
@@ -53,7 +39,11 @@ async function api(path, opts = {}) {
     delete opts.json;
   }
 
-  const res = await fetch(`${BACKEND_URL}${path}`, { ...opts, headers });
+  const res = await fetch(`${BACKEND_URL}${path}`, {
+    ...opts,
+    headers,
+    credentials: "include"
+  });
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
@@ -195,7 +185,7 @@ async function loadFirms() {
   qs.set("country", country);
   if (search) qs.set("search", search);
 
-  setMsg(appMsg, "Duke i marrë të dhënat...", true);
+  setMsg(appMsg, "Duke i marre te dhenat...", true);
 
   const r = await api(`/admin/firms?${qs.toString()}`);
   renderRows(r.firms || []);
@@ -211,7 +201,7 @@ async function onActionClick(e) {
 
   try {
     if (act === "delete") {
-      const ok = confirm("A je i sigurt që do me e fshi këtë firmë?");
+      const ok = confirm("A je i sigurt qe do me e fshi kete firme?");
       if (!ok) return;
 
       await api(`/admin/firms/${encodeURIComponent(id)}`, {
@@ -228,13 +218,13 @@ async function onActionClick(e) {
         method: "POST"
       });
 
-      setMsg(appMsg, "Firma u kthye në free.", true);
+      setMsg(appMsg, "Firma u kthye ne free.", true);
       await loadFirms();
       return;
     }
 
     if (act === "markPaid") {
-      const days = prompt("Sa ditë me vlejt premium? (default 30)", "30");
+      const days = prompt("Sa dite me vlejt premium? (default 30)", "30");
       const n = Number(days || 30);
 
       await api(`/admin/firms/${encodeURIComponent(id)}/mark-paid`, {
@@ -259,10 +249,10 @@ async function migrateLegacyFirms() {
       method: "POST"
     });
 
-    setMsg(appMsg, `Migrimi u krye. U përditësuan ${r.updatedCount ?? 0} firma.`, true);
+    setMsg(appMsg, `Migrimi u krye. U perditesuan ${r.updatedCount ?? 0} firma.`, true);
     await loadFirms();
   } catch (err) {
-    setMsg(appMsg, `Gabim gjatë migrimit: ${err.message}`, false);
+    setMsg(appMsg, `Gabim gjate migrimit: ${err.message}`, false);
   }
 }
 
@@ -277,21 +267,13 @@ function showLogin() {
 }
 
 async function tryBoot() {
-  const token = getToken();
-
-  if (!token) {
-    showLogin();
-    return;
-  }
-
   try {
     showApp();
     await loadFirms();
     await loadStats();
   } catch (e) {
-    clearToken();
     showLogin();
-    setMsg(loginMsg, "Token gabim ose ADMIN_KEY s’është saktë.", false);
+    setMsg(loginMsg, "ADMIN session nuk u verifikua.", false);
   }
 }
 
@@ -303,15 +285,38 @@ loginBtn.addEventListener("click", async () => {
     return;
   }
 
-  setToken(key);
   setMsg(loginMsg, "Duke provu...", true);
-  await tryBoot();
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/admin/session`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adminKey: key })
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.success) {
+      setMsg(loginMsg, data?.error || "ADMIN_KEY nuk eshte i sakte.", false);
+      return;
+    }
+
+    await tryBoot();
+  } catch (err) {
+    setMsg(loginMsg, `Gabim: ${err.message}`, false);
+  }
 });
 
-logoutBtn.addEventListener("click", () => {
-  clearToken();
+logoutBtn.addEventListener("click", async () => {
+  try {
+    await fetch(`${BACKEND_URL}/admin/logout`, {
+      method: "POST",
+      credentials: "include"
+    });
+  } catch {}
+
   showLogin();
-  setMsg(loginMsg, "U ç’kyçe.", true);
+  setMsg(loginMsg, "U ckyce.", true);
 });
 
 refreshBtn.addEventListener("click", () => loadFirms());

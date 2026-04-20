@@ -4,8 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EasyFix - Pro Login</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
   <script src="i18n.js"></script>
+  <script src="easyfix-config.js"></script>
+  <script src="auth-client.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
@@ -37,17 +39,19 @@
     </form>
 
     <div class="text-center mt-5">
-      <a href="/register.html" id="registerLink" class="text-blue-600 font-bold hover:underline"></a>
+      <a href="register.html" id="registerLink" class="text-blue-600 font-bold hover:underline"></a>
     </div>
 
     <div class="text-center mt-4">
-      <a href="/auth.html" class="text-sm text-gray-500 hover:text-gray-700" data-i18n="back">Kthehu mbrapa</a>
+      <a id="backAuthLink" href="auth.html" class="text-sm text-gray-500 hover:text-gray-700" data-i18n="back">Kthehu mbrapa</a>
     </div>
   </div>
 
 <script>
-const API_URL = "https://easyfix.onrender.com";
+const API_URL = window.EASYFIX_CONFIG.API_URL;
+const { pagePath, goToPage } = window.EASYFIX_CONFIG;
 const { t, applyTranslations, getLang } = window.EASYFIX_I18N;
+const { setUser, apiFetch, apiAuthFetch } = window.EASYFIX_AUTH;
 
 function applyPageTranslations() {
   applyTranslations(document);
@@ -58,6 +62,8 @@ function applyPageTranslations() {
   document.getElementById("title").innerText = t("pro_login_title");
   document.getElementById("submitBtn").innerText = t("pro_login_button");
   document.getElementById("registerLink").innerText = t("pro_login_register_link");
+  document.getElementById("registerLink").href = pagePath("register.html");
+  document.getElementById("backAuthLink").href = pagePath("auth.html");
 
   document.getElementById("email").placeholder = t("email");
   document.getElementById("password").placeholder = t("password_label");
@@ -92,7 +98,7 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
   try {
     showStatus(t("pro_login_loading"), "info");
 
-    const res = await fetch(`${API_URL}/user/login`, {
+    const res = await apiAuthFetch(`${API_URL}/user/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password })
@@ -110,8 +116,8 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
       return;
     }
 
-    localStorage.setItem("easyfix_user", JSON.stringify({
-      id: data.user.id,
+    setUser({
+      id: data.user.id || data.user._id,
       name: data.user.name,
       surname: data.user.surname,
       address: data.user.address,
@@ -119,12 +125,12 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
       role: data.user.role,
       credits: data.user.credits,
       sessionToken: data.sessionToken
-    }));
+    });
 
     showStatus(t("login_success"), "success");
 
     setTimeout(() => {
-      window.location.href = "/pro-dashboard.html";
+      goToPage("pro-dashboard.html");
     }, 700);
   } catch (err) {
     console.error(err);

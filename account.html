@@ -4,8 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EasyFix - Account</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
   <script src="i18n.js"></script>
+  <script src="easyfix-config.js"></script>
+  <script src="auth-client.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
   <style>
     .glass-card {
@@ -19,7 +21,7 @@
   <div class="max-w-5xl mx-auto px-4 py-8 md:py-12">
     <!-- Top bar -->
     <div class="flex items-center justify-between mb-6">
-      <a href="/" class="inline-flex items-center gap-2 text-sm font-bold text-blue-700 hover:text-blue-800">
+      <a id="backHomeLink" href="index.html" class="inline-flex items-center gap-2 text-sm font-bold text-blue-700 hover:text-blue-800">
         <span>←</span>
         <span data-i18n="back">Kthehu mbrapa</span>
       </a>
@@ -207,24 +209,19 @@ const { applyTranslations, getLang, t } = window.EASYFIX_I18N;
 applyTranslations(document);
 document.documentElement.setAttribute("lang", getLang());
 
-const API_URL = "https://easyfix.onrender.com";
-
-function getUser() {
-  return JSON.parse(localStorage.getItem("easyfix_user"));
-}
-
-function setUser(user) {
-  localStorage.setItem("easyfix_user", JSON.stringify(user));
-}
+const API_URL = window.EASYFIX_CONFIG.API_URL;
+const { pagePath, goToPage } = window.EASYFIX_CONFIG;
+const { getUser, setUser, clearUser, apiFetch } = window.EASYFIX_AUTH;
+document.getElementById("backHomeLink").href = pagePath("index.html");
 
 const currentUser = getUser();
 
 if (!currentUser || !currentUser.id) {
-  window.location.href = "/auth.html";
+  goToPage("auth.html");
 }
 
 if (currentUser.role === "pro") {
-  window.location.href = "/pro-dashboard.html";
+  goToPage("pro-dashboard.html");
 }
 
 function showError(msg) {
@@ -258,17 +255,17 @@ async function loadAccount() {
   const user = getUser();
 
   if (!user || !user.id) {
-    window.location.href = "/auth.html";
+    goToPage("auth.html");
     return;
   }
 
   try {
-    const res = await fetch(`${API_URL}/user/me/${user.id}`);
+    const res = await apiFetch(`${API_URL}/user/me/${user.id}`);
     const data = await res.json();
 
     if (!res.ok || !data.success) {
-      localStorage.removeItem("easyfix_user");
-      window.location.href = "/auth.html";
+      clearUser();
+      goToPage("auth.html");
       return;
     }
 
@@ -285,7 +282,7 @@ async function loadAccount() {
 
     setUser({
       ...user,
-      id: data.user.id,
+      id: data.user.id || data.user._id,
       name: data.user.name,
       surname: data.user.surname,
       address: data.user.address,
@@ -305,7 +302,7 @@ async function saveProfile() {
   const user = getUser();
 
   if (!user || !user.id) {
-    window.location.href = "/auth.html";
+    goToPage("auth.html");
     return;
   }
 
@@ -323,7 +320,7 @@ async function saveProfile() {
   saveBtn.innerText = t("account_saving");
 
   try {
-    const res = await fetch(`${API_URL}/user/me/${user.id}`, {
+    const res = await apiFetch(`${API_URL}/user/me/${user.id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json"
@@ -344,7 +341,7 @@ async function saveProfile() {
 
     setUser({
       ...user,
-      id: data.user.id,
+      id: data.user.id || data.user._id,
       name: data.user.name,
       surname: data.user.surname,
       address: data.user.address,
@@ -371,7 +368,7 @@ async function changePassword() {
   const user = getUser();
 
   if (!user || !user.id) {
-    window.location.href = "/auth.html";
+    goToPage("auth.html");
     return;
   }
 
@@ -399,7 +396,7 @@ async function changePassword() {
   btn.innerText = t("account_changing_password");
 
   try {
-    const res = await fetch(`${API_URL}/user/password/${user.id}`, {
+    const res = await apiFetch(`${API_URL}/user/password/${user.id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json"
@@ -433,9 +430,12 @@ async function changePassword() {
 
 document.getElementById("saveBtn").addEventListener("click", saveProfile);
 
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  localStorage.removeItem("easyfix_user");
-  window.location.href = "/auth.html";
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  clearUser();
+  try {
+    await apiFetch(`${API_URL}/auth/logout`, { method: "POST" });
+  } catch {}
+  goToPage("auth.html");
 });
 
 document.getElementById("changePasswordBtn").addEventListener("click", changePassword);

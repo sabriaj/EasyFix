@@ -27,27 +27,16 @@
 <meta name="twitter:image" content="https://www.easyfix.services/easyfix-preview.jpg">
 
 
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="i18n.js"></script>
+  <script src="easyfix-config.js"></script>
+  <script src="auth-client.js"></script>
   <script src="https://app.lemonsqueezy.com/js/lemon.js" defer></script>
   <script src="lemon.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
   <meta name="theme-color" content="#2563eb">
-
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter', 'sans-serif'] },
-          colors: {
-            brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' }
-          }
-        }
-      }
-    }
-  </script>
 
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -202,7 +191,7 @@
 
 <script>
 /* ================= GLOBAL & CONFIG ================= */
-const API_URL = "https://easyfix.onrender.com";
+const API_URL = window.EASYFIX_CONFIG.API_URL;
 let allFirms = [];
 const NEAR_RADIUS_KM = 25;
 let activeCountry = "MK";
@@ -441,6 +430,7 @@ function renderFirms(firms) {
   document.getElementById("noResults").classList.add("hidden");
 
   firms.forEach(f => {
+    const firmId = String(f._firmId || f._id || f.id || "").trim();
     const plan = (f.plan || "free").toLowerCase();
 const isPremium = plan === "premium";
 const photos = Array.isArray(f.photos) ? f.photos : [];
@@ -473,7 +463,7 @@ if (isPremium) {
       if (photos.length > 1) setTimeout(() => startAutoScroll(sliderId), 100);
     }
 
-    const unlockedContact = getUnlockedFirmContact(f._id);
+    const unlockedContact = getUnlockedFirmContact(firmId);
 
 const card = document.createElement("div");
 card.className = isPremium
@@ -531,7 +521,7 @@ card.dataset.email = (f.email || "").toLowerCase();
     </div>
   ` : `
     <div class="flex gap-2">
-      <button onclick="handleGetContact('${f._id}')"
+      <button onclick="handleGetContact('${firmId}')"
         class="flex-1 bg-brand-600 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
         <i class="fas fa-phone-alt text-xs"></i>
         <span>${t("contact_cta")} (-1 ${t("credits_one")})</span>
@@ -605,6 +595,7 @@ document.getElementById("nearMeBtn").addEventListener("click", () => {
 function normalizeCategories(f) {
   const arr = Array.isArray(f.categories) ? f.categories : (f.category ? [f.category] : []);
   f._catKeys = arr.map(k => normalizeCategoryKey(k)).filter(Boolean);
+  f._firmId = String(f._id || f.id || "").trim();
   return f;
 }
 
@@ -652,9 +643,7 @@ async function init() {
 }
 
 /* ================= AUTH / USER ================= */
-function getUser() {
-  return JSON.parse(localStorage.getItem("easyfix_user"));
-}
+const { getUser, setUser, clearUser, apiFetch } = window.EASYFIX_AUTH;
 
 function getUnlockedStorageKey() {
   const user = getUser();
@@ -706,9 +695,9 @@ function updateAuthUI() {
 
     loginBtn.onclick = () => {
       if (user.role === "pro") {
-        window.location.href = "/pro-dashboard.html";
+        window.EASYFIX_CONFIG.goToPage("pro-dashboard.html");
       } else {
-        window.location.href = "/account.html";
+        window.EASYFIX_CONFIG.goToPage("account.html");
       }
     };
 
@@ -735,7 +724,7 @@ function updateAuthUI() {
   } else {
     loginBtn.innerText = "Login";
     loginBtn.onclick = () => {
-      window.location.href = "/auth.html";
+      window.EASYFIX_CONFIG.goToPage("auth.html");
     };
 
     // logout: desktop top button only + mobile sticky only
@@ -794,7 +783,7 @@ async function loadCredits() {
   }
 
   try {
-    const res = await fetch(`${API_URL}/user/me/${user.id}`);
+    const res = await apiFetch(`${API_URL}/user/me/${user.id}`);
     const data = await res.json();
 
     if (!res.ok) {
@@ -802,10 +791,10 @@ async function loadCredits() {
       return;
     }
 
-    localStorage.setItem("easyfix_user", JSON.stringify({
+    setUser({
       ...user,
       credits: data.user.credits
-    }));
+    });
 
     updateCreditsUI(data.user.credits);
   } catch (err) {
@@ -934,7 +923,7 @@ async function continueCreditsPayment() {
   const user = getUser();
 
   if (!user || !user.id) {
-    window.location.href = "/auth.html";
+    window.EASYFIX_CONFIG.goToPage("auth.html");
     return;
   }
 
@@ -955,7 +944,7 @@ async function continueCreditsPayment() {
   try {
     setCreditsModalStatus(t("credits_preparing_payment"));
 
-    const res = await fetch(`${API_URL}/credits/buy`, {
+    const res = await apiFetch(`${API_URL}/credits/buy`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -996,8 +985,9 @@ async function continueCreditsPayment() {
 async function handleGetContact(firmId) {
   const user = getUser();
 
-  if (!user) {
-    window.location.href = "/auth.html";
+  if (!user || !user.id) {
+    clearUser();
+    window.EASYFIX_CONFIG.goToPage("auth.html");
     return;
   }
 
@@ -1011,9 +1001,9 @@ async function handleGetContact(firmId) {
     return;
   }
 
-  if (!user.sessionToken) {
-    localStorage.removeItem("easyfix_user");
-    window.location.href = "/auth.html";
+  if (Number(user.credits || 0) < 1) {
+    openCreditsModal(5);
+    setCreditsModalStatus(t("credits_no_credits_choose_pack"), true);
     return;
   }
 
@@ -1021,15 +1011,19 @@ async function handleGetContact(firmId) {
   window.__loadingContact = true;
 
   try {
-    const res = await fetch(`${API_URL}/contact`, {
+    const sessionToken = String(user.sessionToken || "").trim();
+    const res = await apiFetch(`${API_URL}/contact`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
         userId: user.id,
+        user_id: user.id,
         firmId: firmId,
-        sessionToken: user.sessionToken
+        firm_id: firmId,
+        sessionToken,
+        session_token: sessionToken
       })
     });
 
@@ -1042,9 +1036,19 @@ async function handleGetContact(firmId) {
         return;
       }
 
+      if (data.error_code === "UNAUTHORIZED" || data.error_code === "FORBIDDEN") {
+        showMessage(t("login_login_title"));
+        return;
+      }
+
       if (data.error_code === "USER_NOT_FOUND" || data.error_code === "MISSING_FIELDS") {
-        localStorage.removeItem("easyfix_user");
-        window.location.href = "/auth.html";
+        showMessage(data.error_code);
+        return;
+      }
+
+      if (data.error_code === "INVALID_FIELDS") {
+        clearUser();
+        window.EASYFIX_CONFIG.goToPage("auth.html");
         return;
       }
 
@@ -1052,10 +1056,10 @@ async function handleGetContact(firmId) {
       return;
     }
 
-    localStorage.setItem("easyfix_user", JSON.stringify({
-  ...user,
-  credits: data.credits
-}));
+    setUser({
+      ...user,
+      credits: data.credits
+    });
 
 saveUnlockedFirmContact(firmId, data.contact);
 

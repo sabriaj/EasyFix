@@ -4,16 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Blej Kredi - EasyFix</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
   <script src="https://app.lemonsqueezy.com/js/lemon.js" defer></script>
-  <script src="lemon.js""></script>
+  <script src="lemon.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
 
   <div class="bg-white w-full max-w-xl rounded-2xl shadow-xl p-8">
     <h1 class="text-3xl font-extrabold text-center text-gray-900 mb-2">Blej Kredi</h1>
-    <p class="text-center text-gray-600 mb-8">Zgjidh paketën që dëshiron.</p>
+    <p class="text-center text-gray-600 mb-8">Zgjidh paketen qe deshiron.</p>
 
     <div id="userBox" class="mb-6 text-center text-sm font-semibold text-gray-700"></div>
 
@@ -40,16 +40,17 @@
     <p id="status" class="text-center text-sm text-gray-600 mt-6"></p>
 
     <div class="mt-8 text-center">
-      <a href="/" class="inline-block text-blue-600 font-bold hover:underline">Kthehu mbrapa</a>
+      <a id="backHomeLink" href="index.html" class="inline-block text-blue-600 font-bold hover:underline">Kthehu mbrapa</a>
     </div>
   </div>
 
+<script src="easyfix-config.js"></script>
+<script src="auth-client.js"></script>
 <script>
-const API_URL = "https://easyfix.onrender.com";
-
-function getUser() {
-  return JSON.parse(localStorage.getItem("easyfix_user"));
-}
+const API_URL = window.EASYFIX_CONFIG.API_URL;
+const { pagePath, goToPage } = window.EASYFIX_CONFIG;
+const { getUser, setUser, clearUser, apiFetch } = window.EASYFIX_AUTH;
+document.getElementById("backHomeLink").href = pagePath("index.html");
 
 function showStatus(msg, isError = false) {
   const el = document.getElementById("status");
@@ -63,10 +64,7 @@ function updateCreditsUI(credits) {
   const user = getUser();
   if (!user) return;
 
-  localStorage.setItem("easyfix_user", JSON.stringify({
-    ...user,
-    credits
-  }));
+  setUser({ ...user, credits });
 }
 
 async function handleSuccessReturn() {
@@ -77,27 +75,27 @@ async function handleSuccessReturn() {
   const user = getUser();
   if (!user || !user.id) return;
 
-  showStatus("Duke rifreskuar kreditë...");
+  showStatus("Duke rifreskuar kredite...");
 
   setTimeout(async () => {
     try {
-      const res = await fetch(`${API_URL}/user/me/${user.id}`);
+      const res = await apiFetch(`${API_URL}/user/me/${user.id}`);
       const data = await res.json();
 
       if (!res.ok) {
-        showStatus("Pagesa u krye, por kreditë s’u rifreskuan ende.", true);
+        showStatus("Pagesa u krye, por kredite s'u rifreskuan ende.", true);
         return;
       }
 
       updateCreditsUI(data.user.credits);
 
       document.getElementById("userBox").innerText =
-        `I kyçur si: ${data.user.email} • Kreditë aktuale: ${data.user.credits}`;
+        `I kycur si: ${data.user.email} - Kredite aktuale: ${data.user.credits}`;
 
-      showStatus("Pagesa u krye me sukses ✅");
+      showStatus("Pagesa u krye me sukses.");
     } catch (err) {
       console.error(err);
-      showStatus("Gabim gjatë rifreskimit të kredive.", true);
+      showStatus("Gabim gjate rifreskimit te kredive.", true);
     }
   }, 1500);
 }
@@ -106,35 +104,35 @@ async function loadUser() {
   const user = getUser();
 
   if (!user || !user.id) {
-    window.location.href = "/auth.html";
+    goToPage("auth.html");
     return;
   }
 
   if (user.role !== "client") {
-    window.location.href = "/";
+    goToPage("index.html");
     return;
   }
 
   try {
-    const res = await fetch(`${API_URL}/user/me/${user.id}`);
+    const res = await apiFetch(`${API_URL}/user/me/${user.id}`);
     const data = await res.json();
 
     if (!res.ok) {
-      localStorage.removeItem("easyfix_user");
-      window.location.href = "/auth.html";
+      clearUser();
+      goToPage("auth.html");
       return;
     }
 
     document.getElementById("userBox").innerText =
-      `I kyçur si: ${data.user.email} • Kreditë aktuale: ${data.user.credits}`;
+      `I kycur si: ${data.user.email} - Kredite aktuale: ${data.user.credits}`;
 
     if (window.location.search.includes("success=1")) {
-      showStatus("Nëse pagesa u krye me sukses, kreditë do të përditësohen pas pak.");
+      showStatus("Nese pagesa u krye me sukses, kredite do te perditesohen pas pak.");
       setTimeout(loadUser, 2500);
     }
   } catch (err) {
     console.error(err);
-    showStatus("Gabim gjatë ngarkimit të user-it", true);
+    showStatus("Gabim gjate ngarkimit te user-it", true);
   }
 }
 
@@ -142,14 +140,14 @@ async function buyCredits(pack) {
   const user = getUser();
 
   if (!user || !user.id) {
-    window.location.href = "/auth.html";
+    goToPage("auth.html");
     return;
   }
 
-  showStatus("Duke u lidhur me pagesën...");
+  showStatus("Duke u lidhur me pagesen...");
 
   try {
-    const res = await fetch(`${API_URL}/credits/buy`, {
+    const res = await apiFetch(`${API_URL}/credits/buy`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -163,7 +161,7 @@ async function buyCredits(pack) {
     const data = await res.json();
 
     if (!res.ok) {
-      showStatus(data.error_code || "Gabim gjatë krijimit të pagesës", true);
+      showStatus(data.error_code || "Gabim gjate krijimit te pageses", true);
       return;
     }
 

@@ -1,4 +1,6 @@
-const API_URL = "https://easyfix.onrender.com";
+const API_URL = window.EASYFIX_CONFIG.API_URL;
+const { goToPage } = window.EASYFIX_CONFIG;
+const { setUser, apiFetch, apiAuthFetch } = window.EASYFIX_AUTH;
 
 let emailVerified = false;
 
@@ -230,11 +232,13 @@ const phone = buildFullPhone();
   const submitBtn = document.getElementById("submitBtn");
   submitBtn.disabled = true;
   submitBtn.innerText = "Duke krijuar account-in...";
+  let proUser = null;
+  let reusedProUser = false;
 
   try {
     showStatus("Duke krijuar pro account...", "info");
 
-    const proSignupRes = await fetch(`${API_URL}/pro/signup`, {
+    const proSignupRes = await apiAuthFetch(`${API_URL}/pro/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -249,13 +253,14 @@ const phone = buildFullPhone();
     });
 
     const proSignupData = await proSignupRes.json();
+    reusedProUser = !!proSignupData.reused;
 
     if (!proSignupRes.ok || !proSignupData.success) {
       showStatus(proSignupData.error_code || "Gabim gjatë krijimit të pro account.");
       return;
     }
 
-    const proUser = proSignupData.user;
+    proUser = proSignupData.user;
 
     showStatus("Duke krijuar listing-un...", "info");
 
@@ -281,7 +286,7 @@ const phone = buildFullPhone();
       formData.append("photos", file);
     }
 
-    const registerRes = await fetch(`${API_URL}/register`, {
+    const registerRes = await apiFetch(`${API_URL}/register`, {
       method: "POST",
       body: formData
     });
@@ -289,12 +294,28 @@ const phone = buildFullPhone();
     const registerData = await registerRes.json();
 
     if (!registerRes.ok || !registerData.success) {
+      try {
+        if (!reusedProUser && proUser?.id) {
+          await apiFetch(`${API_URL}/pro/rollback-signup`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              userId: proUser.id,
+              email
+            })
+          });
+        }
+      } catch (rollbackErr) {
+        console.error("ROLLBACK ERROR:", rollbackErr);
+      }
       showStatus(registerData.error_code || "Gabim gjatë krijimit të listing-ut.");
       return;
     }
 
-    localStorage.setItem("easyfix_user", JSON.stringify({
-      id: proUser.id,
+    setUser({
+      id: proUser.id || proUser._id,
       name: proUser.name,
       surname: proUser.surname,
       address: proUser.address,
@@ -302,15 +323,31 @@ const phone = buildFullPhone();
       role: proUser.role,
       credits: proUser.credits,
       sessionToken: proSignupData.sessionToken
-    }));
+    });
 
     showStatus("Account dhe listing u krijuan me sukses.", "success");
 
     setTimeout(() => {
-      window.location.href = "/pro-dashboard.html";
+      goToPage("pro-dashboard.html");
     }, 900);
   } catch (err) {
     console.error(err);
+    try {
+      if (!reusedProUser && proUser?.id && email) {
+        await apiFetch(`${API_URL}/pro/rollback-signup`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            userId: proUser.id,
+            email
+          })
+        });
+      }
+    } catch (rollbackErr) {
+      console.error("ROLLBACK ERROR:", rollbackErr);
+    }
     showStatus("Gabim serveri.");
   } finally {
     submitBtn.disabled = false;

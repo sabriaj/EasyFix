@@ -5,7 +5,12 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev:api": "node server.js",
+    "build:css": "tailwindcss -i ./src/styles.css -o ./styles.css --minify",
+    "check:server": "node --check server.js",
+    "check:core": "node --check server.js && node --check lib/admin-routes.js && node --check lib/contact-unlock.js && node --check lib/owner-routes.js && node --check lib/pay-now-routes.js && node --check lib/payment-webhook.js",
+    "test:routes": "node tests/route-modules.test.js"
   },
   "repository": {
     "type": "git",
@@ -30,5 +35,10 @@
     "multer": "^2.0.2",
     "resend": "^6.6.0",
     "twilio": "^5.0.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17"
   }
 }

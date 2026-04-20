@@ -1,11 +1,11 @@
-<!-- pay.html (NEW FILE - add to your frontend) -->
 <!DOCTYPE html>
 <html lang="sq">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
   <title>EasyFix - Pay now</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
 
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
@@ -21,20 +21,20 @@
       <div class="flex items-center gap-3">
         <h1 class="text-3xl font-extrabold">EasyFix</h1>
       </div>
-      <a href="index.html" class="text-white underline">Faqja Kryesore</a>
+      <a id="backHomeLink" href="index.html" class="text-white underline">Faqja Kryesore</a>
     </div>
   </header>
 
   <main class="container mx-auto px-4 py-10 flex-grow max-w-2xl">
     <h2 class="text-3xl font-bold text-blue-900 mb-3 text-center">Ri-aktivizo listimin</h2>
     <p class="text-center text-gray-700 mb-6">
-      Nëse lista jote ka skadu, këtu mundesh me e pagu dhe me u shfaq prap në EasyFix.
+      Nese lista jote ka skadu, ketu mundesh me e pagu dhe me u shfaq prap ne EasyFix.
     </p>
 
     <div class="bg-white rounded-xl shadow p-6">
       <div id="stepEmail" class="space-y-4">
         <div class="text-sm text-gray-600">
-          Shkruaje email-in me të cilin e ke regjistru firmën. Do të të vijë një link magjik në email.
+          Shkruaje email-in me te cilin e ke regjistru firmen. Do te te vije nje link magjik ne email.
         </div>
 
         <input id="emailInput" type="email"
@@ -43,7 +43,7 @@
 
         <button id="sendBtn"
                 class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold">
-          Dërgo linkun në email
+          Dergo linkun ne email
         </button>
 
         <p id="emailMsg" class="text-sm text-gray-700 hidden"></p>
@@ -51,22 +51,13 @@
 
       <div id="stepToken" class="space-y-4 hidden">
         <div class="text-sm text-gray-600">
-          Zgjidh planin dhe vazhdo te pagesa.
+          Vazhdo me planin premium per me fitu me shume foto dhe top ranking.
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <button data-plan="basic" class="planBtn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
-            <div class="font-bold">Basic</div>
-            <div class="text-sm text-gray-600">15€/muaj</div>
-          </button>
-          <button data-plan="standard" class="planBtn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
-            <div class="font-bold">Standard</div>
-            <div class="text-sm text-gray-600">20€/muaj</div>
-          </button>
-          <button data-plan="premium" class="planBtn p-4 rounded-xl border bg-gray-50 hover:bg-gray-100 text-left">
-            <div class="font-bold">Premium</div>
-            <div class="text-sm text-gray-600">30€/muaj</div>
-          </button>
+        <div class="p-4 rounded-xl border bg-gray-50 ring-2 ring-blue-600 border-blue-600">
+          <div class="font-bold">Premium</div>
+          <div class="text-xs text-gray-500 mt-2">Free listing mbetet aktiv. Premium shton foto dhe ranking me te larte.</div>
+          <div class="text-sm text-gray-600">30 EUR/muaj</div>
         </div>
 
         <button id="payBtn"
@@ -82,14 +73,18 @@
   </main>
 
   <footer class="bg-blue-700 text-white text-center py-6 mt-auto">
-    © 2025 EasyFix.services - Ndihma për çdo shtëpi
+    &copy; 2025 EasyFix.services - Ndihma per cdo shtepi
   </footer>
 
+<script src="easyfix-config.js"></script>
+<script src="auth-client.js"></script>
 <script>
-  const API_URL = "https://easyfix.onrender.com";
+  const { API_URL, pagePath } = window.EASYFIX_CONFIG;
+  const { apiFetch } = window.EASYFIX_AUTH;
+  document.getElementById("backHomeLink").href = pagePath("index.html");
 
   const params = new URLSearchParams(window.location.search);
-  const token = (params.get("token") || "").trim();
+  let token = (params.get("token") || "").trim();
 
   const stepEmail = document.getElementById("stepEmail");
   const stepToken = document.getElementById("stepToken");
@@ -100,26 +95,46 @@
 
   const payBtn = document.getElementById("payBtn");
   const tokenMsg = document.getElementById("tokenMsg");
-  const planBtns = Array.from(document.querySelectorAll(".planBtn"));
-
-  let selectedPlan = "";
+  const selectedPlan = "premium";
 
   function showEmailMsg(text) {
     emailMsg.classList.remove("hidden");
     emailMsg.textContent = text;
   }
+
   function showTokenErr(text) {
     tokenMsg.classList.remove("hidden");
     tokenMsg.textContent = text;
   }
-  function setActivePlan(btn) {
-    planBtns.forEach(b => b.classList.remove("ring-2", "ring-blue-600", "border-blue-600"));
-    btn.classList.add("ring-2", "ring-blue-600", "border-blue-600");
+
+  async function startPaySession() {
+    try {
+      window.history.replaceState({}, document.title, pagePath("pay.html"));
+      const res = await apiFetch(`${API_URL}/pay-now/session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token })
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.success) {
+        showTokenErr(data?.error || "Link jo valid ose ka skadu. Kerko link te ri.");
+        return;
+      }
+
+      token = "";
+      stepEmail.classList.add("hidden");
+      stepToken.classList.remove("hidden");
+      payBtn.disabled = false;
+    } catch (error) {
+      showTokenErr("Gabim gjate komunikimit me serverin.");
+    }
   }
 
   if (token) {
     stepEmail.classList.add("hidden");
     stepToken.classList.remove("hidden");
+    startPaySession();
   }
 
   sendBtn.addEventListener("click", async () => {
@@ -127,10 +142,10 @@
     if (!email) return showEmailMsg("Shkruaje email-in.");
 
     sendBtn.disabled = true;
-    sendBtn.textContent = "Duke dërguar...";
+    sendBtn.textContent = "Duke derguar...";
 
     try {
-      const res = await fetch(`${API_URL}/pay-now/request`, {
+      const res = await apiFetch(`${API_URL}/pay-now/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -140,48 +155,35 @@
       if (!res.ok || !data.success) {
         showEmailMsg(data?.error || "Gabim. Provo prap.");
       } else {
-        showEmailMsg("Nëse email-i ekziston, u dërgua linku. Kontrollo Inbox/Spam.");
+        showEmailMsg("Nese email-i ekziston, u dergua linku. Kontrollo Inbox/Spam.");
       }
-    } catch (e) {
-      showEmailMsg("Gabim gjatë komunikimit me serverin.");
+    } catch (error) {
+      showEmailMsg("Gabim gjate komunikimit me serverin.");
     } finally {
       sendBtn.disabled = false;
-      sendBtn.textContent = "Dërgo linkun në email";
+      sendBtn.textContent = "Dergo linkun ne email";
     }
   });
 
-  planBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      selectedPlan = btn.getAttribute("data-plan") || "";
-      setActivePlan(btn);
-      payBtn.disabled = !selectedPlan;
-      tokenMsg.classList.add("hidden");
-    });
-  });
-
   payBtn.addEventListener("click", async () => {
-    if (!token) return showTokenErr("Mungon token. Kërko link të ri.");
-    if (!selectedPlan) return showTokenErr("Zgjidh planin.");
-
     payBtn.disabled = true;
-    payBtn.textContent = "Duke të dërguar te pagesa...";
+    payBtn.textContent = "Duke te derguar te pagesa...";
 
     try {
-      const url = `${API_URL}/pay-now/checkout?token=${encodeURIComponent(token)}&plan=${encodeURIComponent(selectedPlan)}`;
-      const res = await fetch(url);
+      const url = `${API_URL}/pay-now/checkout?plan=${encodeURIComponent(selectedPlan)}`;
+      const res = await apiFetch(url);
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || !data.success || !data.checkoutUrl) {
-        showTokenErr(data?.error || "Link jo valid ose ka skadu. Kërko link të ri.");
+        showTokenErr(data?.error || "Link jo valid ose ka skadu. Kerko link te ri.");
         payBtn.disabled = false;
         payBtn.textContent = "Vazhdo te pagesa";
         return;
       }
 
       window.location.href = data.checkoutUrl;
-
-    } catch (e) {
-      showTokenErr("Gabim gjatë komunikimit me serverin.");
+    } catch (error) {
+      showTokenErr("Gabim gjate komunikimit me serverin.");
       payBtn.disabled = false;
       payBtn.textContent = "Vazhdo te pagesa";
     }

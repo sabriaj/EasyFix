@@ -1,23 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
-  <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-CWDYCJ09D8"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-CWDYCJ09D8');
-</script>
-
-
-
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
   <title>EasyFix - Manage Listing</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
 
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
   <meta name="theme-color" content="#1d4ed8">
@@ -28,8 +16,8 @@
     <div class="container mx-auto px-4 flex items-center justify-between">
       <h1 class="text-2xl font-extrabold">EasyFix</h1>
       <div class="text-sm opacity-95 flex gap-4">
-        <a href="privacy.html" class="underline">Privacy Policy</a>
-        <a href="index.html" class="underline">Back to Home</a>
+        <a id="privacyLink" href="privacy.html" class="underline">Privacy Policy</a>
+        <a id="backHomeLink" href="index.html" class="underline">Back to Home</a>
       </div>
     </div>
   </header>
@@ -56,7 +44,7 @@
         If this email exists in our system, we will send a link that expires in 1 hour.
       </p>
       <div class="text-xs text-gray-500 pt-2">
-        Want to delete your listing? Use <a class="underline text-blue-700" href="delete.html">Data Deletion</a>.
+        Want to delete your listing? Use <a id="deleteLinkRequest" class="underline text-blue-700" href="delete.html">Data Deletion</a>.
       </div>
     </div>
 
@@ -89,7 +77,7 @@
       </button>
 
       <div class="text-xs text-gray-500 pt-2">
-        Deletion is done via email confirmation: <a class="underline text-blue-700" href="delete.html">Data Deletion</a>.
+        Deletion is done via email confirmation: <a id="deleteLinkEdit" class="underline text-blue-700" href="delete.html">Data Deletion</a>.
       </div>
     </div>
   </main>
@@ -98,12 +86,15 @@
     &copy; 2025 EasyFix
   </footer>
 
+  <script src="easyfix-config.js"></script>
+  <script src="auth-client.js"></script>
   <script>
-  const isDev =
-  window.location.hostname.includes("main") ||
-  window.location.hostname.includes("easyfix.services");
-
-  const API_URL = "https://easyfix.onrender.com";
+  const { API_URL, pagePath } = window.EASYFIX_CONFIG;
+  const { apiFetch } = window.EASYFIX_AUTH;
+  document.getElementById("privacyLink").href = pagePath("privacy.html");
+  document.getElementById("backHomeLink").href = pagePath("index.html");
+  document.getElementById("deleteLinkRequest").href = pagePath("delete.html");
+  document.getElementById("deleteLinkEdit").href = pagePath("delete.html");
 
     const msg = document.getElementById("msg");
     const requestCard = document.getElementById("requestCard");
@@ -140,7 +131,6 @@
     }
 
     const params = new URLSearchParams(window.location.search);
-    let email = (params.get("email") || "").trim();
     let token = (params.get("token") || "").trim();
 
     async function requestLink() {
@@ -153,7 +143,7 @@
       show("ok", "Sending link...");
 
       try {
-        const r = await fetch(`${API_URL}/owner/request-link`, {
+        const r = await apiFetch(`${API_URL}/owner/request-link`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: em })
@@ -179,8 +169,7 @@
       show("ok", "Verifying link...");
 
       try {
-        const url = `${API_URL}/owner/me?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
-        const r = await fetch(url);
+        const r = await apiFetch(`${API_URL}/owner/me`);
         const j = await r.json().catch(() => ({}));
 
         if (!r.ok || !j.success || !j.firm) {
@@ -194,7 +183,7 @@
 
         firmName.textContent = f.name || "—";
         firmEmail.textContent = f.email || "—";
-        firmPlan.textContent = `Plan: ${(f.plan || "basic")}`;
+        firmPlan.textContent = `Plan: ${(f.plan || "free")}`;
         firmStatus.textContent = `Status: ${(f.payment_status || "pending")}`;
 
         uName.value = f.name || "";
@@ -220,18 +209,16 @@
       saveBtn.classList.add("opacity-70");
       show("ok", "Saving...");
 
-      const payload = {
-        email,
-        token,
-        name: uName.value.trim(),
-        phone: uPhone.value.trim(),
+        const payload = {
+          name: uName.value.trim(),
+          phone: uPhone.value.trim(),
         address: uAddress.value.trim(),
         category: uCategory.value.trim(),
         country: uCountry.value.trim(),
       };
 
       try {
-        const r = await fetch(`${API_URL}/owner/update`, {
+        const r = await apiFetch(`${API_URL}/owner/update`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -258,14 +245,39 @@
 
     logoutBtn.addEventListener("click", () => {
       // “logout” = hiq query params
-      window.location.href = "manage.html";
+      window.location.href = pagePath("manage.html");
     });
 
     // Auto mode: if opened from email with token
-    if (email && token) {
+    async function startOwnerSession() {
+      try {
+        window.history.replaceState({}, document.title, pagePath("manage.html"));
+        const r = await apiFetch(`${API_URL}/owner/session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token })
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.success) {
+          show("err", j?.error || "Invalid or expired link. Request a new one.");
+          requestCard.classList.remove("hidden");
+          editCard.classList.add("hidden");
+          return;
+        }
+
+        token = "";
+        await loadMe();
+      } catch (e) {
+        show("err", "Network error. Please try again.");
+        requestCard.classList.remove("hidden");
+        editCard.classList.add("hidden");
+      }
+    }
+
+    if (token) {
       requestCard.classList.add("hidden");
       editCard.classList.remove("hidden");
-      loadMe();
+      startOwnerSession();
     } else {
       requestCard.classList.remove("hidden");
       editCard.classList.add("hidden");

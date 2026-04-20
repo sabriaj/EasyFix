@@ -211,7 +211,7 @@ document.documentElement.setAttribute("lang", getLang());
 
 const API_URL = window.EASYFIX_CONFIG.API_URL;
 const { pagePath, goToPage } = window.EASYFIX_CONFIG;
-const { getUser, setUser, clearUser, apiFetch } = window.EASYFIX_AUTH;
+const { getUser, setUser, clearUser, apiFetch, translateApiError } = window.EASYFIX_AUTH;
 document.getElementById("backHomeLink").href = pagePath("index.html");
 
 const currentUser = getUser();
@@ -249,6 +249,26 @@ function showPasswordStatus(msg, isError = false) {
   el.className = isError
     ? "text-sm font-semibold mt-4 text-red-600"
     : "text-sm font-semibold mt-4 text-green-600";
+}
+
+function validateProfileFields(name, surname, address) {
+  if (!name || !surname || !address) {
+    return t("msg_fill_all");
+  }
+
+  if (String(name).trim().length < 2) {
+    return "Emri duhet te kete te pakten 2 karaktere.";
+  }
+
+  if (String(surname).trim().length < 2) {
+    return "Mbiemri duhet te kete te pakten 2 karaktere.";
+  }
+
+  if (String(address).trim().length < 5) {
+    return "Adresa duhet te kete te pakten 5 karaktere.";
+  }
+
+  return "";
 }
 
 async function loadAccount() {
@@ -310,8 +330,9 @@ async function saveProfile() {
   const surname = document.getElementById("surname").value.trim();
   const address = document.getElementById("address").value.trim();
 
-  if (!name || !surname || !address) {
-    showStatus(t("msg_fill_all"), true);
+  const profileError = validateProfileFields(name, surname, address);
+  if (profileError) {
+    showStatus(profileError, true);
     return;
   }
 
@@ -335,7 +356,12 @@ async function saveProfile() {
     const data = await res.json();
 
     if (!res.ok || !data.success) {
-      showStatus(data.error_code || t("account_save_error"), true);
+      if (data.error_code === "INVALID_FIELDS") {
+        showStatus("Kontrollo emrin, mbiemrin dhe adresen. Adresa duhet te kete te pakten 5 karaktere.", true);
+        return;
+      }
+
+      showStatus(translateApiError(data.error_code, "account_save_error"), true);
       return;
     }
 
@@ -410,7 +436,7 @@ async function changePassword() {
     const data = await res.json();
 
     if (!res.ok || !data.success) {
-      showPasswordStatus(data.error_code || t("account_password_change_error"), true);
+      showPasswordStatus(translateApiError(data.error_code, "account_password_change_error"), true);
       return;
     }
 

@@ -149,6 +149,7 @@
 </label>
   </div>
   <p id="categoryPlanHint" class="text-xs text-gray-400 mt-2"></p>
+  <p id="categoryPlanStatus" class="text-xs font-semibold mt-2 hidden"></p>
 </div>
 
               <div class="md:col-span-2">
@@ -306,6 +307,14 @@ const { getUser, clearUser, apiFetch } = window.EASYFIX_AUTH;
 let currentFirm = null;
 document.getElementById("backHomeLink").href = pagePath("index.html");
 
+function tr(key, vars = {}) {
+  return window.EASYFIX_I18N?.t ? window.EASYFIX_I18N.t(key, vars) : key;
+}
+
+function getDashboardPlanLabel() {
+  return currentFirm?.plan === "premium" ? tr("plan_standard_title") : tr("plan_basic_title");
+}
+
 const currentUser = getUser();
 if (!currentUser || !currentUser.id) {
   goToPage("auth.html");
@@ -370,11 +379,68 @@ function getSelectedCategories() {
     .map(el => el.value);
 }
 
+function getCurrentCategoryLimit() {
+  return currentFirm?.plan === "premium" ? Infinity : 2;
+}
+
+function setCategoryPlanStatus(message = "", isError = false) {
+  const el = document.getElementById("categoryPlanStatus");
+  if (!el) return;
+
+  if (!message) {
+    el.classList.add("hidden");
+    el.textContent = "";
+    return;
+  }
+
+  el.className = isError
+    ? "text-xs font-semibold mt-2 text-red-600"
+    : "text-xs font-semibold mt-2 text-gray-500";
+  el.classList.remove("hidden");
+  el.textContent = message;
+}
+
+function enforceProCategoryLimit(changedEl) {
+  const limit = getCurrentCategoryLimit();
+
+  if (!Number.isFinite(limit)) {
+    setCategoryPlanStatus(tr("categories_limit_hint", {
+      n: 7,
+      plan: tr("plan_standard_title")
+    }));
+    return true;
+  }
+
+  const checked = Array.from(document.querySelectorAll(".pro-category-checkbox:checked"));
+  if (checked.length <= limit) {
+    setCategoryPlanStatus(tr("categories_limit_hint", {
+      n: limit,
+      plan: getDashboardPlanLabel()
+    }));
+    return true;
+  }
+
+  if (changedEl) {
+    changedEl.checked = false;
+  } else {
+    checked.slice(limit).forEach(el => {
+      el.checked = false;
+    });
+  }
+
+  setCategoryPlanStatus(tr("msg_max_categories", {
+    n: limit,
+    plan: getDashboardPlanLabel()
+  }), true);
+  return false;
+}
+
 function setSelectedCategories(categories = []) {
   const selected = new Set(Array.isArray(categories) ? categories : []);
   document.querySelectorAll(".pro-category-checkbox").forEach(el => {
     el.checked = selected.has(el.value);
   });
+  enforceProCategoryLimit();
 }
 
 function updateCategoryPlanHint(firm) {
@@ -383,8 +449,14 @@ function updateCategoryPlanHint(firm) {
 
   const premium = firm?.plan === "premium";
   hint.innerText = premium
-    ? "Plani PREMIUM lejon deri 7 kategori."
-    : "Plani FREE lejon deri 2 kategori.";
+    ? tr("categories_limit_hint", { n: 7, plan: tr("plan_standard_title") })
+    : tr("categories_limit_hint", { n: 2, plan: tr("plan_basic_title") });
+
+  setCategoryPlanStatus(
+    premium
+      ? tr("categories_limit_hint", { n: 7, plan: tr("plan_standard_title") })
+      : tr("categories_limit_hint", { n: 2, plan: tr("plan_basic_title") })
+  );
 }
 
 
@@ -521,6 +593,14 @@ async function saveListing() {
 
   if (!businessName || !phone || !city || !address || categories.length === 0) {
     showStatus("Plotëso të gjitha fushat kryesore.");
+    return;
+  }
+
+  if (Number.isFinite(getCurrentCategoryLimit()) && categories.length > getCurrentCategoryLimit()) {
+    showStatus(tr("msg_max_categories", {
+      n: getCurrentCategoryLimit(),
+      plan: getDashboardPlanLabel()
+    }));
     return;
   }
 
@@ -681,6 +761,10 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
     await apiFetch(`${API_URL}/auth/logout`, { method: "POST" });
   } catch {}
   goToPage("auth.html");
+});
+
+document.querySelectorAll(".pro-category-checkbox").forEach(el => {
+  el.addEventListener("change", () => enforceProCategoryLimit(el));
 });
 
 

@@ -73,7 +73,7 @@
 const API_URL = window.EASYFIX_CONFIG.API_URL;
 const { pagePath, goToPage } = window.EASYFIX_CONFIG;
 const { t, applyTranslations, getLang } = window.EASYFIX_I18N;
-const { setUser, apiFetch, apiAuthFetch } = window.EASYFIX_AUTH;
+const { setUser, apiFetch, apiAuthFetch, translateApiError } = window.EASYFIX_AUTH;
 let mode = "login";
 
 function applyPageTranslations() {
@@ -156,7 +156,7 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
       const data = await res.json();
 
       if (!res.ok) {
-        showStatus(data.error_code || t("login_error"));
+        showStatus(translateApiError(data.error_code, "login_error"));
         return;
       }
 
@@ -227,7 +227,7 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
     const data = await res.json();
 
     if (!res.ok) {
-      showStatus(data.error_code || t("login_signup_error"));
+      showStatus(translateApiError(data.error_code, "login_signup_error"));
       return;
     }
 

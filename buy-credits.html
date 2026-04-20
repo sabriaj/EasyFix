@@ -49,7 +49,7 @@
 <script>
 const API_URL = window.EASYFIX_CONFIG.API_URL;
 const { pagePath, goToPage } = window.EASYFIX_CONFIG;
-const { getUser, setUser, clearUser, apiFetch } = window.EASYFIX_AUTH;
+const { getUser, setUser, clearUser, apiFetch, translateApiError } = window.EASYFIX_AUTH;
 document.getElementById("backHomeLink").href = pagePath("index.html");
 
 function showStatus(msg, isError = false) {
@@ -161,7 +161,7 @@ async function buyCredits(pack) {
     const data = await res.json();
 
     if (!res.ok) {
-      showStatus(data.error_code || "Gabim gjate krijimit te pageses", true);
+      showStatus(translateApiError(data.error_code, "api_server_error"), true);
       return;
     }
 

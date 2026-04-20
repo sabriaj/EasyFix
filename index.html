@@ -815,6 +815,47 @@ function setCreditsModalStatus(message, isError = false) {
     : "text-sm text-gray-500 mt-4";
 }
 
+function translateApiError(errorCode, fallbackKey = "generic_try_again") {
+  const code = String(errorCode || "").trim().toUpperCase();
+  if (!code) return t(fallbackKey);
+
+  const map = {
+    MISSING_FIELDS: "api_missing_fields",
+    INVALID_FIELDS: "api_invalid_fields",
+    INVALID_PLAN: "api_invalid_plan",
+    SERVER_ERROR: "api_server_error",
+    NO_CREDITS: "api_no_credits",
+    UNAUTHORIZED: "api_unauthorized",
+    FORBIDDEN: "api_forbidden",
+    USER_NOT_FOUND: "api_user_not_found",
+    CHECKOUT_CREATE_FAILED: "api_checkout_create_failed",
+    CHECKOUT_URL_MISSING: "api_checkout_url_missing"
+  };
+
+  const key = map[code];
+  if (!key) return code;
+
+  const translated = t(key);
+  if (translated && translated !== key) {
+    return translated;
+  }
+
+  const fallbackText = {
+    api_missing_fields: "Please fill in all fields.",
+    api_invalid_fields: "Some fields are invalid.",
+    api_invalid_plan: "Invalid plan.",
+    api_server_error: "Server error.",
+    api_no_credits: "You do not have enough credits.",
+    api_unauthorized: "You need to log in to continue.",
+    api_forbidden: "You are not allowed to do this.",
+    api_user_not_found: "User not found.",
+    api_checkout_create_failed: "Could not create checkout. Please try again.",
+    api_checkout_url_missing: "Missing checkout link. Please try again."
+  };
+
+  return fallbackText[key] || code;
+}
+
 let selectedCreditPack = 5;
 let buyingCreditsNow = false;
 
@@ -1037,12 +1078,12 @@ async function handleGetContact(firmId) {
       }
 
       if (data.error_code === "UNAUTHORIZED" || data.error_code === "FORBIDDEN") {
-        showMessage(t("login_login_title"));
+        showMessage(translateApiError(data.error_code));
         return;
       }
 
       if (data.error_code === "USER_NOT_FOUND" || data.error_code === "MISSING_FIELDS") {
-        showMessage(data.error_code);
+        showMessage(translateApiError(data.error_code));
         return;
       }
 
@@ -1052,7 +1093,7 @@ async function handleGetContact(firmId) {
         return;
       }
 
-      showMessage(data.error_code || t("generic_try_again"));
+      showMessage(translateApiError(data.error_code));
       return;
     }
 

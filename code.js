@@ -1,13 +1,65 @@
 const API_URL = window.EASYFIX_CONFIG.API_URL;
 const { goToPage } = window.EASYFIX_CONFIG;
-const { setUser, apiFetch, apiAuthFetch } = window.EASYFIX_AUTH;
+const { setUser, apiFetch, apiAuthFetch, translateApiError } = window.EASYFIX_AUTH;
 
 let emailVerified = false;
+const REGISTER_CATEGORY_LIMIT = 2;
+
+function tr(key, vars = {}) {
+  return window.EASYFIX_I18N?.t ? window.EASYFIX_I18N.t(key, vars) : key;
+}
+
+function getRegisterPlanLabel() {
+  return tr("plan_basic_title");
+}
+
+function setRegisterCategoriesStatus(message = "", isError = false) {
+  const el = document.getElementById("registerCategoriesStatus");
+  if (!el) return;
+
+  if (!message) {
+    el.classList.add("hidden");
+    el.textContent = "";
+    return;
+  }
+
+  el.className = isError
+    ? "text-xs font-semibold mt-2 text-red-600"
+    : "text-xs font-semibold mt-2 text-gray-500";
+  el.classList.remove("hidden");
+  el.textContent = message;
+}
 
 
 function getSelectedRegisterCategories() {
   return Array.from(document.querySelectorAll(".reg-category:checked"))
     .map(el => el.value);
+}
+
+function enforceRegisterCategoryLimit(changedEl) {
+  const checked = Array.from(document.querySelectorAll(".reg-category:checked"));
+
+  if (checked.length <= REGISTER_CATEGORY_LIMIT) {
+    setRegisterCategoriesStatus(tr("categories_limit_hint", {
+      n: REGISTER_CATEGORY_LIMIT,
+      plan: getRegisterPlanLabel()
+    }));
+    return true;
+  }
+
+  if (changedEl) {
+    changedEl.checked = false;
+  } else {
+    checked.slice(REGISTER_CATEGORY_LIMIT).forEach(el => {
+      el.checked = false;
+    });
+  }
+
+  setRegisterCategoriesStatus(tr("msg_max_categories", {
+    n: REGISTER_CATEGORY_LIMIT,
+    plan: getRegisterPlanLabel()
+  }), true);
+  return false;
 }
 
 function showStatus(message, type = "error") {
@@ -64,7 +116,7 @@ async function sendOtp() {
     const data = await res.json();
 
     if (!res.ok) {
-      setOtpInfo(data.error_code || "Gabim gjatë dërgimit të OTP.", "error");
+      setOtpInfo(translateApiError(data.error_code, "api_server_error"), "error");
       return;
     }
 
@@ -105,7 +157,7 @@ async function verifyOtp() {
 
     if (!res.ok) {
       emailVerified = false;
-      setOtpInfo(data.error_code || "OTP i pavlefshëm.", "error");
+      setOtpInfo(translateApiError(data.error_code, "api_invalid_code"), "error");
       return;
     }
 
@@ -212,6 +264,14 @@ async function submitRegister(e) {
   return;
 }
 
+if (categories.length > REGISTER_CATEGORY_LIMIT) {
+  showStatus(tr("msg_max_categories", {
+    n: REGISTER_CATEGORY_LIMIT,
+    plan: getRegisterPlanLabel()
+  }));
+  return;
+}
+
 if (!/^\d+$/.test(localPhone)) {
   showStatus("Numri i telefonit duhet të përmbajë vetëm numra.");
   return;
@@ -256,7 +316,7 @@ const phone = buildFullPhone();
     reusedProUser = !!proSignupData.reused;
 
     if (!proSignupRes.ok || !proSignupData.success) {
-      showStatus(proSignupData.error_code || "Gabim gjatë krijimit të pro account.");
+      showStatus(translateApiError(proSignupData.error_code, "api_server_error"));
       return;
     }
 
@@ -310,7 +370,7 @@ const phone = buildFullPhone();
       } catch (rollbackErr) {
         console.error("ROLLBACK ERROR:", rollbackErr);
       }
-      showStatus(registerData.error_code || "Gabim gjatë krijimit të listing-ut.");
+      showStatus(translateApiError(registerData.error_code, "api_server_error"));
       return;
     }
 
@@ -372,3 +432,12 @@ if (phoneCodeSelectEl && phoneInputEl) {
 document.getElementById("sendOtpBtn").addEventListener("click", sendOtp);
 document.getElementById("verifyOtpBtn").addEventListener("click", verifyOtp);
 document.getElementById("registerForm").addEventListener("submit", submitRegister);
+document.querySelectorAll(".reg-category").forEach(el => {
+  el.addEventListener("change", () => enforceRegisterCategoryLimit(el));
+});
+setRegisterCategoriesStatus(tr("categories_limit_hint", {
+  n: REGISTER_CATEGORY_LIMIT,
+  plan: getRegisterPlanLabel()
+}));
+
+

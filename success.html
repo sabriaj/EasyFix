@@ -1,43 +1,37 @@
 <!DOCTYPE html>
 <html lang="sq">
 <head>
-
-  <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-CWDYCJ09D8"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-CWDYCJ09D8');
-</script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-CWDYCJ09D8"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag("js", new Date());
+    gtag("config", "G-CWDYCJ09D8");
+  </script>
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pagesa u Krye - EasyFix</title>
   <link rel="stylesheet" href="styles.css">
-
-  <!-- i18n - non-defer because inline script below depends on it -->
   <script src="i18n.js"></script>
   <script src="easyfix-config.js"></script>
 
-  <!-- logo per tabs -->
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-32.png" sizes="32x32">
   <link rel="icon" type="image/png" href="easyfix-icons-pack/favicon-16.png" sizes="16x16">
   <link rel="apple-touch-icon" href="easyfix-icons-pack/apple-touch-icon.png">
   <meta name="theme-color" content="#1d4ed8">
-  <!-- /logo per tabs -->
 </head>
 
-<body class="bg-gray-100 min-h-screen flex flex-col">
-
-  <header class="bg-blue-700 text-white py-6 shadow-md">
-    <div class="container mx-auto px-4 flex justify-between items-center">
+<body class="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100 flex flex-col text-gray-800">
+  <header class="bg-blue-700 text-white shadow-md">
+    <div class="container mx-auto px-4 py-5 flex justify-between items-center gap-4">
       <div class="flex items-center gap-3">
-        <h1 class="text-3xl font-extrabold">EasyFix</h1>
+        <div>
+          <div class="text-3xl font-extrabold tracking-tight">EasyFix</div>
+          <div class="text-xs text-blue-100 font-semibold uppercase tracking-wider">Payment status</div>
+        </div>
 
-        <!-- Language Switch -->
         <div class="flex items-center gap-1">
           <button id="langSQ" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">SQ</button>
           <button id="langMK" type="button" class="text-xs font-bold bg-white/15 hover:bg-white/25 px-2 py-1 rounded">MK</button>
@@ -45,54 +39,78 @@
         </div>
       </div>
 
-      <a id="backHomeLink" href="index.html" class="text-white underline" data-i18n="home">Faqja Kryesore</a>
+      <a id="backHomeLink" href="index.html" class="text-sm font-bold underline underline-offset-4" data-i18n="home">Faqja Kryesore</a>
     </div>
   </header>
 
-  <main class="container mx-auto px-4 py-10 flex-grow max-w-2xl">
-    <h2 class="text-3xl md:text-4xl font-bold text-blue-900 mb-4 text-center" data-i18n="thanks">Faleminderit!</h2>
-
-    <p id="subtitle" class="text-center text-gray-700" data-i18n="verifying_sub">
-      Po verifikojme pagesen dhe aktivizimin e firmes suaj...
-    </p>
-
-    <div id="card" class="bg-white rounded-xl shadow p-6 mt-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm text-gray-500">Status</p>
-          <p id="statusText" class="text-lg font-semibold text-blue-700" data-i18n="status_verifying">Duke verifikuar...</p>
+  <main class="flex-grow">
+    <section class="container mx-auto max-w-3xl px-4 py-10 md:py-14">
+      <div class="text-center max-w-2xl mx-auto">
+        <div class="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-blue-700 shadow-sm border border-blue-100">
+          <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+          EasyFix Checkout
         </div>
-        <div id="spinner" class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-700"></div>
-      </div>
-
-      <div class="mt-4 text-sm text-gray-600">
-        <p id="hint" data-i18n="hint_activation">
-          Nese sapo e kryet pagesen, zakonisht aktivizimi vjen brenda pak sekondash.
+        <h1 class="mt-5 text-3xl md:text-4xl font-extrabold text-blue-900" data-i18n="thanks">Faleminderit!</h1>
+        <p id="subtitle" class="mt-3 text-gray-600 text-sm md:text-base leading-relaxed" data-i18n="verifying_sub">
+          Po verifikojme pagesen dhe aktivizimin e firmes suaj...
         </p>
-        <p id="emailLine" class="mt-2"></p>
       </div>
 
-      <div class="mt-6 flex flex-col sm:flex-row gap-3">
-        <button
-          id="goBtn"
-          class="w-full sm:w-auto bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
-          disabled
-          data-i18n="go_firm"
-        >
-          Shko te firma jote
-        </button>
+      <div id="card" class="mt-8 bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/60 overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-6 text-white">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="text-xs uppercase tracking-wider text-blue-100 font-bold">Status</div>
+              <div id="statusText" class="mt-2 text-2xl font-extrabold" data-i18n="status_verifying">Duke verifikuar...</div>
+            </div>
+            <div id="spinnerWrap" class="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center shrink-0">
+              <div id="spinner" class="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+            </div>
+          </div>
 
-        <button
-          id="retryBtn"
-          class="w-full sm:w-auto bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
-          data-i18n="refresh_status"
-        >
-          Rifresko statusin
-        </button>
+          <div class="mt-5 h-2 rounded-full bg-white/15 overflow-hidden">
+            <div id="progressBar" class="h-full w-1/3 bg-white/80 transition-all duration-300"></div>
+          </div>
+        </div>
+
+        <div class="p-6 md:p-8">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="rounded-2xl bg-blue-50 border border-blue-100 p-4">
+              <div class="text-xs uppercase tracking-wide font-bold text-blue-700">What is happening</div>
+              <p id="hint" class="mt-2 text-sm text-blue-900 leading-relaxed" data-i18n="hint_activation">
+                Nese sapo e kryet pagesen, zakonisht aktivizimi vjen brenda pak sekondash.
+              </p>
+            </div>
+
+            <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+              <div class="text-xs uppercase tracking-wide font-bold text-gray-500">Reference</div>
+              <p id="emailLine" class="mt-2 text-sm text-gray-700 break-all"></p>
+            </div>
+          </div>
+
+          <p id="errorBox" class="mt-5 hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"></p>
+
+          <div class="mt-6 flex flex-col sm:flex-row gap-3">
+            <button
+              id="goBtn"
+              class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white py-3 px-5 rounded-2xl font-bold shadow-lg shadow-blue-100 disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled
+              data-i18n="go_firm"
+            >
+              Shko te firma jote
+            </button>
+
+            <button
+              id="retryBtn"
+              class="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 px-5 rounded-2xl font-bold border border-gray-200"
+              data-i18n="refresh_status"
+            >
+              Rifresko statusin
+            </button>
+          </div>
+        </div>
       </div>
-
-      <p id="errorBox" class="mt-4 text-sm text-red-600 hidden"></p>
-    </div>
+    </section>
   </main>
 
   <footer class="bg-blue-700 text-white text-center py-6 mt-auto" data-i18n="footer">
@@ -100,7 +118,66 @@
   </footer>
 
   <script>
-    const { t, setLang, applyTranslations, setLangButtonsUI } = window.EASYFIX_I18N;
+    const { t, setLang, applyTranslations, setLangButtonsUI, getLang } = window.EASYFIX_I18N;
+
+    function successText(key) {
+      const lang = getLang ? getLang() : "sq";
+      const map = {
+        status_active_listing: {
+          sq: "Aktive",
+          mk: "\u0410\u043a\u0442\u0438\u0432\u043d\u043e",
+          en: "Active"
+        },
+        listing_active_subtitle: {
+          sq: "Listing-u yt eshte aktiv.",
+          mk: "\u0422\u0432\u043e\u0458\u043e\u0442 listing \u0435 \u0430\u043a\u0442\u0438\u0432\u0435\u043d.",
+          en: "Your listing is active."
+        },
+        status_check_failed: {
+          sq: "Gabim gjate kontrollit te statusit",
+          mk: "\u0413\u0440\u0435\u0448\u043a\u0430 \u043f\u0440\u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u043d\u0430 \u0441\u0442\u0430\u0442\u0443\u0441\u043e\u0442",
+          en: "Status check failed"
+        }
+      };
+
+      return map[key]?.[lang] || map[key]?.sq || key;
+    }
+
+    function setVisualState(state) {
+      const card = document.getElementById("card");
+      const spinnerWrap = document.getElementById("spinnerWrap");
+      const spinner = document.getElementById("spinner");
+      const progressBar = document.getElementById("progressBar");
+      const statusText = document.getElementById("statusText");
+
+      if (!card || !spinnerWrap || !spinner || !progressBar || !statusText) return;
+
+      if (state === "success") {
+        spinner.classList.add("hidden");
+        spinnerWrap.className = "w-12 h-12 rounded-2xl bg-green-500/20 border border-green-300/40 flex items-center justify-center shrink-0";
+        spinnerWrap.innerHTML = '<div class="text-2xl font-extrabold text-white">OK</div>';
+        progressBar.style.width = "100%";
+        statusText.className = "mt-2 text-2xl font-extrabold text-white";
+        return;
+      }
+
+      if (state === "error") {
+        spinner.classList.add("hidden");
+        spinnerWrap.className = "w-12 h-12 rounded-2xl bg-red-500/20 border border-red-300/40 flex items-center justify-center shrink-0";
+        spinnerWrap.innerHTML = '<div class="text-2xl font-extrabold text-white">!</div>';
+        progressBar.style.width = "100%";
+        progressBar.className = "h-full bg-red-200 transition-all duration-300";
+        statusText.className = "mt-2 text-2xl font-extrabold text-white";
+        return;
+      }
+
+      spinnerWrap.className = "w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center shrink-0";
+      spinner.classList.remove("hidden");
+      spinnerWrap.innerHTML = '<div id="spinner" class="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>';
+      progressBar.className = "h-full bg-white/80 transition-all duration-300";
+      progressBar.style.width = "33%";
+      statusText.className = "mt-2 text-2xl font-extrabold text-white";
+    }
 
     function wireLang() {
       document.getElementById("langSQ")?.addEventListener("click", () => { setLang("sq"); applyTranslations(); setLangButtonsUI(); repaintDynamicTexts(); });
@@ -114,15 +191,17 @@
     const email = params.get("email");
 
     const statusText = document.getElementById("statusText");
-    const spinner = document.getElementById("spinner");
     const goBtn = document.getElementById("goBtn");
     const retryBtn = document.getElementById("retryBtn");
     const errorBox = document.getElementById("errorBox");
     const emailLine = document.getElementById("emailLine");
     const subtitle = document.getElementById("subtitle");
+    const progressBar = document.getElementById("progressBar");
 
     function repaintDynamicTexts() {
-      if (email) emailLine.textContent = t("email_line", { email });
+      if (email) {
+        emailLine.textContent = t("email_line", { email });
+      }
     }
 
     if (email) {
@@ -130,11 +209,11 @@
     } else {
       subtitle.textContent = t("missing_email_sub");
       statusText.textContent = t("missing_email_status");
-      spinner.classList.add("hidden");
       errorBox.classList.remove("hidden");
       errorBox.textContent = t("missing_email_err");
       retryBtn.textContent = t("back_home_btn");
-      retryBtn.addEventListener("click", () => window.location.href = pagePath("index.html"));
+      retryBtn.addEventListener("click", () => { window.location.href = pagePath("index.html"); });
+      setVisualState("error");
     }
 
     let tries = 0;
@@ -146,6 +225,8 @@
 
       tries++;
       errorBox.classList.add("hidden");
+      setVisualState("loading");
+      progressBar.style.width = `${Math.min(90, 20 + tries * 3)}%`;
       statusText.textContent = `${t("status_verifying")} (${tries}/${MAX_TRIES})`;
 
       try {
@@ -158,14 +239,14 @@
         if (!data?.success || !firma) throw new Error("Not found");
 
         if (firma.payment_status === "active" || firma.payment_status === "paid" || firma.payment_status === "trial") {
-          spinner.classList.add("hidden");
+          setVisualState("success");
 
           if (firma.plan === "premium") {
             statusText.textContent = t("active_paid");
             subtitle.textContent = t("activated_ok");
           } else {
-            statusText.textContent = "Aktive";
-            subtitle.textContent = "Listing-u yt eshte aktiv.";
+            statusText.textContent = successText("status_active_listing");
+            subtitle.textContent = successText("listing_active_subtitle");
           }
 
           goBtn.disabled = false;
@@ -177,12 +258,12 @@
           return true;
         }
 
-        spinner.classList.remove("hidden");
         statusText.textContent = t("in_process", { status: (firma.payment_status || "pending") });
         return false;
       } catch (error) {
+        setVisualState("error");
         errorBox.classList.remove("hidden");
-        errorBox.textContent = "Error: " + error.message;
+        errorBox.textContent = successText("status_check_failed") + ": " + error.message;
         return false;
       }
     }
@@ -197,9 +278,9 @@
         const done = await checkStatus();
         if (done || tries >= MAX_TRIES) {
           clearInterval(timer);
-          spinner.classList.add("hidden");
 
           if (!done) {
+            setVisualState("error");
             statusText.textContent = t("not_confirmed");
             subtitle.textContent = t("try_refresh");
           }
@@ -208,7 +289,7 @@
     }
 
     retryBtn.addEventListener("click", async () => {
-      spinner.classList.remove("hidden");
+      setVisualState("loading");
       await startPolling();
     });
 
@@ -217,8 +298,10 @@
     wireLang();
     repaintDynamicTexts();
 
-    if (email) startPolling();
+    if (email) {
+      setVisualState("loading");
+      startPolling();
+    }
   </script>
-
 </body>
 </html>

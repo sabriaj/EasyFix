@@ -251,9 +251,26 @@
               <div id="photosGrid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
             </div>
           </div>
+
+          <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+            <div class="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <h2 class="text-2xl font-extrabold text-gray-900">Reviews</h2>
+                <p id="reviewsSummary" class="text-sm text-gray-500 mt-1">Duke ngarkuar reviews...</p>
+              </div>
+              <div id="reviewsAverage" class="text-right text-2xl font-extrabold text-amber-500">-</div>
+            </div>
+            <div id="reviewsList" class="space-y-3"></div>
+          </div>
         </div>
 
         <div class="space-y-6">
+          <div class="bg-white rounded-3xl shadow-xl p-6">
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider">Inbox</div>
+            <p class="text-sm text-gray-500 mt-2">Njoftime nga EasyFix.</p>
+            <div id="notificationsList" class="mt-4 space-y-3"></div>
+          </div>
+
           <div class="bg-white rounded-3xl shadow-xl p-6">
             <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="pro_current_plan">Plani aktual</div>
             <div id="sidePlanName" class="text-2xl font-extrabold text-gray-900 mt-2">FREE</div>
@@ -372,6 +389,118 @@ function renderPhotos(photos = []) {
     wrap.innerHTML = `<img src="${src}" class="w-full h-32 object-cover">`;
     grid.appendChild(wrap);
   });
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("sq-AL");
+}
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
+function renderStars(rating) {
+  const safe = Math.max(0, Math.min(5, Number(rating || 0)));
+  return "★★★★★".split("").map((star, index) =>
+    `<span class="${index < safe ? "text-amber-400" : "text-gray-300"}">${star}</span>`
+  ).join("");
+}
+
+function renderReviews(data = {}) {
+  const list = document.getElementById("reviewsList");
+  const summary = document.getElementById("reviewsSummary");
+  const average = document.getElementById("reviewsAverage");
+  const reviews = Array.isArray(data.reviews) ? data.reviews : [];
+
+  average.textContent = data.count ? `${data.averageRating || 0} ★` : "-";
+  summary.textContent = data.count
+    ? `${data.count} review${data.count === 1 ? "" : "s"} nga klientet`
+    : "Ende nuk ka reviews.";
+
+  if (!reviews.length) {
+    list.innerHTML = `<div class="text-sm text-gray-500 rounded-2xl border border-gray-100 bg-gray-50 p-4">Reviews nga klientet do te shfaqen ketu.</div>`;
+    return;
+  }
+
+  list.innerHTML = reviews.map(review => {
+    const reviewerName = escapeHtml(review.reviewer_display_name || "Klient");
+    const avatar = review.reviewer_avatar_url
+      ? `<img src="${escapeHtml(review.reviewer_avatar_url)}" class="w-11 h-11 rounded-2xl object-cover border border-gray-100" alt="">`
+      : `<div class="w-11 h-11 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center font-extrabold">${reviewerName.slice(0, 1)}</div>`;
+
+    return `
+      <div class="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+        <div class="flex items-start gap-3">
+          ${avatar}
+          <div class="min-w-0 flex-1">
+            <div class="flex items-start justify-between gap-3">
+              <div class="font-extrabold text-gray-900">${reviewerName}</div>
+              <div class="text-xs text-gray-400 shrink-0">${formatDate(review.createdAt)}</div>
+            </div>
+            <div class="text-sm mt-1">${renderStars(review.rating)}</div>
+            <p class="text-sm text-gray-600 mt-2 whitespace-pre-line">${escapeHtml(review.comment || "")}</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderNotifications(items = []) {
+  const list = document.getElementById("notificationsList");
+  if (!list) return;
+
+  if (!items.length) {
+    list.innerHTML = `<div class="text-sm text-gray-500 rounded-2xl border border-gray-100 bg-gray-50 p-4">Nuk ka njoftime.</div>`;
+    return;
+  }
+
+  list.innerHTML = items.slice(0, 5).map(item => `
+    <div class="rounded-2xl border ${item.is_read ? "border-gray-100 bg-gray-50" : "border-blue-100 bg-blue-50"} p-4">
+      <div class="text-sm font-extrabold text-gray-900">${escapeHtml(item.title || "Njoftim")}</div>
+      <p class="text-sm text-gray-600 mt-1">${escapeHtml(item.message || "")}</p>
+      <div class="text-xs text-gray-400 mt-2">${formatDate(item.createdAt)}</div>
+    </div>
+  `).join("");
+}
+
+async function loadProReviews() {
+  try {
+    const res = await apiFetch(`${API_URL}/pro/reviews/me`);
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      renderReviews({ reviews: [], count: 0, averageRating: 0 });
+      return;
+    }
+    renderReviews(data);
+  } catch (err) {
+    console.error(err);
+    renderReviews({ reviews: [], count: 0, averageRating: 0 });
+  }
+}
+
+async function loadNotifications() {
+  try {
+    const res = await apiFetch(`${API_URL}/pro/notifications/me`);
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      renderNotifications([]);
+      return;
+    }
+    renderNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+  } catch (err) {
+    console.error(err);
+    renderNotifications([]);
+  }
 }
 
 function getSelectedCategories() {
@@ -567,6 +696,7 @@ async function loadDashboard() {
     }
 
     fillDashboard(data.firm);
+    await Promise.all([loadProReviews(), loadNotifications()]);
 
     document.getElementById("loadingBox").classList.add("hidden");
     document.getElementById("dashboardBox").classList.remove("hidden");

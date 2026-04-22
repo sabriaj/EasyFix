@@ -47,10 +47,35 @@
       <div class="glass-card rounded-3xl shadow-xl border border-white/60 overflow-hidden">
         <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-8 text-white">
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <p class="text-blue-100 text-sm font-semibold uppercase tracking-wider" data-i18n="account_dashboard">Dashboard</p>
-              <h1 id="heroName" class="text-3xl md:text-4xl font-extrabold mt-1">Llogaria ime</h1>
-              <p id="heroEmail" class="text-blue-100 mt-2 text-sm md:text-base"></p>
+            <div class="flex items-center gap-4 min-w-0">
+              <div class="relative shrink-0">
+                <button id="avatarButton" type="button"
+                  class="w-20 h-20 rounded-full bg-white/15 border-2 border-white/40 overflow-hidden flex items-center justify-center text-2xl font-extrabold text-white shadow-lg focus:outline-none focus:ring-4 focus:ring-white/30"
+                  style="width:5rem;height:5rem;min-width:5rem;min-height:5rem;max-width:5rem;max-height:5rem;"
+                  aria-label="Ndrysho avatarin">
+                  <span id="avatarInitials">EF</span>
+                </button>
+                <span class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white text-blue-700 border border-blue-100 shadow flex items-center justify-center text-sm font-extrabold pointer-events-none">+</span>
+                <div id="avatarMenu" class="hidden absolute left-0 top-[calc(100%+0.75rem)] w-56 max-w-[calc(100vw-2rem)] rounded-2xl bg-white text-gray-800 shadow-2xl border border-gray-100 p-2 z-50">
+                  <div class="absolute -top-2 left-8 w-4 h-4 rotate-45 bg-white border-l border-t border-gray-100"></div>
+                  <button id="changeAvatarBtn" type="button" class="relative w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-50">
+                    <span class="w-8 h-8 rounded-full bg-blue-50 text-blue-700 flex items-center justify-center text-base">+</span>
+                    <span>Ndrysho foton</span>
+                  </button>
+                  <button id="removeAvatarBtn" type="button" class="relative w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50">
+                    <span class="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center text-base">x</span>
+                    <span>Hiq foton</span>
+                  </button>
+                </div>
+                <input id="avatarFile" type="file" accept="image/*" class="hidden">
+              </div>
+
+              <div class="min-w-0">
+                <p class="text-blue-100 text-sm font-semibold uppercase tracking-wider" data-i18n="account_dashboard">Dashboard</p>
+                <h1 id="heroName" class="text-3xl md:text-4xl font-extrabold mt-1 break-words">Llogaria ime</h1>
+                <p id="heroEmail" class="text-blue-100 mt-2 text-sm md:text-base break-all"></p>
+                <p id="avatarStatus" class="text-sm font-semibold mt-2 text-blue-100"></p>
+              </div>
             </div>
 
             <div class="bg-white/15 rounded-2xl px-5 py-4 border border-white/20 min-w-[180px]">
@@ -216,6 +241,7 @@ const { getUser, setUser, clearUser, apiFetch, translateApiError } = window.EASY
 document.getElementById("backHomeLink").href = pagePath("index.html");
 
 const currentUser = getUser();
+let currentAvatarUrl = "";
 
 if (!currentUser || !currentUser.id) {
   goToPage("auth.html");
@@ -252,6 +278,76 @@ function showPasswordStatus(msg, isError = false) {
     : "text-sm font-semibold mt-4 text-green-600";
 }
 
+function showAvatarStatus(msg, isError = false) {
+  const el = document.getElementById("avatarStatus");
+  el.innerText = msg;
+  el.className = isError
+    ? "text-sm font-semibold mt-2 text-red-100"
+    : "text-sm font-semibold mt-2 text-blue-100";
+}
+
+function getInitials(user = {}) {
+  const first = String(user.name || "").trim().slice(0, 1);
+  const second = String(user.surname || "").trim().slice(0, 1);
+  return `${first}${second}`.trim().toUpperCase() || "EF";
+}
+
+function renderAvatar(avatarUrl = "", user = getUser() || {}) {
+  const button = document.getElementById("avatarButton");
+  if (!button) return;
+
+  currentAvatarUrl = String(avatarUrl || "");
+  if (avatarUrl) {
+    button.innerHTML = `<img src="${avatarUrl}" class="w-full h-full object-cover" style="width:100%;height:100%;max-width:100%;max-height:100%;object-fit:cover;display:block;" alt="">`;
+  } else {
+    button.innerHTML = `<span id="avatarInitials">${getInitials(user)}</span>`;
+  }
+}
+
+function getLocalAvatarKey(userId) {
+  return `easyfix_client_avatar_${String(userId || "").trim()}`;
+}
+
+function getLocalAvatar(userId) {
+  try {
+    return localStorage.getItem(getLocalAvatarKey(userId)) || "";
+  } catch {
+    return "";
+  }
+}
+
+function setLocalAvatar(userId, dataUrl) {
+  try {
+    localStorage.setItem(getLocalAvatarKey(userId), dataUrl);
+  } catch {}
+}
+
+function clearLocalAvatar(userId) {
+  try {
+    localStorage.removeItem(getLocalAvatarKey(userId));
+  } catch {}
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("File read failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function readJsonResponse(res) {
+  const contentType = String(res.headers.get("content-type") || "").toLowerCase();
+  if (contentType.includes("application/json")) {
+    return res.json();
+  }
+  return {
+    success: false,
+    error_code: res.status === 404 ? "NOT_FOUND" : "SERVER_ERROR"
+  };
+}
+
 function validateProfileFields(name, surname, address) {
   if (!name || !surname || !address) {
     return t("msg_fill_all");
@@ -282,7 +378,7 @@ async function loadAccount() {
 
   try {
     const res = await apiFetch(`${API_URL}/user/me/${user.id}`);
-    const data = await res.json();
+    const data = await readJsonResponse(res);
 
     if (!res.ok || !data.success) {
       clearUser();
@@ -295,6 +391,8 @@ async function loadAccount() {
     document.getElementById("email").value = data.user.email || "";
     document.getElementById("address").value = data.user.address || "";
     document.getElementById("credits").innerText = data.user.credits ?? 0;
+    const localAvatar = getLocalAvatar(user.id);
+    renderAvatar(data.user.avatarUrl || localAvatar, data.user);
 
     document.getElementById("heroName").innerText =
       `${data.user.name || ""} ${data.user.surname || ""}`.trim() || t("account_page_title");
@@ -307,6 +405,7 @@ async function loadAccount() {
       name: data.user.name,
       surname: data.user.surname,
       address: data.user.address,
+      avatarUrl: data.user.avatarUrl || localAvatar,
       email: data.user.email,
       credits: data.user.credits
     });
@@ -354,7 +453,7 @@ async function saveProfile() {
       })
     });
 
-    const data = await res.json();
+    const data = await readJsonResponse(res);
 
     if (!res.ok || !data.success) {
       if (data.error_code === "INVALID_FIELDS") {
@@ -372,6 +471,7 @@ async function saveProfile() {
       name: data.user.name,
       surname: data.user.surname,
       address: data.user.address,
+      avatarUrl: data.user.avatarUrl || "",
       email: data.user.email,
       credits: data.user.credits
     });
@@ -380,6 +480,7 @@ async function saveProfile() {
     document.getElementById("heroName").innerText =
       `${data.user.name || ""} ${data.user.surname || ""}`.trim() || t("account_page_title");
     document.getElementById("heroEmail").innerText = data.user.email || "";
+    renderAvatar(data.user.avatarUrl || currentAvatarUrl, data.user);
 
     showStatus(t("account_saved_success"));
   } catch (err) {
@@ -434,7 +535,7 @@ async function changePassword() {
       })
     });
 
-    const data = await res.json();
+    const data = await readJsonResponse(res);
 
     if (!res.ok || !data.success) {
       showPasswordStatus(translateApiError(data.error_code, "account_password_change_error"), true);
@@ -455,7 +556,139 @@ async function changePassword() {
   }
 }
 
+async function saveAvatar(file) {
+  const user = getUser();
+
+  if (!user || !user.id) {
+    goToPage("auth.html");
+    return;
+  }
+
+  if (!file) {
+    showAvatarStatus("Zgjidh nje foto per avatarin.", true);
+    return;
+  }
+
+  showAvatarStatus("Duke ruajtur...");
+
+  try {
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    const res = await apiFetch(`${API_URL}/user/me/${user.id}/avatar`, {
+      method: "PUT",
+      body: formData
+    });
+
+    const data = await readJsonResponse(res);
+
+    if (!res.ok || !data.success) {
+      if (data.error_code === "NOT_FOUND") {
+        if (file.size > 1500 * 1024) {
+          showAvatarStatus("Fotoja eshte shume e madhe per ruajtje lokale ne dev backend.", true);
+          return;
+        }
+        const localAvatar = await fileToDataUrl(file);
+        setLocalAvatar(user.id, localAvatar);
+        renderAvatar(localAvatar, user);
+        setUser({ ...user, avatarUrl: localAvatar });
+        document.getElementById("avatarFile").value = "";
+        showAvatarStatus("Avatari u ruajt ne kete pajisje. Dev backend ende nuk e ka endpoint-in.");
+        return;
+      }
+      showAvatarStatus(translateApiError(data.error_code, "account_save_error"), true);
+      return;
+    }
+
+    document.getElementById("avatarFile").value = "";
+    renderAvatar(data.user.avatarUrl || "", data.user);
+    setUser({
+      ...user,
+      name: data.user.name,
+      surname: data.user.surname,
+      address: data.user.address,
+      avatarUrl: data.user.avatarUrl || "",
+      credits: data.user.credits
+    });
+    showAvatarStatus("Avatari u ruajt me sukses.");
+  } catch (err) {
+    console.error(err);
+    showAvatarStatus(t("api_server_error"), true);
+  }
+}
+
+async function removeAvatar() {
+  const user = getUser();
+
+  if (!user || !user.id) {
+    goToPage("auth.html");
+    return;
+  }
+
+  if (!currentAvatarUrl) {
+    showAvatarStatus("Nuk ka foto per ta hequr.", true);
+    return;
+  }
+
+  showAvatarStatus("Duke hequr foton...");
+
+  try {
+    const res = await apiFetch(`${API_URL}/user/me/${user.id}/avatar`, {
+      method: "DELETE"
+    });
+    const data = await readJsonResponse(res);
+
+    if (!res.ok || !data.success) {
+      if (data.error_code === "NOT_FOUND") {
+        clearLocalAvatar(user.id);
+        renderAvatar("", user);
+        setUser({ ...user, avatarUrl: "" });
+        showAvatarStatus("Fotoja u hoq nga kjo pajisje. Dev backend ende nuk e ka endpoint-in.");
+        return;
+      }
+      showAvatarStatus(translateApiError(data.error_code, "account_save_error"), true);
+      return;
+    }
+
+    renderAvatar("", data.user);
+    setUser({
+      ...user,
+      name: data.user.name,
+      surname: data.user.surname,
+      address: data.user.address,
+      avatarUrl: "",
+      credits: data.user.credits
+    });
+    showAvatarStatus("Fotoja u hoq.");
+  } catch (err) {
+    console.error(err);
+    showAvatarStatus(t("api_server_error"), true);
+  }
+}
+
 document.getElementById("saveBtn").addEventListener("click", saveProfile);
+document.getElementById("avatarButton").addEventListener("click", (event) => {
+  event.stopPropagation();
+  document.getElementById("avatarMenu").classList.toggle("hidden");
+});
+document.getElementById("avatarMenu").addEventListener("click", (event) => {
+  event.stopPropagation();
+});
+document.getElementById("changeAvatarBtn").addEventListener("click", () => {
+  document.getElementById("avatarMenu").classList.add("hidden");
+  document.getElementById("avatarFile").click();
+});
+document.getElementById("removeAvatarBtn").addEventListener("click", () => {
+  document.getElementById("avatarMenu").classList.add("hidden");
+  removeAvatar();
+});
+document.getElementById("avatarFile").addEventListener("change", (event) => {
+  const file = event.target.files?.[0] || null;
+  if (file) saveAvatar(file);
+});
+document.addEventListener("click", () => {
+  document.getElementById("avatarMenu").classList.add("hidden");
+});
 
 document.getElementById("logoutBtn").addEventListener("click", async () => {
   clearUser();

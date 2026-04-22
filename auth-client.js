@@ -11,6 +11,7 @@
       name: String(user.name || ""),
       surname: String(user.surname || ""),
       address: String(user.address || ""),
+      avatarUrl: String(user.avatarUrl || ""),
       email: String(user.email || ""),
       role: String(user.role || ""),
       credits: Number(user.credits || 0)

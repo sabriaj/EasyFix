@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyFix - Profil Mjeshtri</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="i18n.js"></script>
+  <script src="easyfix-config.js"></script>
+  <script src="auth-client.js"></script>
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-800">
+  <header class="bg-white border-b border-gray-100 sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <a id="backLink" href="index.html" class="text-sm font-bold text-blue-700 hover:underline">Kthehu te lista</a>
+      <button id="accountBtn" class="bg-white border border-gray-200 px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-50">Login</button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6 md:py-8">
+    <div id="loadingBox" class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center text-gray-500 font-semibold">
+      Duke ngarkuar profilin...
+    </div>
+
+    <div id="errorBox" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-2xl px-5 py-4 font-semibold"></div>
+
+    <div id="profileBox" class="hidden space-y-6">
+      <section class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div id="heroPhoto" class="h-64 md:h-80 bg-gray-100"></div>
+        <div class="p-6 md:p-8">
+          <div class="flex flex-col md:flex-row md:items-start gap-5">
+            <div id="logoBox" class="w-24 h-24 rounded-3xl border border-gray-100 bg-white shadow-sm overflow-hidden flex items-center justify-center text-gray-400 font-bold shrink-0"></div>
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                <div>
+                  <h1 id="firmName" class="text-3xl md:text-4xl font-extrabold text-gray-900"></h1>
+                  <p id="firmCategories" class="text-sm text-blue-700 font-bold uppercase tracking-wide mt-2"></p>
+                  <p id="firmLocation" class="text-sm text-gray-500 mt-3"></p>
+                </div>
+                <div class="rounded-2xl bg-amber-50 border border-amber-100 px-5 py-4 text-right">
+                  <div id="averageRating" class="text-2xl font-extrabold text-amber-500">-</div>
+                  <div id="reviewCount" class="text-xs font-bold text-gray-500 uppercase tracking-wide">0 reviews</div>
+                </div>
+              </div>
+              <div id="contactBox" class="mt-6"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-6">
+          <div id="descriptionSection" class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-7">
+            <h2 class="text-2xl font-extrabold text-gray-900">Pershkrimi</h2>
+            <p id="firmDescription" class="text-gray-600 mt-4 leading-relaxed whitespace-pre-line"></p>
+          </div>
+
+          <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-7">
+            <h2 class="text-2xl font-extrabold text-gray-900">Foto</h2>
+            <div id="photosGrid" class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-5"></div>
+          </div>
+
+          <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-7">
+            <div class="flex items-center justify-between gap-4">
+              <h2 class="text-2xl font-extrabold text-gray-900">Reviews</h2>
+              <div id="reviewsSmallSummary" class="text-sm font-bold text-gray-500"></div>
+            </div>
+            <div id="reviewsList" class="space-y-3 mt-5"></div>
+          </div>
+        </div>
+
+        <aside class="space-y-6">
+          <div id="reviewFormBox" class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6"></div>
+        </aside>
+      </section>
+    </div>
+  </main>
+
+<script>
+const API_URL = window.EASYFIX_CONFIG.API_URL;
+const { pagePath, goToPage } = window.EASYFIX_CONFIG;
+const { getUser, setUser, clearUser, apiFetch, translateApiError } = window.EASYFIX_AUTH;
+const { applyTranslations, categoryLabel, normalizeCategoryKey, t } = window.EASYFIX_I18N;
+let currentFirm = null;
+let currentReviews = [];
+let pendingReviewStatus = "";
+let selectedReviewRating = 5;
+
+document.getElementById("backLink").href = pagePath("index.html");
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
+function getFirmId() {
+  const params = new URLSearchParams(window.location.search);
+  return String(params.get("id") || params.get("firmId") || params.get("firm_id") || params.get("owner_user_id") || "").trim();
+}
+
+function getLocalReviewsKey(firmId) {
+  return `easyfix_local_reviews_${normalizeFirmId(firmId)}`;
+}
+
+function getLocalReviews(firmId) {
+  try {
+    return JSON.parse(localStorage.getItem(getLocalReviewsKey(firmId)) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalReviews(firmId, reviews) {
+  try {
+    localStorage.setItem(getLocalReviewsKey(firmId), JSON.stringify(Array.isArray(reviews) ? reviews : []));
+  } catch {}
+}
+
+function getReviewSummary(reviews = []) {
+  const safeReviews = Array.isArray(reviews) ? reviews : [];
+  const count = safeReviews.length;
+  const avg = count
+    ? safeReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / count
+    : 0;
+  return {
+    count,
+    averageRating: Math.round(avg * 10) / 10
+  };
+}
+
+function mergeLocalReviews(firmId, remoteReviews = []) {
+  const merged = Array.isArray(remoteReviews) ? [...remoteReviews] : [];
+  const seen = new Set(merged.map(review => String(review.reviewer_user_id || "")));
+
+  getLocalReviews(firmId).forEach(review => {
+    const key = String(review.reviewer_user_id || "");
+    if (key && seen.has(key)) return;
+    merged.push(review);
+  });
+
+  return merged.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+}
+
+function buildLocalReviewPayload({ firmId, rating, comment, user }) {
+  const reviewerName = `${user.name || ""} ${user.surname || ""}`.trim() || "Klient";
+  return {
+    _id: `local-${user.id}-${firmId}`,
+    reviewer_user_id: user.id,
+    reviewer_display_name: reviewerName,
+    reviewer_avatar_url: user.avatarUrl || "",
+    firm_id: firmId,
+    rating,
+    comment,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    localOnly: true
+  };
+}
+
+function getActiveCountry() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = String(params.get("country") || "").trim().toUpperCase();
+  const fromStorage = String(localStorage.getItem("easyfix_country") || "").trim().toUpperCase();
+  if (/^[A-Z]{2}$/.test(fromUrl)) return fromUrl;
+  if (/^[A-Z]{2}$/.test(fromStorage)) return fromStorage;
+  return "MK";
+}
+
+async function readJsonResponse(res) {
+  const contentType = String(res.headers.get("content-type") || "").toLowerCase();
+  if (contentType.includes("application/json")) {
+    return res.json();
+  }
+  return {
+    success: false,
+    error_code: res.status === 404 ? "NOT_FOUND" : "SERVER_ERROR"
+  };
+}
+
+function formatDate(value) {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("sq-AL");
+}
+
+function renderStars(rating) {
+  const safe = Math.max(0, Math.min(5, Number(rating || 0)));
+  return "★★★★★".split("").map((star, index) =>
+    `<span class="${index < safe ? "text-amber-400" : "text-gray-300"}">${star}</span>`
+  ).join("");
+}
+
+function renderStarButtons(rating) {
+  const safe = Math.max(0, Math.min(5, Number(rating || 0)));
+  return [1, 2, 3, 4, 5].map(value => `
+    <button type="button"
+      data-rating-value="${value}"
+      class="review-star-btn text-3xl leading-none transition ${value <= safe ? "text-amber-400" : "text-gray-300"} hover:text-amber-400"
+      aria-label="${value} yje">★</button>
+  `).join("");
+}
+
+function updateReviewStarInput() {
+  const wrap = document.getElementById("reviewStarsInput");
+  if (!wrap) return;
+  wrap.querySelectorAll(".review-star-btn").forEach(btn => {
+    const value = Number(btn.dataset.ratingValue || 0);
+    btn.className = `review-star-btn text-3xl leading-none transition ${value <= selectedReviewRating ? "text-amber-400" : "text-gray-300"} hover:text-amber-400`;
+  });
+}
+
+function getCategories(firm) {
+  const arr = Array.isArray(firm.categories) ? firm.categories : (firm.category ? [firm.category] : []);
+  return arr.map(k => categoryLabel(normalizeCategoryKey(k))).filter(Boolean).join(", ");
+}
+
+function normalizeFirmId(value) {
+  return String(value || "").trim();
+}
+
+function normalizeFirmForProfile(firm) {
+  if (!firm || typeof firm !== "object") return null;
+  const firmId = normalizeFirmId(firm._id || firm.id || firm._firmId);
+  if (!firmId) return null;
+  return {
+    ...firm,
+    _id: firmId
+  };
+}
+
+function getStoredSelectedFirm(targetId = "") {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem("easyfix_selected_firm_profile") || "null");
+    const firm = normalizeFirmForProfile(saved?.firm);
+    if (!firm) return null;
+
+    const savedAt = Number(saved?.savedAt || 0);
+    if (savedAt && Date.now() - savedAt > 30 * 60 * 1000) return null;
+
+    const safeTarget = normalizeFirmId(targetId);
+    if (!safeTarget) return firm;
+
+    const matches = [
+      firm._id,
+      firm.id,
+      firm._firmId,
+      firm.owner_user_id,
+      firm.email
+    ].some(value => normalizeFirmId(value) === safeTarget);
+
+    return matches ? firm : null;
+  } catch {
+    return null;
+  }
+}
+
+function findFirmInList(firms, targetId) {
+  const safeTarget = normalizeFirmId(targetId);
+  if (!safeTarget) return null;
+
+  return (Array.isArray(firms) ? firms : []).find(firm => {
+    return [
+      firm?._id,
+      firm?.id,
+      firm?._firmId,
+      firm?.owner_user_id,
+      firm?.email
+    ].some(value => normalizeFirmId(value) === safeTarget);
+  }) || null;
+}
+
+async function loadFirmFromList(targetId) {
+  const countries = Array.from(new Set([getActiveCountry(), "MK", ""]));
+
+  for (const country of countries) {
+    let data = null;
+    try {
+      const url = country
+        ? `${API_URL}/firms?country=${encodeURIComponent(country)}`
+        : `${API_URL}/firms`;
+      const res = await fetch(url);
+      data = await readJsonResponse(res);
+      if (!res.ok || !Array.isArray(data)) continue;
+    } catch {
+      continue;
+    }
+
+    const firm = findFirmInList(data, targetId);
+    if (firm) {
+      return {
+        success: true,
+        firm,
+        reviews: [],
+        averageRating: 0,
+        reviewCount: 0
+      };
+    }
+  }
+
+  return null;
+}
+
+function getUnlockedStorageKey() {
+  const user = getUser();
+  if (!user || !user.id) return null;
+  return `easyfix_unlocked_firms_map_${user.id}`;
+}
+
+function getUnlockedFirmsMap() {
+  try {
+    const key = getUnlockedStorageKey();
+    if (!key) return {};
+    return JSON.parse(localStorage.getItem(key) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveUnlockedFirmContact(firmId, contact) {
+  const key = getUnlockedStorageKey();
+  if (!key || !firmId || !contact) return;
+  const map = getUnlockedFirmsMap();
+  map[firmId] = contact;
+  localStorage.setItem(key, JSON.stringify(map));
+}
+
+function getUnlockedFirmContact(firmId) {
+  return getUnlockedFirmsMap()[firmId] || null;
+}
+
+function updateAccountButton() {
+  const user = getUser();
+  const btn = document.getElementById("accountBtn");
+  btn.innerText = user ? "Account" : "Login";
+  btn.onclick = () => {
+    if (!user) return goToPage("auth.html");
+    goToPage(user.role === "pro" ? "pro-dashboard.html" : "account.html");
+  };
+}
+
+function renderContact() {
+  const box = document.getElementById("contactBox");
+  const firmId = String(currentFirm?._id || "").trim();
+  const unlocked = getUnlockedFirmContact(firmId);
+
+  if (unlocked) {
+    box.innerHTML = `
+      <div class="rounded-2xl border border-green-200 bg-green-50 p-4">
+        <div class="font-extrabold text-green-700 mb-3">${t("contact_unlocked")}</div>
+        <div class="text-sm text-gray-800 space-y-1">
+          <div><span class="font-semibold">${t("phone_short")}:</span> ${escapeHtml(unlocked.phone || "-")}</div>
+          <div class="break-all"><span class="font-semibold">${t("email")}:</span> ${escapeHtml(unlocked.email || "-")}</div>
+        </div>
+        <div class="grid grid-cols-3 gap-2 mt-4">
+          <a href="${escapeHtml(unlocked.callLink || "#")}" class="bg-green-600 hover:bg-green-700 text-white text-center py-2.5 rounded-xl text-sm font-bold">Call</a>
+          <a href="${escapeHtml(unlocked.smsLink || "#")}" class="bg-blue-600 hover:bg-blue-700 text-white text-center py-2.5 rounded-xl text-sm font-bold">SMS</a>
+          <a href="${escapeHtml(unlocked.mailLink || "#")}" class="bg-gray-900 hover:bg-black text-white text-center py-2.5 rounded-xl text-sm font-bold">Email</a>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  box.innerHTML = `
+    <button id="unlockContactBtn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-extrabold shadow-lg shadow-blue-100">
+      <i class="fas fa-phone-alt text-sm mr-2"></i>${t("contact_cta")} (-1 ${t("credits_one")})
+    </button>
+    <p id="contactStatus" class="text-sm font-semibold mt-3"></p>
+  `;
+  document.getElementById("unlockContactBtn").addEventListener("click", unlockContact);
+}
+
+function setContactStatus(msg, isError = false) {
+  const el = document.getElementById("contactStatus");
+  if (!el) return;
+  el.textContent = msg;
+  el.className = isError ? "text-sm font-semibold mt-3 text-red-600" : "text-sm font-semibold mt-3 text-green-600";
+}
+
+async function unlockContact() {
+  const user = getUser();
+  if (!user || !user.id) {
+    clearUser();
+    goToPage("auth.html");
+    return;
+  }
+
+  if (user.role === "pro") {
+    setContactStatus(t("pro_cannot_contact_pros"), true);
+    return;
+  }
+
+  if (Number(user.credits || 0) < 1) {
+    goToPage("buy-credits.html");
+    return;
+  }
+
+  const btn = document.getElementById("unlockContactBtn");
+  btn.disabled = true;
+  btn.innerText = "Duke zhbllokuar...";
+
+  try {
+    const sessionToken = String(user.sessionToken || "").trim();
+    const res = await apiFetch(`${API_URL}/contact`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user.id,
+        firmId: currentFirm._id,
+        sessionToken
+      })
+    });
+    const data = await readJsonResponse(res);
+
+    if (!res.ok || !data.success) {
+      if (data.error_code === "NO_CREDITS") {
+        goToPage("buy-credits.html");
+        return;
+      }
+      setContactStatus(translateApiError(data.error_code), true);
+      return;
+    }
+
+    setUser({ ...user, credits: data.credits });
+    saveUnlockedFirmContact(String(currentFirm._id), data.contact);
+    renderContact();
+  } catch (err) {
+    console.error(err);
+    setContactStatus(t("api_server_error"), true);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function renderReviews(reviews, averageRating, reviewCount) {
+  currentReviews = Array.isArray(reviews) ? reviews : [];
+  document.getElementById("averageRating").textContent = reviewCount ? `${averageRating || 0} ★` : "-";
+  document.getElementById("reviewCount").textContent = `${reviewCount || 0} reviews`;
+  document.getElementById("reviewsSmallSummary").textContent = reviewCount ? `${averageRating || 0} / 5` : "";
+
+  const list = document.getElementById("reviewsList");
+  if (!currentReviews.length) {
+    list.innerHTML = `<div class="text-sm text-gray-500 rounded-2xl border border-gray-100 bg-gray-50 p-4">Ende nuk ka reviews.</div>`;
+    return;
+  }
+
+  list.innerHTML = currentReviews.map(review => {
+    const name = escapeHtml(review.reviewer_display_name || "Klient");
+    const avatar = review.reviewer_avatar_url
+      ? `<img src="${escapeHtml(review.reviewer_avatar_url)}" class="w-11 h-11 rounded-2xl object-cover border border-gray-100" alt="">`
+      : `<div class="w-11 h-11 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center font-extrabold">${name.slice(0, 1)}</div>`;
+    return `
+      <div class="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+        <div class="flex items-start gap-3">
+          ${avatar}
+          <div class="min-w-0 flex-1">
+            <div class="flex items-start justify-between gap-3">
+              <div class="font-extrabold text-gray-900">${name}</div>
+              <div class="text-xs text-gray-400 shrink-0">${formatDate(review.createdAt)}</div>
+            </div>
+            <div class="text-sm mt-1">${renderStars(review.rating)}</div>
+            <p class="text-sm text-gray-600 mt-2 whitespace-pre-line">${escapeHtml(review.comment || "")}</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderReviewForm() {
+  const box = document.getElementById("reviewFormBox");
+  const user = getUser();
+
+  if (!user) {
+    box.innerHTML = `
+      <h2 class="text-xl font-extrabold text-gray-900">Lere nje review</h2>
+      <p class="text-sm text-gray-500 mt-2">Kycu si klient per te lene review.</p>
+      <button id="loginReviewBtn" class="mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl font-bold">Login</button>
+    `;
+    document.getElementById("loginReviewBtn").addEventListener("click", () => goToPage("auth.html"));
+    return;
+  }
+
+  if (user.role === "pro") {
+    box.innerHTML = `
+      <h2 class="text-xl font-extrabold text-gray-900">Reviews</h2>
+      <p class="text-sm text-gray-500 mt-2">Account-et pro nuk mund te lene reviews per mjeshtra.</p>
+    `;
+    return;
+  }
+
+  const existing = currentReviews.find(review => String(review.reviewer_user_id) === String(user.id));
+  selectedReviewRating = Number(existing?.rating || selectedReviewRating || 5);
+  box.innerHTML = `
+    <h2 class="text-xl font-extrabold text-gray-900">${existing ? "Perditeso review" : "Lere nje review"}</h2>
+    <div class="mt-4">
+      <label class="block text-sm font-semibold text-gray-700 mb-2">Rating</label>
+      <div id="reviewStarsInput" class="flex items-center gap-1" role="radiogroup" aria-label="Rating">
+        ${renderStarButtons(selectedReviewRating)}
+      </div>
+    </div>
+    <div class="mt-4">
+      <label class="block text-sm font-semibold text-gray-700 mb-2">Koment</label>
+      <textarea id="reviewComment" rows="5" maxlength="1000" class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Shkruaj eksperiencen tende...">${escapeHtml(existing?.comment || "")}</textarea>
+    </div>
+    <button id="submitReviewBtn" class="mt-4 w-full bg-gray-900 hover:bg-black text-white py-3 rounded-2xl font-bold">${existing ? "Perditeso" : "Dergo review"}</button>
+    <p id="reviewStatus" class="text-sm font-semibold mt-3"></p>
+  `;
+  document.getElementById("submitReviewBtn").addEventListener("click", submitReview);
+  document.querySelectorAll(".review-star-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      selectedReviewRating = Number(btn.dataset.ratingValue || 5);
+      updateReviewStarInput();
+    });
+  });
+  if (pendingReviewStatus) {
+    setReviewStatus(pendingReviewStatus);
+    pendingReviewStatus = "";
+  }
+}
+
+function setReviewStatus(msg, isError = false) {
+  const el = document.getElementById("reviewStatus");
+  if (!el) return;
+  el.textContent = msg;
+  el.className = isError ? "text-sm font-semibold mt-3 text-red-600" : "text-sm font-semibold mt-3 text-green-600";
+}
+
+async function submitReview() {
+  const user = getUser();
+  if (!user || user.role !== "client") return;
+
+  const rating = Number(selectedReviewRating);
+  const comment = document.getElementById("reviewComment").value.trim();
+
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5 || comment.length < 3) {
+    setReviewStatus("Ploteso rating dhe koment te vlefshem.", true);
+    return;
+  }
+
+  const btn = document.getElementById("submitReviewBtn");
+  btn.disabled = true;
+  btn.innerText = "Duke ruajtur...";
+
+  try {
+    const res = await apiFetch(`${API_URL}/firms/${currentFirm._id}/reviews`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating, comment })
+    });
+    const data = await readJsonResponse(res);
+
+    if (!res.ok || !data.success) {
+      if (data.error_code === "NOT_FOUND") {
+        const localReview = buildLocalReviewPayload({
+          firmId: currentFirm._id,
+          rating,
+          comment,
+          user
+        });
+        const localReviews = getLocalReviews(currentFirm._id);
+        const nextReviews = localReviews.filter(review => String(review.reviewer_user_id) !== String(user.id));
+        nextReviews.unshift(localReview);
+        saveLocalReviews(currentFirm._id, nextReviews);
+        const mergedReviews = mergeLocalReviews(currentFirm._id, currentReviews);
+        const summary = getReviewSummary(mergedReviews);
+        renderReviews(mergedReviews, summary.averageRating, summary.count);
+        renderReviewForm();
+        pendingReviewStatus = "";
+        setReviewStatus("Review u ruajt ne kete pajisje. Dev backend ende nuk e ka endpoint-in.");
+        return;
+      }
+      setReviewStatus(translateApiError(data.error_code, "api_server_error"), true);
+      return;
+    }
+
+    pendingReviewStatus = data.created ? "Review u dergua me sukses." : "Review u perditesua me sukses.";
+    await loadProfile();
+  } catch (err) {
+    console.error(err);
+    setReviewStatus(t("api_server_error"), true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderProfile(data) {
+  currentFirm = data.firm;
+  const photos = Array.isArray(currentFirm.photos) ? currentFirm.photos : [];
+  const logo = currentFirm.logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+  const hero = photos[0] || logo;
+  const mergedReviews = mergeLocalReviews(currentFirm._id, data.reviews || []);
+  const reviewSummary = mergedReviews.length
+    ? getReviewSummary(mergedReviews)
+    : {
+      count: Number(data.reviewCount || data.count || 0),
+      averageRating: Number(data.averageRating || currentFirm.averageRating || 0)
+    };
+
+  document.getElementById("heroPhoto").innerHTML = hero
+    ? `<img src="${escapeHtml(hero)}" class="w-full h-full object-cover" alt="">`
+    : "";
+  document.getElementById("logoBox").innerHTML = `<img src="${escapeHtml(logo)}" class="w-full h-full object-cover" alt="">`;
+  document.getElementById("firmName").textContent = currentFirm.name || "";
+  document.getElementById("firmCategories").textContent = getCategories(currentFirm);
+  document.getElementById("firmLocation").textContent = [currentFirm.city, currentFirm.address].filter(Boolean).join(" · ");
+  document.getElementById("firmDescription").textContent = currentFirm.description || "";
+
+  const grid = document.getElementById("photosGrid");
+  grid.innerHTML = photos.length
+    ? photos.map(src => `<div class="rounded-2xl overflow-hidden border border-gray-100 bg-gray-50"><img src="${escapeHtml(src)}" class="w-full h-36 object-cover" alt=""></div>`).join("")
+    : `<div class="col-span-full text-sm text-gray-500">Nuk ka foto ende.</div>`;
+
+  renderContact();
+  renderReviews(mergedReviews, reviewSummary.averageRating, reviewSummary.count);
+  renderReviewForm();
+}
+
+async function loadProfile() {
+  const firmId = getFirmId();
+  const storedFirm = getStoredSelectedFirm(firmId);
+
+  if (!firmId && !storedFirm) {
+    showError("Profili nuk u gjet.");
+    return;
+  }
+
+  if (storedFirm) {
+    renderProfile({
+      success: true,
+      firm: storedFirm,
+      reviews: [],
+      averageRating: 0,
+      reviewCount: 0
+    });
+    document.getElementById("loadingBox").classList.add("hidden");
+    document.getElementById("errorBox").classList.add("hidden");
+    document.getElementById("profileBox").classList.remove("hidden");
+    if (!firmId) return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/firms/${encodeURIComponent(firmId)}`);
+    let data = await readJsonResponse(res);
+
+    if (!res.ok || !data.success || !data.firm) {
+      const fallbackData = await loadFirmFromList(firmId);
+      if (!fallbackData) {
+        if (storedFirm) return;
+        showError(data.error_code === "NOT_FOUND" ? "Profili nuk u gjet." : translateApiError(data.error_code, "api_server_error"));
+        return;
+      }
+      data = fallbackData;
+    }
+
+    renderProfile(data);
+    document.getElementById("loadingBox").classList.add("hidden");
+    document.getElementById("errorBox").classList.add("hidden");
+    document.getElementById("profileBox").classList.remove("hidden");
+  } catch (err) {
+    console.error(err);
+    showError(t("api_server_error"));
+  }
+}
+
+function showError(msg) {
+  document.getElementById("loadingBox").classList.add("hidden");
+  document.getElementById("profileBox").classList.add("hidden");
+  const box = document.getElementById("errorBox");
+  box.classList.remove("hidden");
+  box.textContent = msg;
+}
+
+applyTranslations(document);
+updateAccountButton();
+loadProfile();
+</script>
+</body>
+</html>

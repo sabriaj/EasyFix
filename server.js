@@ -634,6 +634,7 @@ const userSchema = new mongoose.Schema(
     name: String,
     surname: String,
     address: String,
+    avatarUrl: String,
     
 
     email: { type: String, unique: true, required: true, index: true },
@@ -661,6 +662,74 @@ const User = mongoose.model("User", userSchema);
 const SALT = 10;
 
 const requireUserSession = createRequireUserSession({ User, sendError, errorWithTime });
+
+/* ================= REVIEWS / NOTIFICATIONS ================= */
+const reviewSchema = new mongoose.Schema(
+  {
+    reviewer_user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    reviewer_display_name: { type: String, required: true },
+    reviewer_avatar_url: { type: String, default: "" },
+    firm_id: { type: mongoose.Schema.Types.ObjectId, ref: "Firma", required: true, index: true },
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    comment: { type: String, required: true, maxlength: 1000 }
+  },
+  { timestamps: true }
+);
+
+reviewSchema.index({ reviewer_user_id: 1, firm_id: 1 }, { unique: true });
+
+const Review = mongoose.model("Review", reviewSchema);
+
+const notificationSchema = new mongoose.Schema(
+  {
+    recipient_user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    firm_id: { type: mongoose.Schema.Types.ObjectId, ref: "Firma", index: true },
+    review_id: { type: mongoose.Schema.Types.ObjectId, ref: "Review" },
+    type: { type: String, default: "review" },
+    title: { type: String, required: true },
+    message: { type: String, required: true },
+    is_read: { type: Boolean, default: false, index: true },
+    read_at: Date
+  },
+  { timestamps: true }
+);
+
+notificationSchema.index({ recipient_user_id: 1, createdAt: -1 });
+
+const Notification = mongoose.model("Notification", notificationSchema);
+
+async function appendReviewSummariesToFirms(firms = []) {
+  const list = Array.isArray(firms) ? firms : [];
+  const ids = list.map(firm => firm?._id).filter(Boolean);
+  if (!ids.length) return list;
+
+  const summaries = await Review.aggregate([
+    { $match: { firm_id: { $in: ids } } },
+    {
+      $group: {
+        _id: "$firm_id",
+        averageRating: { $avg: "$rating" },
+        reviewCount: { $sum: 1 }
+      }
+    }
+  ]);
+
+  const summaryMap = new Map(
+    summaries.map(item => [
+      String(item._id),
+      {
+        averageRating: Math.round(Number(item.averageRating || 0) * 10) / 10,
+        reviewCount: Number(item.reviewCount || 0)
+      }
+    ])
+  );
+
+  return list.map(firm => ({
+    ...firm,
+    averageRating: summaryMap.get(String(firm._id))?.averageRating || 0,
+    reviewCount: summaryMap.get(String(firm._id))?.reviewCount || 0
+  }));
+}
 
 
 /* ================= USER SIGNUP (CLIENT) ================= */
@@ -702,6 +771,7 @@ const user = await User.create({
   name,
   surname,
   address,
+  avatarUrl: "",
   email,
   password_hash: hash,
   session_token: sessionToken,
@@ -719,6 +789,7 @@ return res.json({
     name: user.name,
     surname: user.surname,
     address: user.address,
+    avatarUrl: user.avatarUrl || "",
     email: user.email,
     role: user.role,
     credits: user.credits,
@@ -800,6 +871,7 @@ app.post("/pro/signup", authRateLimiter, async (req, res) => {
           name: existingUser.name,
           surname: existingUser.surname,
           address: existingUser.address,
+          avatarUrl: existingUser.avatarUrl || "",
           email: existingUser.email,
           role: existingUser.role,
           credits: existingUser.credits,
@@ -814,6 +886,7 @@ app.post("/pro/signup", authRateLimiter, async (req, res) => {
       name,
       surname,
       address,
+      avatarUrl: "",
       email,
       password_hash: hash,
       session_token: sessionToken,
@@ -832,6 +905,7 @@ app.post("/pro/signup", authRateLimiter, async (req, res) => {
         name: user.name,
         surname: user.surname,
         address: user.address,
+        avatarUrl: user.avatarUrl || "",
         email: user.email,
         role: user.role,
         credits: user.credits,
@@ -921,6 +995,7 @@ return res.json({
     name: user.name,
     surname: user.surname,
     address: user.address,
+    avatarUrl: user.avatarUrl || "",
     email: user.email,
     role: user.role,
     credits: user.credits,
@@ -963,6 +1038,7 @@ app.get("/user/me/:id", requireUserSession, async (req, res) => {
         name: req.authUser.name,
         surname: req.authUser.surname,
         address: req.authUser.address,
+        avatarUrl: req.authUser.avatarUrl || "",
         email: req.authUser.email,
         credits: req.authUser.credits,
       },
@@ -1027,12 +1103,111 @@ app.put("/user/me/:id", requireUserSession, async (req, res) => {
         name: updatedUser.name,
         surname: updatedUser.surname,
         address: updatedUser.address,
+        avatarUrl: updatedUser.avatarUrl || "",
         email: updatedUser.email,
         credits: updatedUser.credits
       }
     });
   } catch (err) {
     errorWithTime("USER UPDATE ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+/* ================= UPDATE USER AVATAR ================= */
+app.put("/user/me/:id/avatar", requireUserSession, upload.single("avatar"), async (req, res) => {
+  try {
+    const userId = String(req.params.id || "").trim();
+
+    if (!userId) {
+      return sendError(res, 400, "MISSING_USER_ID");
+    }
+
+    if (!isValidObjectId(mongoose, userId)) {
+      return sendError(res, 400, "INVALID_USER_ID");
+    }
+
+    if (String(req.authUser._id) !== userId) {
+      return sendError(res, 403, "FORBIDDEN");
+    }
+
+    if (String(req.authUser.role || "") !== "client") {
+      return sendError(res, 403, "FORBIDDEN");
+    }
+
+    if (!req.file) {
+      return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    const avatarUrl = await uploadBufferToCloudinary(req.file.buffer, "easyfix/avatars");
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: { avatarUrl } },
+      { new: true }
+    ).lean();
+
+    if (!updatedUser) {
+      return sendError(res, 404, "USER_NOT_FOUND");
+    }
+
+    return res.json({
+      success: true,
+      user: {
+        id: String(updatedUser._id),
+        name: updatedUser.name,
+        surname: updatedUser.surname,
+        address: updatedUser.address,
+        avatarUrl: updatedUser.avatarUrl || "",
+        email: updatedUser.email,
+        credits: updatedUser.credits
+      }
+    });
+  } catch (err) {
+    errorWithTime("USER AVATAR UPDATE ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+app.delete("/user/me/:id/avatar", requireUserSession, async (req, res) => {
+  try {
+    const userId = String(req.params.id || "").trim();
+
+    if (!userId) {
+      return sendError(res, 400, "MISSING_USER_ID");
+    }
+
+    if (!isValidObjectId(mongoose, userId)) {
+      return sendError(res, 400, "INVALID_USER_ID");
+    }
+
+    if (String(req.authUser._id) !== userId || String(req.authUser.role || "") !== "client") {
+      return sendError(res, 403, "FORBIDDEN");
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: { avatarUrl: "" } },
+      { new: true }
+    ).lean();
+
+    if (!updatedUser) {
+      return sendError(res, 404, "USER_NOT_FOUND");
+    }
+
+    return res.json({
+      success: true,
+      user: {
+        id: String(updatedUser._id),
+        name: updatedUser.name,
+        surname: updatedUser.surname,
+        address: updatedUser.address,
+        avatarUrl: "",
+        email: updatedUser.email,
+        credits: updatedUser.credits
+      }
+    });
+  } catch (err) {
+    errorWithTime("USER AVATAR REMOVE ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }
 });
@@ -1212,6 +1387,173 @@ app.post("/contact", contactLimiter, requireUserSession, requireRole("client"), 
     return res.status(result.status).json(result.body);
   } catch (err) {
     errorWithTime("CONTACT ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+/* ================= REVIEWS ================= */
+app.get("/firms/:id/reviews", async (req, res) => {
+  try {
+    const firmId = String(req.params.id || "").trim();
+
+    if (!isValidObjectId(mongoose, firmId)) {
+      return sendError(res, 400, "INVALID_FIELDS");
+    }
+
+    const reviews = await Review.find({ firm_id: firmId })
+      .select("-__v")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const avg = reviews.length
+      ? reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length
+      : 0;
+
+    return res.json({
+      success: true,
+      averageRating: Math.round(avg * 10) / 10,
+      count: reviews.length,
+      reviews
+    });
+  } catch (err) {
+    errorWithTime("REVIEWS LIST ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+app.post("/firms/:id/reviews", requireUserSession, requireRole("client"), async (req, res) => {
+  try {
+    const firmId = String(req.params.id || "").trim();
+    const rating = Number(req.body?.rating);
+    const comment = String(req.body?.comment || "").trim();
+
+    if (!isValidObjectId(mongoose, firmId)) {
+      return sendError(res, 400, "INVALID_FIELDS");
+    }
+
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5 || !hasText(comment, 3, 1000)) {
+      return sendError(res, 400, "INVALID_FIELDS");
+    }
+
+    const firm = await Firma.findById(firmId)
+      .select("_id name owner_user_id payment_status deleted_at")
+      .lean();
+
+    if (!firm || !isRealFirmRecord(firm) || !isFirmVisibleStatus(firm.payment_status)) {
+      return sendError(res, 404, "FIRM_NOT_FOUND");
+    }
+
+    const reviewer = await User.findById(req.authUser._id)
+      .select("_id name surname avatarUrl role")
+      .lean();
+
+    if (!reviewer || reviewer.role !== "client") {
+      return sendError(res, 403, "FORBIDDEN");
+    }
+
+    const reviewerDisplayName = `${reviewer.name || ""} ${reviewer.surname || ""}`.trim() || "EasyFix client";
+    const existingReview = await Review.findOne({
+      reviewer_user_id: reviewer._id,
+      firm_id: firm._id
+    });
+
+    let review;
+    let created = false;
+
+    if (existingReview) {
+      existingReview.reviewer_display_name = reviewerDisplayName;
+      existingReview.reviewer_avatar_url = reviewer.avatarUrl || "";
+      existingReview.rating = rating;
+      existingReview.comment = comment;
+      review = await existingReview.save();
+    } else {
+      created = true;
+      review = await Review.create({
+        reviewer_user_id: reviewer._id,
+        reviewer_display_name: reviewerDisplayName,
+        reviewer_avatar_url: reviewer.avatarUrl || "",
+        firm_id: firm._id,
+        rating,
+        comment
+      });
+
+      if (firm.owner_user_id) {
+        await Notification.create({
+          recipient_user_id: firm.owner_user_id,
+          firm_id: firm._id,
+          review_id: review._id,
+          type: "review",
+          title: "You received a new review",
+          message: `${reviewerDisplayName} left a ${rating}-star review.`
+        });
+      }
+    }
+
+    return res.status(created ? 201 : 200).json({
+      success: true,
+      created,
+      review
+    });
+  } catch (err) {
+    if (err?.code === 11000) {
+      return sendError(res, 409, "DUPLICATE_REVIEW");
+    }
+
+    errorWithTime("REVIEW SAVE ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+app.get("/pro/reviews/me", requireUserSession, requireRole("pro"), async (req, res) => {
+  try {
+    const firm = await Firma.findOne({ owner_user_id: req.authUser._id })
+      .select("_id")
+      .lean();
+
+    if (!firm) {
+      return sendError(res, 404, "FIRM_NOT_FOUND");
+    }
+
+    const reviews = await Review.find({ firm_id: firm._id })
+      .select("-__v")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const avg = reviews.length
+      ? reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length
+      : 0;
+
+    return res.json({
+      success: true,
+      averageRating: Math.round(avg * 10) / 10,
+      count: reviews.length,
+      reviews
+    });
+  } catch (err) {
+    errorWithTime("PRO REVIEWS ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+app.get("/pro/notifications/me", requireUserSession, requireRole("pro"), async (req, res) => {
+  try {
+    const notifications = await Notification.find({ recipient_user_id: req.authUser._id })
+      .select("-__v")
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+    await Notification.updateMany(
+      { recipient_user_id: req.authUser._id, is_read: false },
+      { $set: { is_read: true, read_at: new Date() } }
+    );
+
+    return res.json({
+      success: true,
+      notifications
+    });
+  } catch (err) {
+    errorWithTime("PRO NOTIFICATIONS ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }
 });
@@ -1723,7 +2065,7 @@ app.get("/firms", async (req, res) => {
       .sort({ is_boosted: -1, createdAt: -1 })
       .lean();
 
-    const normalized = firms.map(f => {
+    const normalized = await appendReviewSummariesToFirms(firms.map(f => {
       const safePhotos = Array.isArray(f.photos) ? f.photos : [];
       const visiblePhotos = f.plan === "premium"
         ? safePhotos.slice(0, planPhotoLimit.premium)
@@ -1733,7 +2075,7 @@ app.get("/firms", async (req, res) => {
         ...f,
         photos: visiblePhotos
       };
-    });
+    }));
 
     return res.json(normalized);
   } catch (err) {
@@ -2127,7 +2469,7 @@ app.get("/firms/near", async (req, res) => {
       .sort({ is_boosted: -1, createdAt: -1 })
       .lean();
 
-    const normalized = firms.map(f => {
+    const normalized = await appendReviewSummariesToFirms(firms.map(f => {
       const safePhotos = Array.isArray(f.photos) ? f.photos : [];
       const visiblePhotos = f.plan === "premium"
         ? safePhotos.slice(0, planPhotoLimit.premium)
@@ -2137,12 +2479,77 @@ app.get("/firms/near", async (req, res) => {
         ...f,
         photos: visiblePhotos
       };
-    });
+    }));
 
     return res.json(normalized);
   } catch (err) {
     errorWithTime("FIRMS NEAR ERROR:", err);
     return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+app.get("/firms/:id", async (req, res) => {
+  try {
+    const firmId = String(req.params.id || "").trim();
+
+    if (!isValidObjectId(mongoose, firmId)) {
+      return sendError(res, 400, "INVALID_FIELDS");
+    }
+
+    const firm = await Firma.findOne({
+      $or: [
+        { _id: firmId },
+        { owner_user_id: firmId }
+      ]
+    })
+      .select("-__v")
+      .lean();
+
+    if (!firm || !isRealFirmRecord(firm) || !isFirmVisibleStatus(firm.payment_status)) {
+      return sendError(res, 404, "FIRM_NOT_FOUND");
+    }
+
+    const safePhotos = Array.isArray(firm.photos) ? firm.photos : [];
+    const visiblePhotos = firm.plan === "premium"
+      ? safePhotos.slice(0, planPhotoLimit.premium)
+      : safePhotos.slice(0, planPhotoLimit.free);
+
+    const reviews = await Review.find({ firm_id: firm._id })
+      .select("-__v")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const avg = reviews.length
+      ? reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length
+      : 0;
+
+    const publicFirm = {
+      _id: firm._id,
+      name: firm.name,
+      address: firm.address,
+      city: firm.city,
+      description: firm.description || "",
+      categories: Array.isArray(firm.categories) ? firm.categories : undefined,
+      category: firm.category,
+      country: firm.country,
+      plan: firm.plan || "free",
+      payment_status: firm.payment_status,
+      logoUrl: firm.logoUrl || "",
+      photos: visiblePhotos,
+      createdAt: firm.createdAt,
+      updatedAt: firm.updatedAt
+    };
+
+    return res.json({
+      success: true,
+      firm: publicFirm,
+      reviews,
+      averageRating: Math.round(avg * 10) / 10,
+      reviewCount: reviews.length
+    });
+  } catch (err) {
+    errorWithTime("PUBLIC FIRM DETAIL ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
   }
 });
 

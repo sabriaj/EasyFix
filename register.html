@@ -3,12 +3,116 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EasyFix - Regjistrohu si Mjeshter</title>
+  <title>EasyFix - Register</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="i18n.js"></script>
   <script src="easyfix-config.js"></script>
   <script src="auth-client.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+  <style>
+    #registerCategoryBox label {
+      align-items: center;
+      min-height: 4.5rem;
+      transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+    }
+    #registerCategoryBox label:hover {
+      border-color: #bfdbfe;
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.08);
+    }
+    #registerCategoryBox label:has(.reg-category:checked) {
+      border-color: #2563eb;
+      background: #eff6ff;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
+    }
+    .register-category-icon {
+      width: 2.25rem;
+      height: 2.25rem;
+      min-width: 2.25rem;
+      border-radius: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #eff6ff;
+      color: #2563eb;
+      font-size: 0.95rem;
+    }
+    #registerCategoryBox label:has(.reg-category:checked) .register-category-icon {
+      background: #2563eb;
+      color: #fff;
+    }
+    @media (max-width: 640px) {
+      body > .max-w-5xl {
+        padding: 1rem 0.875rem 2rem;
+      }
+      .text-center.mb-8 {
+        margin-bottom: 1.25rem;
+      }
+      .text-center.mb-8 h1 {
+        font-size: 1.7rem;
+        line-height: 1.12;
+      }
+      .text-center.mb-8 p {
+        font-size: 0.92rem;
+        line-height: 1.45;
+      }
+      form#registerForm {
+        gap: 1rem;
+      }
+      form#registerForm > section {
+        border-radius: 1.35rem;
+        padding: 1rem;
+        background: #fff;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+      }
+      form#registerForm h3 {
+        font-size: 1.08rem;
+        line-height: 1.25;
+        margin-bottom: 0.9rem;
+      }
+      form#registerForm label {
+        font-size: 0.82rem;
+        margin-bottom: 0.4rem;
+      }
+      form#registerForm input,
+      form#registerForm select,
+      form#registerForm textarea {
+        border-radius: 1rem;
+      }
+      #sendOtpBtn,
+      #verifyOtpBtn,
+      #submitBtn {
+        width: 100%;
+        border-radius: 1rem;
+      }
+      #phoneCode {
+        padding-left: 0.65rem;
+        padding-right: 0.5rem;
+      }
+      #phoneCode + input,
+      #phone {
+        min-width: 0;
+      }
+      #registerCategoryBox {
+        gap: 0.65rem;
+      }
+      #registerCategoryBox label {
+        min-height: auto;
+        padding: 0.75rem;
+        border-radius: 1rem;
+      }
+      #registerCategoryBox .reg-category {
+        margin-top: 0;
+      }
+      .register-category-icon {
+        width: 2rem;
+        height: 2rem;
+        min-width: 2rem;
+        border-radius: 0.75rem;
+        font-size: 0.86rem;
+      }
+    }
+  </style>
 </head>
 <body class="bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 min-h-screen text-gray-800">
 
@@ -47,7 +151,7 @@
               </div>
 
               <div class="md:col-span-2">
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Adresa personale <span class="text-gray-400 font-medium">(opsionale)</span></label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2"><span data-i18n="register_personal_address">Adresa personale</span> <span class="text-gray-400 font-medium" data-i18n="optional_label">(opsionale)</span></label>
                 <input id="ownerAddress" type="text" class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="p.sh. Shkup">
               </div>
 
@@ -105,7 +209,7 @@
               </div>
 
               <div>
-                <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2">
+                <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2" data-i18n="register_operating_country">
                   Shteti ku operon
                 </label>
 
@@ -173,9 +277,9 @@
               </div>
 
               <div class="md:col-span-2">
-                <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2">Adresa e biznesit <span class="text-gray-400 font-medium">(opsionale)</span></label>
-                <input id="businessAddress" type="text" class="w-full border border-gray-200 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="p.sh. Cair, Qendra, Rruga 10 ose nr. 5">
-                <p class="text-xs text-gray-400 mt-2">Mjafton qyteti per afersine. Adresa mund te jete e shkurter ose informale.</p>
+                <label class="block text-[13px] sm:text-sm font-semibold text-gray-700 mb-2"><span data-i18n="register_business_address">Adresa e biznesit</span> <span class="text-gray-400 font-medium" data-i18n="optional_label">(opsionale)</span></label>
+                <input id="businessAddress" type="text" class="w-full border border-gray-200 rounded-2xl px-4 py-3.5 text-base leading-6 outline-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-i18n-placeholder="register_business_address_placeholder" placeholder="p.sh. Cair, Qendra, Rruga 10 ose nr. 5">
+                <p class="text-xs text-gray-400 mt-2" data-i18n="address_city_hint">Mjafton qyteti per afersine. Adresa mund te jete e shkurter ose informale.</p>
               </div>
 
               <div class="md:col-span-2">
@@ -186,66 +290,79 @@
                 <div id="registerCategoryBox" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
                     <input type="checkbox" value="plumber" class="reg-category mt-1 shrink-0">
+                    <i class="register-category-icon fas fa-wrench"></i>
                     <span class="text-sm leading-5 break-words" data-i18n="cat_plumber">Hidraulik</span>
                   </label>
 
                   <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
                     <input type="checkbox" value="electrician" class="reg-category mt-1 shrink-0">
+                    <i class="register-category-icon fas fa-bolt"></i>
                     <span class="text-sm leading-5 break-words" data-i18n="cat_electrician">Elektricist</span>
                   </label>
 
                   <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
                     <input type="checkbox" value="painter" class="reg-category mt-1 shrink-0">
+                    <i class="register-category-icon fas fa-paint-roller"></i>
                     <span class="text-sm leading-5 break-words" data-i18n="cat_painter">Bojaxhi</span>
                   </label>
 
                   <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
                     <input type="checkbox" value="cleaning" class="reg-category mt-1 shrink-0">
+                    <i class="register-category-icon fas fa-broom"></i>
                     <span class="text-sm leading-5 break-words" data-i18n="cat_cleaning">Pastrim</span>
                   </label>
 
                   <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
                     <input type="checkbox" value="mason" class="reg-category mt-1 shrink-0">
+                    <i class="register-category-icon fas fa-hammer"></i>
                     <span class="text-sm leading-5 break-words" data-i18n="cat_mason">Murator</span>
                   </label>
 
                   <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
                     <input type="checkbox" value="gardener" class="reg-category mt-1 shrink-0">
+                    <i class="register-category-icon fas fa-seedling"></i>
                     <span class="text-sm leading-5 break-words" data-i18n="cat_gardener">Kopshtar</span>
                   </label>
 
                   <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
                     <input type="checkbox" value="ac" class="reg-category mt-1 shrink-0">
+                    <i class="register-category-icon fas fa-snowflake"></i>
                     <span class="text-sm leading-5 break-words" data-i18n="cat_ac">Klima</span>
                   </label>
 
                   <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
                     <input type="checkbox" value="gips" class="reg-category mt-1 shrink-0">
+                    <i class="register-category-icon fas fa-ruler-combined"></i>
                     <span class="text-sm leading-5 break-words" data-i18n="cat_gips">Punime me gips</span>
                   </label>
 
                   <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
                     <input type="checkbox" value="doors_windows" class="reg-category mt-1 shrink-0">
+                    <i class="register-category-icon fas fa-door-open"></i>
                     <span class="text-sm leading-5 break-words" data-i18n="cat_doors_windows">Dyer/Dritare</span>
                   </label>
 
                   <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
                     <input type="checkbox" value="tiles" class="reg-category mt-1 shrink-0">
+                    <i class="register-category-icon fas fa-table-cells"></i>
                     <span class="text-sm leading-5 break-words" data-i18n="cat_tiles">Pllaka/Keramik</span>
                   </label>
 
                   <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
                     <input type="checkbox" value="parquet" class="reg-category mt-1 shrink-0">
+                    <i class="register-category-icon fas fa-layer-group"></i>
                     <span class="text-sm leading-5 break-words" data-i18n="cat_parquet">Sallidim parketit</span>
                   </label>
 
                   <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
                     <input type="checkbox" value="facade" class="reg-category mt-1 shrink-0">
+                    <i class="register-category-icon fas fa-building"></i>
                     <span class="text-sm leading-5 break-words" data-i18n="cat_facade">Punime fasade</span>
                   </label>
 
                   <label class="flex items-start gap-3 rounded-2xl border border-gray-200 px-3 py-3 bg-white min-h-[72px] shadow-sm">
                     <input type="checkbox" value="heating_cooling" class="reg-category mt-1 shrink-0">
+                    <i class="register-category-icon fas fa-temperature-half"></i>
                     <span class="text-sm leading-5 break-words" data-i18n="cat_heating_cooling">Ngrohje/Ftohje</span>
                   </label>
                 </div>

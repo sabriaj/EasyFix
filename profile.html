@@ -14,14 +14,14 @@
 <body class="bg-gray-50 min-h-screen text-gray-800">
   <header class="bg-white border-b border-gray-100 sticky top-0 z-40">
     <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-      <a id="backLink" href="index.html" class="text-sm font-bold text-blue-700 hover:underline">Kthehu te lista</a>
+      <a id="backLink" href="index.html" class="text-sm font-bold text-blue-700 hover:underline" data-i18n="profile_back_to_list">Kthehu te lista</a>
       <button id="accountBtn" class="bg-white border border-gray-200 px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-50">Login</button>
     </div>
   </header>
 
   <main class="max-w-6xl mx-auto px-4 py-6 md:py-8">
     <div id="loadingBox" class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center text-gray-500 font-semibold">
-      Duke ngarkuar profilin...
+      <span data-i18n="profile_loading">Duke ngarkuar profilin...</span>
     </div>
 
     <div id="errorBox" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-2xl px-5 py-4 font-semibold"></div>
@@ -41,7 +41,7 @@
                 </div>
                 <div class="rounded-2xl bg-amber-50 border border-amber-100 px-5 py-4 text-right">
                   <div id="averageRating" class="text-2xl font-extrabold text-amber-500">-</div>
-                  <div id="reviewCount" class="text-xs font-bold text-gray-500 uppercase tracking-wide">0 reviews</div>
+                  <div id="reviewCount" class="text-xs font-bold text-gray-500 uppercase tracking-wide">0</div>
                 </div>
               </div>
               <div id="contactBox" class="mt-6"></div>
@@ -53,18 +53,18 @@
       <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-6">
           <div id="descriptionSection" class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-7">
-            <h2 class="text-2xl font-extrabold text-gray-900">Pershkrimi</h2>
+            <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="profile_description">Pershkrimi</h2>
             <p id="firmDescription" class="text-gray-600 mt-4 leading-relaxed whitespace-pre-line"></p>
           </div>
 
           <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-7">
-            <h2 class="text-2xl font-extrabold text-gray-900">Foto</h2>
+            <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="profile_photos">Foto</h2>
             <div id="photosGrid" class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-5"></div>
           </div>
 
           <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-7">
             <div class="flex items-center justify-between gap-4">
-              <h2 class="text-2xl font-extrabold text-gray-900">Reviews</h2>
+              <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="dashboard_reviews">Reviews</h2>
               <div id="reviewsSmallSummary" class="text-sm font-bold text-gray-500"></div>
             </div>
             <div id="reviewsList" class="space-y-3 mt-5"></div>
@@ -388,7 +388,7 @@ function getUnlockedFirmContact(firmId) {
 function updateAccountButton() {
   const user = getUser();
   const btn = document.getElementById("accountBtn");
-  btn.innerText = user ? "Account" : "Login";
+  btn.innerText = user ? t("account_page") : t("login_login_title");
   btn.onclick = () => {
     if (!user) return goToPage("auth.html");
     goToPage(user.role === "pro" ? "pro-dashboard.html" : "account.html");
@@ -454,7 +454,7 @@ async function unlockContact() {
 
   const btn = document.getElementById("unlockContactBtn");
   btn.disabled = true;
-  btn.innerText = "Duke zhbllokuar...";
+  btn.innerText = t("unlocking_contact");
 
   try {
     const sessionToken = String(user.sessionToken || "").trim();
@@ -494,12 +494,12 @@ function renderReviews(reviews, averageRating, reviewCount) {
   document.getElementById("averageRating").innerHTML = reviewCount
     ? `${averageRating || 0} <span style="color:#f59e0b">★</span>`
     : "-";
-  document.getElementById("reviewCount").textContent = `${reviewCount || 0} reviews`;
+  document.getElementById("reviewCount").textContent = `${reviewCount || 0} ${t("reviews_label")}`;
   document.getElementById("reviewsSmallSummary").textContent = reviewCount ? `${averageRating || 0} / 5` : "";
 
   const list = document.getElementById("reviewsList");
   if (!currentReviews.length) {
-    list.innerHTML = `<div class="text-sm text-gray-500 rounded-2xl border border-gray-100 bg-gray-50 p-4">Ende nuk ka reviews.</div>`;
+    list.innerHTML = `<div class="text-sm text-gray-500 rounded-2xl border border-gray-100 bg-gray-50 p-4">${t("reviews_empty")}</div>`;
     return;
   }
 
@@ -534,9 +534,9 @@ function renderReviewForm() {
 
   if (!user) {
     box.innerHTML = `
-      <h2 class="text-xl font-extrabold text-gray-900">Lere nje review</h2>
-      <p class="text-sm text-gray-500 mt-2">Kycu si klient per te lene review.</p>
-      <button id="loginReviewBtn" class="mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl font-bold">Login</button>
+      <h2 class="text-xl font-extrabold text-gray-900">${t("review_leave")}</h2>
+      <p class="text-sm text-gray-500 mt-2">${t("review_login_required")}</p>
+      <button id="loginReviewBtn" class="mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl font-bold">${t("login_login_title")}</button>
     `;
     document.getElementById("loginReviewBtn").addEventListener("click", () => goToPage("auth.html"));
     return;
@@ -544,8 +544,8 @@ function renderReviewForm() {
 
   if (user.role === "pro") {
     box.innerHTML = `
-      <h2 class="text-xl font-extrabold text-gray-900">Reviews</h2>
-      <p class="text-sm text-gray-500 mt-2">Account-et pro nuk mund te lene reviews per mjeshtra.</p>
+      <h2 class="text-xl font-extrabold text-gray-900">${t("dashboard_reviews")}</h2>
+      <p class="text-sm text-gray-500 mt-2">${t("review_pro_blocked")}</p>
     `;
     return;
   }
@@ -553,18 +553,18 @@ function renderReviewForm() {
   const existing = currentReviews.find(review => String(review.reviewer_user_id) === String(user.id));
   selectedReviewRating = Number(existing?.rating || selectedReviewRating || 5);
   box.innerHTML = `
-    <h2 class="text-xl font-extrabold text-gray-900">${existing ? "Perditeso review" : "Lere nje review"}</h2>
+    <h2 class="text-xl font-extrabold text-gray-900">${existing ? t("review_update") : t("review_leave")}</h2>
     <div class="mt-4">
-      <label class="block text-sm font-semibold text-gray-700 mb-2">Rating</label>
+      <label class="block text-sm font-semibold text-gray-700 mb-2">${t("rating_label")}</label>
       <div id="reviewStarsInput" class="flex items-center gap-1" role="radiogroup" aria-label="Rating">
         ${renderStarButtons(selectedReviewRating)}
       </div>
     </div>
     <div class="mt-4">
       <label class="block text-sm font-semibold text-gray-700 mb-2">Koment</label>
-      <textarea id="reviewComment" rows="5" maxlength="1000" class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Shkruaj eksperiencen tende...">${escapeHtml(existing?.comment || "")}</textarea>
+      <textarea id="reviewComment" rows="5" maxlength="1000" class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500" placeholder="${t("review_comment_placeholder")}">${escapeHtml(existing?.comment || "")}</textarea>
     </div>
-    <button id="submitReviewBtn" class="mt-4 w-full bg-gray-900 hover:bg-black text-white py-3 rounded-2xl font-bold">${existing ? "Perditeso" : "Dergo review"}</button>
+    <button id="submitReviewBtn" class="mt-4 w-full bg-gray-900 hover:bg-black text-white py-3 rounded-2xl font-bold">${existing ? t("update_button") : t("review_submit")}</button>
     <p id="reviewStatus" class="text-sm font-semibold mt-3"></p>
   `;
   document.getElementById("submitReviewBtn").addEventListener("click", submitReview);
@@ -595,13 +595,13 @@ async function submitReview() {
   const comment = document.getElementById("reviewComment").value.trim();
 
   if (!Number.isInteger(rating) || rating < 1 || rating > 5 || comment.length < 3) {
-    setReviewStatus("Ploteso rating dhe koment te vlefshem.", true);
+    setReviewStatus(t("review_invalid"), true);
     return;
   }
 
   const btn = document.getElementById("submitReviewBtn");
   btn.disabled = true;
-  btn.innerText = "Duke ruajtur...";
+  btn.innerText = t("account_saving");
 
   try {
     const res = await apiFetch(`${API_URL}/firms/${currentFirm._id}/reviews`, {
@@ -628,14 +628,14 @@ async function submitReview() {
         renderReviews(mergedReviews, summary.averageRating, summary.count);
         renderReviewForm();
         pendingReviewStatus = "";
-        setReviewStatus("Review u ruajt ne kete pajisje. Dev backend ende nuk e ka endpoint-in.");
+        setReviewStatus(t("review_saved_local"));
         return;
       }
       setReviewStatus(translateApiError(data.error_code, "api_server_error"), true);
       return;
     }
 
-    pendingReviewStatus = data.created ? "Review u dergua me sukses." : "Review u perditesua me sukses.";
+    pendingReviewStatus = data.created ? t("review_sent_success") : t("review_updated_success");
     await loadProfile();
   } catch (err) {
     console.error(err);
@@ -670,7 +670,7 @@ function renderProfile(data) {
   const grid = document.getElementById("photosGrid");
   grid.innerHTML = photos.length
     ? photos.map(src => `<div class="rounded-2xl overflow-hidden border border-gray-100 bg-gray-50"><img src="${escapeHtml(src)}" class="w-full h-36 object-cover" alt=""></div>`).join("")
-    : `<div class="col-span-full text-sm text-gray-500">Nuk ka foto ende.</div>`;
+    : `<div class="col-span-full text-sm text-gray-500">${t("photos_empty")}</div>`;
 
   renderContact();
   renderReviews(mergedReviews, reviewSummary.averageRating, reviewSummary.count);
@@ -682,7 +682,7 @@ async function loadProfile() {
   const storedFirm = getStoredSelectedFirm(firmId);
 
   if (!firmId && !storedFirm) {
-    showError("Profili nuk u gjet.");
+    showError(t("profile_not_found"));
     return;
   }
 
@@ -709,7 +709,7 @@ async function loadProfile() {
       const fallbackData = await loadFirmFromList(firmId);
       if (!fallbackData) {
         if (storedFirm) return;
-        showError(data.error_code === "NOT_FOUND" ? "Profili nuk u gjet." : translateApiError(data.error_code, "api_server_error"));
+        showError(data.error_code === "NOT_FOUND" ? t("profile_not_found") : translateApiError(data.error_code, "api_server_error"));
         return;
       }
       data = fallbackData;

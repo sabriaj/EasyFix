@@ -14,6 +14,17 @@
       background: rgba(255,255,255,0.92);
       backdrop-filter: blur(10px);
     }
+    .account-hero-card {
+      border-radius: 1.5rem;
+      background: #fff;
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+    }
+    .account-hero-top {
+      border-radius: 1.5rem 1.5rem 0 0;
+    }
+    .account-hero-bottom {
+      border-radius: 0 0 1.5rem 1.5rem;
+    }
   </style>
 </head>
 <body class="bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 min-h-screen text-gray-800">
@@ -44,28 +55,28 @@
     <!-- Main -->
     <div id="accountBox" class="hidden space-y-6">
       <!-- Hero -->
-      <div class="glass-card rounded-3xl shadow-xl border border-white/60 overflow-visible">
-        <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-8 text-white">
+      <div class="account-hero-card border border-white/60 relative">
+        <div class="account-hero-top bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-8 text-white">
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div class="flex items-center gap-4 min-w-0">
               <div class="relative shrink-0">
                 <button id="avatarButton" type="button"
                   class="w-20 h-20 rounded-full bg-white/15 border-2 border-white/40 overflow-hidden flex items-center justify-center text-2xl font-extrabold text-white shadow-lg focus:outline-none focus:ring-4 focus:ring-white/30"
                   style="width:5rem;height:5rem;min-width:5rem;min-height:5rem;max-width:5rem;max-height:5rem;"
+                  data-i18n-aria-label="avatar_change_photo"
                   aria-label="Ndrysho avatarin">
                   <span id="avatarInitials">EF</span>
                 </button>
-                <span class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white text-blue-700 border border-blue-100 shadow flex items-center justify-center text-sm font-extrabold pointer-events-none">+</span>
                 <div id="avatarMenu" class="hidden absolute rounded-2xl bg-white text-gray-800 shadow-2xl border border-gray-100 p-2 z-50"
                   style="left:0;top:calc(100% + 0.75rem);width:14rem;max-width:calc(100vw - 2rem);">
                   <div class="absolute bg-white border-l border-t border-gray-100" style="top:-0.5rem;left:2rem;width:1rem;height:1rem;transform:rotate(45deg);"></div>
                   <button id="changeAvatarBtn" type="button" class="relative w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-50">
                     <span class="w-8 h-8 rounded-full bg-blue-50 text-blue-700 flex items-center justify-center text-base">+</span>
-                    <span>Ndrysho foton</span>
+                    <span data-i18n="avatar_change_photo">Ndrysho foton</span>
                   </button>
                   <button id="removeAvatarBtn" type="button" class="relative w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50">
                     <span class="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center text-base">x</span>
-                    <span>Hiq foton</span>
+                    <span data-i18n="avatar_remove_photo">Hiq foton</span>
                   </button>
                 </div>
                 <input id="avatarFile" type="file" accept="image/*" class="hidden">
@@ -86,7 +97,7 @@
           </div>
         </div>
 
-        <div class="px-6 py-5 bg-white">
+        <div class="account-hero-bottom px-6 py-5 bg-white">
           <p class="text-sm text-gray-500" data-i18n="account_hero_desc">
             Menaxho te dhenat e profilit, kredite dhe sigurine e llogarise tende.
           </p>
@@ -125,7 +136,7 @@
               </div>
 
               <div class="md:col-span-2">
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Adresa <span class="text-gray-400 font-medium">(opsionale)</span></label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2"><span data-i18n="address">Adresa</span> <span class="text-gray-400 font-medium" data-i18n="optional_label">(opsionale)</span></label>
                 <input id="address" type="text"
                   class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
               </div>
@@ -355,11 +366,11 @@ function validateProfileFields(name, surname, address) {
   }
 
   if (String(name).trim().length < 2) {
-    return "Emri duhet te kete te pakten 2 karaktere.";
+    return t("first_name_min");
   }
 
   if (String(surname).trim().length < 2) {
-    return "Mbiemri duhet te kete te pakten 2 karaktere.";
+    return t("last_name_min");
   }
 
   if (String(address).trim() && String(address).trim().length > 200) {
@@ -458,7 +469,7 @@ async function saveProfile() {
 
     if (!res.ok || !data.success) {
       if (data.error_code === "INVALID_FIELDS") {
-        showStatus("Kontrollo emrin, mbiemrin dhe adresen.", true);
+        showStatus(t("profile_fields_invalid"), true);
         return;
       }
 
@@ -566,11 +577,11 @@ async function saveAvatar(file) {
   }
 
   if (!file) {
-    showAvatarStatus("Zgjidh nje foto per avatarin.", true);
+    showAvatarStatus(t("avatar_choose_photo"), true);
     return;
   }
 
-  showAvatarStatus("Duke ruajtur...");
+  showAvatarStatus(t("account_saving"));
 
   try {
     const formData = new FormData();
@@ -586,7 +597,7 @@ async function saveAvatar(file) {
     if (!res.ok || !data.success) {
       if (data.error_code === "NOT_FOUND") {
         if (file.size > 1500 * 1024) {
-          showAvatarStatus("Fotoja eshte shume e madhe per ruajtje lokale ne dev backend.", true);
+          showAvatarStatus(t("avatar_local_too_large"), true);
           return;
         }
         const localAvatar = await fileToDataUrl(file);
@@ -594,7 +605,7 @@ async function saveAvatar(file) {
         renderAvatar(localAvatar, user);
         setUser({ ...user, avatarUrl: localAvatar });
         document.getElementById("avatarFile").value = "";
-        showAvatarStatus("Avatari u ruajt ne kete pajisje. Dev backend ende nuk e ka endpoint-in.");
+        showAvatarStatus(t("avatar_saved_local"));
         return;
       }
       showAvatarStatus(translateApiError(data.error_code, "account_save_error"), true);
@@ -611,7 +622,7 @@ async function saveAvatar(file) {
       avatarUrl: data.user.avatarUrl || "",
       credits: data.user.credits
     });
-    showAvatarStatus("Avatari u ruajt me sukses.");
+    showAvatarStatus(t("avatar_saved_success"));
   } catch (err) {
     console.error(err);
     showAvatarStatus(t("api_server_error"), true);
@@ -627,11 +638,11 @@ async function removeAvatar() {
   }
 
   if (!currentAvatarUrl) {
-    showAvatarStatus("Nuk ka foto per ta hequr.", true);
+    showAvatarStatus(t("avatar_no_photo"), true);
     return;
   }
 
-  showAvatarStatus("Duke hequr foton...");
+  showAvatarStatus(t("avatar_removing"));
 
   try {
     const res = await apiFetch(`${API_URL}/user/me/${user.id}/avatar`, {
@@ -644,7 +655,7 @@ async function removeAvatar() {
         clearLocalAvatar(user.id);
         renderAvatar("", user);
         setUser({ ...user, avatarUrl: "" });
-        showAvatarStatus("Fotoja u hoq nga kjo pajisje. Dev backend ende nuk e ka endpoint-in.");
+        showAvatarStatus(t("avatar_removed_local"));
         return;
       }
       showAvatarStatus(translateApiError(data.error_code, "account_save_error"), true);
@@ -660,7 +671,7 @@ async function removeAvatar() {
       avatarUrl: "",
       credits: data.user.credits
     });
-    showAvatarStatus("Fotoja u hoq.");
+    showAvatarStatus(t("avatar_removed_success"));
   } catch (err) {
     console.error(err);
     showAvatarStatus(t("api_server_error"), true);

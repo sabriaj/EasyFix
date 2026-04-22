@@ -80,6 +80,119 @@
   background-color: #eff6ff !important;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
 }
+    @media (max-width: 640px) {
+      #mainHeaderInner {
+        height: 58px;
+        gap: 0.75rem;
+      }
+      #mainHeaderActions {
+        gap: 0.55rem;
+        flex-direction: row;
+        align-items: center;
+      }
+      #creditBox {
+        display: none !important;
+      }
+      #langWrap {
+        order: 1;
+      }
+      #userMenuWrap,
+      #loginBtn {
+        order: 2;
+      }
+      #userMenuBtn {
+        width: 44px !important;
+        height: 44px !important;
+        max-width: 44px !important;
+        min-width: 44px !important;
+        padding: 2px !important;
+        gap: 0 !important;
+      }
+      #userMenuAvatar,
+      #userMenuAvatar img {
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        max-width: 36px !important;
+        min-height: 36px !important;
+        max-height: 36px !important;
+      }
+      #userMenuAvatar {
+        border-color: #93c5fd !important;
+        box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
+      }
+      .user-menu-chevron {
+        display: none !important;
+      }
+      #langBtn {
+        width: 42px;
+        height: 34px;
+        padding: 0;
+        justify-content: center;
+        gap: 0;
+        background: #f8fafc;
+        border-color: #e5e7eb;
+        box-shadow: none;
+      }
+      #langFlagImg {
+        display: none;
+      }
+      #langLabel {
+        display: inline !important;
+        font-size: 12px;
+        line-height: 1;
+        color: #111827;
+      }
+      #langBtn .lang-chevron {
+        display: none;
+      }
+      #langMenu {
+        top: 50%;
+        right: calc(100% + 0.35rem);
+        margin-top: 0;
+        width: auto;
+        min-width: 0;
+        padding: 0.2rem;
+        transform: translateY(-50%) scale(0.96);
+        transform-origin: right center;
+        border-radius: 9999px;
+        display: flex;
+        gap: 0.15rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 140ms ease, transform 140ms ease;
+      }
+      #langMenu.mobile-open {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(-50%) scale(1);
+      }
+      #langMenu.hidden {
+        display: flex !important;
+      }
+      #langMenu button {
+        width: auto;
+        padding: 0.35rem 0.5rem;
+        font-size: 11px;
+        line-height: 1;
+        font-weight: 800;
+        border-radius: 9999px;
+        gap: 0;
+      }
+      #langMenu button img {
+        display: none;
+      }
+      #langMenu .lang-name {
+        display: none;
+      }
+      #langMenu .lang-code {
+        display: inline;
+      }
+      #langMenu,
+      #userMenuDropdown {
+        max-width: calc(100vw - 2rem);
+      }
+    }
   </style>
 </head>
 
@@ -88,13 +201,13 @@
   <!-- Header -->
   <header class="bg-white sticky top-0 z-50 border-b border-gray-100 shadow-sm/50 backdrop-blur-md bg-white/95">
     <div class="container mx-auto px-4">
-      <div class="flex items-center justify-between h-16">
-        <div class="flex items-center gap-1 cursor-pointer" onclick="window.location.reload()">
+      <div id="mainHeaderInner" class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-1 cursor-pointer shrink-0" onclick="window.location.reload()">
           <span class="text-2xl font-black text-brand-600 tracking-tighter">EasyFix</span>
           <span id="countryPill" class="hidden text-[9px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border">MK</span>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div id="mainHeaderActions" class="flex items-center gap-3 min-w-0">
           <span id="creditBox" class="text-xs font-bold text-gray-600"></span>
 
           <button id="loginBtn"
@@ -102,16 +215,45 @@
             Login
           </button>
 
-          <div class="relative">
+          <div id="userMenuWrap" class="hidden relative shrink-0">
+            <button id="userMenuBtn" type="button"
+              class="rounded-full border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition"
+              style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;max-width:230px;padding:4px 12px 4px 5px;overflow:hidden;vertical-align:middle;box-sizing:border-box;white-space:nowrap;">
+              <span id="userMenuAvatar" class="rounded-full overflow-hidden bg-blue-50 text-blue-700 border border-blue-100"
+                style="width:34px;height:34px;min-width:34px;max-width:34px;min-height:34px;max-height:34px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 34px;font-size:12px;font-weight:800;line-height:1;"></span>
+              <span id="userMenuName" class="hidden sm:inline truncate text-sm font-extrabold text-gray-800"
+                style="max-width:145px;line-height:1.1;min-width:0;"></span>
+              <i class="fas fa-chevron-down user-menu-chevron text-[10px] text-gray-400" style="flex:0 0 auto;line-height:1;"></i>
+            </button>
+            <div id="userMenuDropdown" class="hidden absolute right-0 top-full mt-2 w-56 rounded-2xl border border-gray-100 bg-white shadow-xl p-2 z-50">
+              <div class="px-3 py-2 border-b border-gray-100 mb-1">
+                <div id="userMenuFullName" class="text-sm font-extrabold text-gray-900 truncate"></div>
+                <div id="userMenuEmail" class="text-xs text-gray-400 truncate"></div>
+                <div id="userMenuMeta" class="text-[11px] font-bold text-blue-600 mt-1 truncate"></div>
+                <div id="userMenuCredits" class="hidden sm:hidden text-[11px] font-extrabold text-gray-600 mt-1"></div>
+              </div>
+              <button id="userDashboardBtn" type="button" class="w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-700">
+                <i class="fas fa-table-columns w-5 text-gray-400"></i> Dashboard
+              </button>
+              <button id="userSettingsBtn" type="button" class="w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-700">
+                <i class="fas fa-gear w-5 text-gray-400"></i> Settings
+              </button>
+              <button id="userLogoutBtn" type="button" class="w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50">
+                <i class="fas fa-right-from-bracket w-5 text-red-300"></i> Logout
+              </button>
+            </div>
+          </div>
+
+          <div id="langWrap" class="relative">
             <button id="langBtn" class="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-full border border-gray-200 transition-all">
               <img id="langFlagImg" class="w-5 h-5 rounded-full object-cover shadow-sm">
               <span id="langLabel" class="text-xs font-bold text-gray-700 hidden sm:inline">SQ</span>
-              <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+              <i class="fas fa-chevron-down lang-chevron text-[10px] text-gray-400"></i>
             </button>
             <div id="langMenu" class="hidden absolute right-0 top-full mt-2 w-40 bg-white border border-gray-100 shadow-xl rounded-xl p-1 z-50">
-              <button onclick="changeLang('sq')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/al.png" class="w-4"> Shqip</button>
-              <button onclick="changeLang('mk')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/mk.png" class="w-4"> MKD</button>
-              <button onclick="changeLang('en')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/gb.png" class="w-4"> English</button>
+              <button data-lang-option="sq" onclick="changeLang('sq')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/al.png" class="w-4"> <span class="lang-name">Shqip</span><span class="lang-code hidden">SQ</span></button>
+              <button data-lang-option="mk" onclick="changeLang('mk')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/mk.png" class="w-4"> <span class="lang-name">MKD</span><span class="lang-code hidden">MK</span></button>
+              <button data-lang-option="en" onclick="changeLang('en')" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded flex gap-2"><img src="https://flagcdn.com/w40/gb.png" class="w-4"> <span class="lang-name">English</span><span class="lang-code hidden">EN</span></button>
             </div>
           </div>
 
@@ -184,7 +326,7 @@
     <div class="text-2xl font-black text-gray-200 mb-4 tracking-tighter">EasyFix</div>
     <div class="flex justify-center gap-6 text-xs font-bold text-gray-400">
       <a href="contact.html" class="hover:text-brand-600" data-i18n="nav_contact">KONTAKT</a>
-      <a href="register.html" class="hover:text-brand-600" data-i18n="nav_register">REGJISTROHU</a>
+      <a id="footerRegisterLink" href="register.html" class="hover:text-brand-600" data-i18n="nav_register">REGJISTROHU</a>
       <a href="privacy.html" class="hover:text-brand-600" data-i18n="nav_privacy">PRIVACY</a>
     </div>
   </footer>
@@ -206,6 +348,10 @@ function updateLangUI() {
   const lang = getLang() || "sq";
   document.getElementById("langLabel").innerText = LANG_META[lang].label;
   document.getElementById("langFlagImg").src = `https://flagcdn.com/w40/${LANG_META[lang].flag}`;
+  document.querySelectorAll("[data-lang-option]").forEach(btn => {
+    const isActive = btn.getAttribute("data-lang-option") === lang;
+    btn.classList.toggle("hidden", isActive);
+  });
 }
 
 const COUNTRY_META = {
@@ -262,6 +408,10 @@ const langMenu = document.getElementById("langMenu");
 
 langBtn.addEventListener("click", (e) => {
   e.stopPropagation();
+  if (window.matchMedia("(max-width: 640px)").matches) {
+    langMenu.classList.toggle("mobile-open");
+    return;
+  }
   langMenu.classList.toggle("hidden");
 });
 
@@ -292,11 +442,15 @@ window.changeLang = (lang) => {
   }
 
   langMenu.classList.add("hidden");
+  langMenu.classList.remove("mobile-open");
   populateCategories(allFirms);
   filterFirms();
 };
 
-document.addEventListener("click", () => langMenu.classList.add("hidden"));
+document.addEventListener("click", () => {
+  langMenu.classList.add("hidden");
+  langMenu.classList.remove("mobile-open");
+});
 
 /* ================= ICON MAP ================= */
 const CATEGORY_STYLES = {
@@ -759,51 +913,89 @@ function isFirmUnlocked(firmId) {
   return !!getUnlockedFirmContact(firmId);
 }
 
+let headerIdentity = null;
 
+function getUserDisplayName(identity) {
+  const full = `${identity?.name || ""} ${identity?.surname || ""}`.trim();
+  return String(identity?.displayName || full || identity?.email || "Account").trim();
+}
 
-function updateAuthUI() {
+function getUserInitials(identity) {
+  const displayName = String(identity?.displayName || "").trim();
+  const name = String(identity?.name || "").trim();
+  const surname = String(identity?.surname || "").trim();
+  const email = String(identity?.email || "").trim();
+  return `${name[0] || ""}${surname[0] || ""}`.trim().toUpperCase() ||
+    displayName.split(/\s+/).slice(0, 2).map(part => part[0] || "").join("").toUpperCase() ||
+    email[0]?.toUpperCase() ||
+    "U";
+}
+
+function getDashboardPageForUser(user) {
+  return user?.role === "pro" ? "pro-dashboard.html" : "account.html";
+}
+
+function renderHeaderAvatar(identity) {
+  const avatar = document.getElementById("userMenuAvatar");
+  if (!avatar) return;
+
+  const avatarUrl = String(identity?.avatarUrl || "").trim();
+  if (avatarUrl) {
+    avatar.innerHTML = `<img src="${avatarUrl.replace(/"/g, "&quot;")}" alt="" style="width:34px;height:34px;min-width:34px;max-width:34px;min-height:34px;max-height:34px;object-fit:cover;display:block;border-radius:9999px;">`;
+  } else {
+    avatar.innerHTML = "";
+    avatar.textContent = getUserInitials(identity);
+  }
+}
+
+function updateAuthUI(identityOverride = null) {
   const user = getUser();
   const registerBtnDesktop = document.getElementById("registerBtnDesktop");
   const registerStickyBar = document.getElementById("registerStickyBar");
+  const footerRegisterLink = document.getElementById("footerRegisterLink");
+  const userMenuWrap = document.getElementById("userMenuWrap");
+  const userMenuDropdown = document.getElementById("userMenuDropdown");
+  const userMenuName = document.getElementById("userMenuName");
+  const userMenuFullName = document.getElementById("userMenuFullName");
+  const userMenuEmail = document.getElementById("userMenuEmail");
+  const userMenuMeta = document.getElementById("userMenuMeta");
 
   if (user) {
-    loginBtn.innerText = "Account";
+    const identity = identityOverride || headerIdentity || user;
+    const displayName = getUserDisplayName(identity);
+    loginBtn.classList.add("hidden");
+    loginBtn.onclick = null;
+    userMenuWrap?.classList.remove("hidden");
+    userMenuDropdown?.classList.add("hidden");
+    if (userMenuName) userMenuName.textContent = displayName;
+    if (userMenuFullName) userMenuFullName.textContent = displayName;
+    if (userMenuEmail) userMenuEmail.textContent = user.email || "";
+    if (userMenuMeta) userMenuMeta.textContent = user.role === "pro"
+      ? (identity.source === "firm" ? "Listing profile" : "Pro account")
+      : "Client account";
+    renderHeaderAvatar(identity);
 
-    loginBtn.onclick = () => {
-      if (user.role === "pro") {
-        window.EASYFIX_CONFIG.goToPage("pro-dashboard.html");
-      } else {
-        window.EASYFIX_CONFIG.goToPage("account.html");
-      }
-    };
-
-    if (user.role === "client") {
-      // client: mos shfaq asnje register button
-      if (registerBtnDesktop) {
-        registerBtnDesktop.classList.add("hidden");
-        registerBtnDesktop.classList.remove("md:inline-flex");
-      }
-      if (registerStickyBar) {
-        registerStickyBar.classList.add("hidden");
-      }
-    } else {
-      // pro: desktop top button only + mobile sticky only
-      if (registerBtnDesktop) {
-        registerBtnDesktop.classList.add("hidden");
-        registerBtnDesktop.classList.add("md:inline-flex");
-      }
-      if (registerStickyBar) {
-        registerStickyBar.classList.remove("hidden");
-        registerStickyBar.classList.add("md:hidden");
-      }
+    if (registerBtnDesktop) {
+      registerBtnDesktop.classList.add("hidden");
+      registerBtnDesktop.classList.remove("md:inline-flex");
+    }
+    if (registerStickyBar) {
+      registerStickyBar.classList.add("hidden");
+      registerStickyBar.classList.remove("md:hidden");
+    }
+    if (footerRegisterLink) {
+      footerRegisterLink.classList.add("hidden");
     }
   } else {
     loginBtn.innerText = "Login";
+    loginBtn.classList.remove("hidden");
     loginBtn.onclick = () => {
       window.EASYFIX_CONFIG.goToPage("auth.html");
     };
+    userMenuWrap?.classList.add("hidden");
+    userMenuDropdown?.classList.add("hidden");
+    headerIdentity = null;
 
-    // logout: desktop top button only + mobile sticky only
     if (registerBtnDesktop) {
       registerBtnDesktop.classList.add("hidden");
       registerBtnDesktop.classList.add("md:inline-flex");
@@ -812,11 +1004,37 @@ function updateAuthUI() {
       registerStickyBar.classList.remove("hidden");
       registerStickyBar.classList.add("md:hidden");
     }
+    if (footerRegisterLink) {
+      footerRegisterLink.classList.remove("hidden");
+    }
+  }
+}
+
+async function loadProHeaderIdentity() {
+  const user = getUser();
+  if (!user || user.role !== "pro" || !user.id) return;
+
+  try {
+    const res = await apiFetch(`${API_URL}/pro/firma/me/${user.id}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success || !data.firm) return;
+
+    headerIdentity = {
+      displayName: data.firm.name || getUserDisplayName(user),
+      avatarUrl: data.firm.logoUrl || user.avatarUrl || "",
+      email: user.email || data.firm.email || "",
+      role: user.role,
+      source: "firm"
+    };
+    updateAuthUI(headerIdentity);
+  } catch (err) {
+    console.error(err);
   }
 }
 
 function updateCreditsUI(credits) {
   const el = document.getElementById("creditBox");
+  const menuCredits = document.getElementById("userMenuCredits");
   const user = getUser();
 
 
@@ -824,15 +1042,27 @@ function updateCreditsUI(credits) {
 
   if (!user) {
     el.innerText = "";
+    if (menuCredits) {
+      menuCredits.innerText = "";
+      menuCredits.classList.add("hidden");
+    }
     return;
   }
 
   if (user.role === "pro") {
     el.innerText =  "";
+    if (menuCredits) {
+      menuCredits.innerText = "";
+      menuCredits.classList.add("hidden");
+    }
     return;
   }
 
   const safeCredits = Number(credits || 0);
+  if (menuCredits) {
+    menuCredits.innerText = `${t("credits_label")}: ${safeCredits}`;
+    menuCredits.classList.remove("hidden");
+  }
 
   if (safeCredits <= 0) {
     el.innerHTML = `<span class="text-red-500 font-extrabold">0 ${t("credits_unit")}</span>`;
@@ -843,7 +1073,51 @@ function updateCreditsUI(credits) {
 }
 
 const loginBtn = document.getElementById("loginBtn");
+const userMenuBtn = document.getElementById("userMenuBtn");
+const userMenuDropdown = document.getElementById("userMenuDropdown");
+const userDashboardBtn = document.getElementById("userDashboardBtn");
+const userSettingsBtn = document.getElementById("userSettingsBtn");
+const userLogoutBtn = document.getElementById("userLogoutBtn");
 
+userMenuBtn?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  userMenuDropdown?.classList.toggle("hidden");
+});
+
+userMenuDropdown?.addEventListener("click", (event) => {
+  event.stopPropagation();
+});
+
+document.addEventListener("click", () => {
+  userMenuDropdown?.classList.add("hidden");
+});
+
+userDashboardBtn?.addEventListener("click", () => {
+  const user = getUser();
+  if (!user) {
+    window.EASYFIX_CONFIG.goToPage("auth.html");
+    return;
+  }
+  window.EASYFIX_CONFIG.goToPage(getDashboardPageForUser(user));
+});
+
+userSettingsBtn?.addEventListener("click", () => {
+  const user = getUser();
+  if (!user) {
+    window.EASYFIX_CONFIG.goToPage("auth.html");
+    return;
+  }
+  window.EASYFIX_CONFIG.goToPage(user.role === "pro" ? "pro-dashboard.html#settings" : "account.html");
+});
+
+userLogoutBtn?.addEventListener("click", async () => {
+  clearUser();
+  try {
+    await apiFetch(`${API_URL}/auth/logout`, { method: "POST" });
+  } catch {}
+  updateAuthUI();
+  updateCreditsUI(0);
+});
 
 async function loadCredits() {
   const user = getUser();
@@ -869,9 +1143,14 @@ async function loadCredits() {
 
     setUser({
       ...user,
+      name: data.user.name || user.name,
+      surname: data.user.surname || user.surname,
+      avatarUrl: data.user.avatarUrl || user.avatarUrl || "",
+      email: data.user.email || user.email,
       credits: data.user.credits
     });
 
+    updateAuthUI();
     updateCreditsUI(data.user.credits);
   } catch (err) {
     console.error(err);
@@ -1202,6 +1481,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 updateAuthUI();
+loadProHeaderIdentity();
 loadCredits(); // para init
 init();
 updateCreditPackUI();

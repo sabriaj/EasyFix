@@ -328,6 +328,28 @@ async function geocodeNominatim({ address, city, countryIso2 }) {
   }
 }
 
+async function geocodeFirmLocation({ address, city, countryIso2 }) {
+  const addressText = String(address || "").trim();
+  const cityText = String(city || "").trim();
+  const countryText = normalizeCountry(countryIso2);
+
+  const precise = await geocodeNominatim({
+    address: addressText,
+    city: cityText,
+    countryIso2: countryText
+  });
+
+  if (precise || !cityText || !addressText) {
+    return precise;
+  }
+
+  return geocodeNominatim({
+    address: "",
+    city: cityText,
+    countryIso2: countryText
+  });
+}
+
 /* ================= SCHEMA ================= */
 const firmaSchema = new mongoose.Schema(
   {
@@ -653,6 +675,7 @@ const userSchema = new mongoose.Schema(
     email_verified: { type: Boolean, default: false },
     email_otp_hash: String,
     email_otp_expires: Date,
+    deleted_at: Date,
   },
   { timestamps: true }
 );
@@ -743,11 +766,11 @@ app.post("/user/signup", authRateLimiter, async (req, res) => {
     address = String(address || "").trim();
     password = String(password || "");
 
-    if (!name || !surname || !address || !email || !password) {
+    if (!name || !surname || !email || !password) {
       return sendError(res, 400, "PLOTESO_TEDHENAT");
     }
 
-    if (!validateNameLike(name) || !validateNameLike(surname) || !validateAddressLike(address)) {
+    if (!validateNameLike(name) || !validateNameLike(surname) || (address && !validateAddressLike(address))) {
       return sendError(res, 400, "INVALID_FIELDS");
     }
 
@@ -759,7 +782,7 @@ app.post("/user/signup", authRateLimiter, async (req, res) => {
       return sendError(res, 400, "PASSWORD_SHKURT");
     }
 
-    const exists = await User.findOne({ email }).lean();
+    const exists = await User.findOne({ email, deleted_at: { $exists: false } }).lean();
     if (exists) {
       return sendError(res, 409, "EMAIL_EKZISTON");
     }
@@ -813,11 +836,11 @@ app.post("/pro/signup", authRateLimiter, async (req, res) => {
     address = String(address || "").trim();
     password = String(password || "");
 
-    if (!name || !surname || !address || !email || !password) {
+    if (!name || !surname || !email || !password) {
       return sendError(res, 400, "PLOTESO_TEDHENAT");
     }
 
-    if (!validateNameLike(name) || !validateNameLike(surname) || !validateAddressLike(address)) {
+    if (!validateNameLike(name) || !validateNameLike(surname) || (address && !validateAddressLike(address))) {
       return sendError(res, 400, "INVALID_FIELDS");
     }
 
@@ -829,7 +852,7 @@ app.post("/pro/signup", authRateLimiter, async (req, res) => {
       return sendError(res, 400, "PASSWORD_SHKURT");
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email, deleted_at: { $exists: false } });
 
     if (existingUser) {
       if (existingUser.role !== "pro") {
@@ -979,6 +1002,8 @@ app.post("/user/login", authRateLimiter, async (req, res) => {
     const user = await User.findOne({ email });
 if (!user) return sendError(res, 400, "INVALID_CREDENTIALS");
 
+if (user.deleted_at) return sendError(res, 400, "INVALID_CREDENTIALS");
+
 const ok = await bcrypt.compare(password, user.password_hash || "");
 if (!ok) return sendError(res, 400, "INVALID_CREDENTIALS");
 
@@ -1072,11 +1097,11 @@ app.put("/user/me/:id", requireUserSession, async (req, res) => {
       return sendError(res, 403, "FORBIDDEN");
     }
 
-    if (!name || !surname || !address) {
+    if (!name || !surname) {
       return sendError(res, 400, "MISSING_FIELDS");
     }
 
-    if (!validateNameLike(name) || !validateNameLike(surname) || !validateAddressLike(address)) {
+    if (!validateNameLike(name) || !validateNameLike(surname) || (address && !validateAddressLike(address))) {
       return sendError(res, 400, "INVALID_FIELDS");
     }
 
@@ -1612,6 +1637,37 @@ registerPayNowRoutes({
 });
 
 /* ================= DATA DELETION ================= */
+async function sendDeleteConfirmationForFirm({ firm, reason = "" }) {
+  const token = makeToken();
+  const tokenHash = sha256Hex(token);
+  const expires = new Date(Date.now() + DELETE_TOKEN_HOURS * 60 * 60 * 1000);
+
+  await Firma.updateOne(
+    { _id: firm._id },
+    { $set: { delete_token_hash: tokenHash, delete_token_expires: expires } }
+  );
+
+  const confirmUrl =
+    `${FRONTEND_BASE_URL}/delete-confirm.html?token=${encodeURIComponent(token)}`;
+
+  await sendMail({
+    to: firm.email,
+    subject: "EasyFix - Confirm account deletion",
+    text: `Per me konfirmu fshirjen e account-it dhe listing-ut, kliko linkun:\n${confirmUrl}\n\n` +
+      `Ky link skadon per ${DELETE_TOKEN_HOURS} ore.\n` +
+      (reason ? `Arsyeja: ${reason}\n` : ""),
+    html: `
+      <div style="font-family:Arial;line-height:1.6">
+        <h2>EasyFix</h2>
+        <p>Per me konfirmu fshirjen e account-it dhe listing-ut, kliko:</p>
+        <p><a href="${confirmUrl}">${confirmUrl}</a></p>
+        <p style="color:#666">Ky link skadon per ${DELETE_TOKEN_HOURS} ore.</p>
+        ${reason ? `<p><b>Arsyeja:</b> ${reason}</p>` : ""}
+      </div>
+    `,
+  });
+}
+
 app.post("/delete-request", emailActionLimiter, async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
@@ -1626,38 +1682,34 @@ app.post("/delete-request", emailActionLimiter, async (req, res) => {
       return res.json({ success: true, message: "If the email exists, we sent a confirmation link." });
     }
 
-    const token = makeToken();
-    const tokenHash = sha256Hex(token);
-    const expires = new Date(Date.now() + DELETE_TOKEN_HOURS * 60 * 60 * 1000);
-
-    await Firma.updateOne(
-      { _id: firm._id },
-      { $set: { delete_token_hash: tokenHash, delete_token_expires: expires } }
-    );
-
-    const confirmUrl =
-      `${FRONTEND_BASE_URL}/delete-confirm.html?token=${encodeURIComponent(token)}`;
-
-    await sendMail({
-      to: email,
-      subject: "EasyFix - Confirm data deletion",
-      text:`Per me konfirmu fshirjen e listing-ut, kliko linkun:\n${confirmUrl}\n\n` +`Ky link skadon per ${DELETE_TOKEN_HOURS} ore.\n` +
-        (reason ? `Arsyeja: ${reason}\n` : ""),
-      html: `
-        <div style="font-family:Arial;line-height:1.6">
-          <h2>EasyFix</h2>
-          <p>Per me konfirmu fshirjen e listing-ut, kliko:</p>
-          <p><a href="${confirmUrl}">${confirmUrl}</a></p>
-          <p style="color:#666">Ky link skadon per ${DELETE_TOKEN_HOURS} ore.</p>
-          ${reason ? `<p><b>Arsyeja:</b> ${reason}</p>` : ""}
-        </div>
-      `,
-    });
+    await sendDeleteConfirmationForFirm({ firm, reason });
 
     return res.json({ success: true, message: "If the email exists, we sent a confirmation link." });
   } catch (err) {
     errorWithTime("DELETE REQUEST ERROR:", err);
     return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+app.post("/pro/account/delete-request", requireUserSession, requireRole("pro"), emailActionLimiter, async (req, res) => {
+  try {
+    if (!resend) return sendError(res, 500, "EMAIL_SERVICE_NOT_CONFIGURED");
+
+    const reason = String(req.body?.reason || "").trim().slice(0, 500);
+    const firm = await Firma.findOne({
+      owner_user_id: req.authUser._id,
+      $or: [{ deleted_at: { $exists: false } }, { deleted_at: null }]
+    }).select("_id email owner_user_id").lean();
+
+    if (!firm) {
+      return sendError(res, 404, "FIRM_NOT_FOUND");
+    }
+
+    await sendDeleteConfirmationForFirm({ firm, reason });
+    return res.json({ success: true });
+  } catch (err) {
+    errorWithTime("PRO DELETE REQUEST ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
   }
 });
 
@@ -1669,7 +1721,7 @@ app.post("/delete-confirm", emailActionLimiter, async (req, res) => {
     const firm = await Firma.findOne({
       delete_token_hash: tokenHash,
       delete_token_expires: { $gt: new Date() },
-    }).select("_id").lean();
+    }).select("_id email owner_user_id").lean();
 
     if (!firm) {
       clearCookie(res, COOKIE_NAMES.deleteSession);
@@ -1689,6 +1741,31 @@ app.post("/delete-confirm", emailActionLimiter, async (req, res) => {
         $unset: { delete_token_hash: "", delete_token_expires: "" },
       }
     );
+
+    if (firm.owner_user_id) {
+      const deletedEmail = `deleted-${String(firm.owner_user_id)}@deleted.easyfix.local`;
+      await User.updateOne(
+        { _id: firm.owner_user_id, role: "pro" },
+        {
+          $set: {
+            name: "Deleted",
+            surname: "Account",
+            address: "",
+            avatarUrl: "",
+            email: deletedEmail,
+            password_hash: "",
+            deleted_at: nowD
+          },
+          $unset: {
+            session_token: "",
+            email_otp_hash: "",
+            email_otp_expires: ""
+          }
+        }
+      );
+
+      await Notification.deleteMany({ recipient_user_id: firm.owner_user_id });
+    }
 
     clearCookie(res, COOKIE_NAMES.deleteSession);
     return res.json({ success: true });
@@ -1902,11 +1979,11 @@ app.post(
       const catsLimited = applyCategoryPlanLimit(parsedCats, freePlan);
       const primaryCategory = catsLimited[0] || null;
 
-      if (!name || !email || !phoneNorm || !address || !cityNorm || !primaryCategory) {
+      if (!name || !email || !phoneNorm || !cityNorm || !primaryCategory) {
         return sendError(res, 400, "MISSING_FIELDS");
       }
 
-      if (!isValidEmail(email) || !validateNameLike(name) || !validateAddressLike(address) || !hasText(cityNorm, 2, 80) || !validateDescriptionValue(descriptionNorm)) {
+      if (!isValidEmail(email) || !validateNameLike(name) || (address && !validateAddressLike(address)) || !hasText(cityNorm, 2, 80) || !validateDescriptionValue(descriptionNorm)) {
         return sendError(res, 400, "INVALID_FIELDS");
       }
 
@@ -1930,8 +2007,9 @@ app.post(
         return sendError(res, 409, "EMAIL_EXISTS");
       }
 
-      const geo = await geocodeNominatim({
-        address: String(address || "").trim(),
+      const addressNorm = String(address || "").trim();
+      const geo = await geocodeFirmLocation({
+        address: addressNorm,
         city: cityNorm,
         countryIso2: countryNorm
       });
@@ -1965,7 +2043,7 @@ app.post(
             phone: phoneNorm,
             phone_verified: false,
             phone_verified_at: null,
-            address,
+            address: addressNorm,
             city: cityNorm,
             owner_user_id: owner_user_id ? String(owner_user_id) : null,
             description: descriptionNorm,
@@ -2277,15 +2355,15 @@ app.put("/pro/firma/:id", requireUserSession, requireRole("pro"), async (req, re
     const catsLimited = applyCategoryPlanLimit(parsedCats, effectivePlan);
     const primaryCategory = catsLimited[0] || null;
 
-    if (!name || !phoneNorm || !address || !city || !primaryCategory) {
+    if (!name || !phoneNorm || !city || !primaryCategory) {
       return sendError(res, 400, "MISSING_FIELDS");
     }
 
-    if (!validateNameLike(name) || !validateAddressLike(address) || !hasText(city, 2, 80) || !validateDescriptionValue(description)) {
+    if (!validateNameLike(name) || (address && !validateAddressLike(address)) || !hasText(city, 2, 80) || !validateDescriptionValue(description)) {
       return sendError(res, 400, "INVALID_FIELDS");
     }
 
-    const geo = await geocodeNominatim({
+    const geo = await geocodeFirmLocation({
       address,
       city,
       countryIso2: country

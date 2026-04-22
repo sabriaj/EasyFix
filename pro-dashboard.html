@@ -15,9 +15,6 @@
   <div class="max-w-6xl mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-6">
       <a id="backHomeLink" href="index.html" class="text-sm font-bold text-blue-600 hover:underline" data-i18n="back_home">Kthehu te faqja kryesore</a>
-      <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-bold" data-i18n="account_logout">
-        Logout
-      </button>
     </div>
 
     <div id="loadingBox" class="bg-white rounded-3xl shadow-xl p-8 text-center font-semibold text-gray-500" data-i18n="pro_loading">
@@ -45,9 +42,55 @@
 
       <div id="statusBox" class="hidden rounded-2xl px-4 py-3 text-sm font-semibold"></div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 space-y-6">
-          <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+      <div class="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 items-start">
+        <aside class="bg-white rounded-3xl shadow-xl border border-gray-100 p-3 lg:sticky lg:top-6">
+          <div class="text-xs font-extrabold uppercase tracking-wider text-gray-400 px-3 py-2">Menu</div>
+          <div class="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-1 lg:pb-0">
+            <button type="button" data-dashboard-nav="overview" class="dashboard-nav-btn shrink-0 text-left px-4 py-3 rounded-2xl text-sm font-extrabold transition">Overview</button>
+            <button type="button" data-dashboard-nav="listing" class="dashboard-nav-btn shrink-0 text-left px-4 py-3 rounded-2xl text-sm font-extrabold transition">Listing Profile</button>
+            <button type="button" data-dashboard-nav="media" class="dashboard-nav-btn shrink-0 text-left px-4 py-3 rounded-2xl text-sm font-extrabold transition">Media</button>
+            <button type="button" data-dashboard-nav="reviews" class="dashboard-nav-btn shrink-0 text-left px-4 py-3 rounded-2xl text-sm font-extrabold transition">Reviews</button>
+            <button type="button" data-dashboard-nav="inbox" class="dashboard-nav-btn shrink-0 text-left px-4 py-3 rounded-2xl text-sm font-extrabold transition">Inbox</button>
+            <button type="button" data-dashboard-nav="security" class="dashboard-nav-btn shrink-0 text-left px-4 py-3 rounded-2xl text-sm font-extrabold transition">Security</button>
+            <button type="button" data-dashboard-nav="settings" class="dashboard-nav-btn shrink-0 text-left px-4 py-3 rounded-2xl text-sm font-extrabold transition">Settings</button>
+          </div>
+        </aside>
+
+        <div class="min-w-0">
+      <div id="dashboardContentGrid" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div id="mainDashboardColumn" class="lg:col-span-2 space-y-6">
+          <div data-dashboard-section="overview" class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+            <div class="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <h2 class="text-2xl font-extrabold text-gray-900">Overview</h2>
+                <p class="text-sm text-gray-500 mt-1">Shiko gjendjen e listing-ut dhe veprimet kryesore.</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div class="rounded-2xl bg-blue-50 border border-blue-100 p-4">
+                <div class="text-xs text-blue-500 font-bold uppercase">Plan</div>
+                <div id="overviewPlanBox" class="text-xl font-extrabold text-gray-900 mt-1">FREE</div>
+              </div>
+              <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+                <div class="text-xs text-gray-400 font-bold uppercase">Status</div>
+                <div id="overviewStatusBox" class="text-xl font-extrabold text-gray-900 mt-1">Aktiv</div>
+              </div>
+              <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+                <div class="text-xs text-gray-400 font-bold uppercase">Foto</div>
+                <div id="overviewPhotoBox" class="text-xl font-extrabold text-gray-900 mt-1">0</div>
+              </div>
+              <div class="rounded-2xl bg-amber-50 border border-amber-100 p-4">
+                <div class="text-xs text-amber-600 font-bold uppercase">Reviews</div>
+                <div id="overviewReviewBox" class="text-xl font-extrabold text-gray-900 mt-1">0</div>
+              </div>
+            </div>
+            <div class="mt-5 flex flex-wrap gap-3">
+              <button type="button" data-dashboard-jump="listing" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-2xl font-bold">Edito listing-un</button>
+              <button type="button" data-dashboard-jump="media" class="bg-gray-900 hover:bg-black text-white px-5 py-3 rounded-2xl font-bold">Menaxho media</button>
+            </div>
+          </div>
+
+          <div data-dashboard-section="listing" class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
             <div class="flex items-center justify-between mb-5">
               <div>
                 <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="pro_profile_title">Profili i listing-ut</h2>
@@ -153,9 +196,11 @@
 </div>
 
               <div class="md:col-span-2">
-                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_business_address">Adresa</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Adresa <span class="text-gray-400 font-medium">(opsionale)</span></label>
                 <input id="address" type="text"
-                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+                  placeholder="p.sh. Qendra, rruga 5 ose vetem nr. 12">
+                <p class="text-xs text-gray-400 mt-2">Qyteti perdoret per afersi. Adresa mund te jete e shkurter ose informale.</p>
               </div>
 
               <div class="md:col-span-2">
@@ -176,7 +221,7 @@
           </div>
 
           
-            <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+            <div data-dashboard-section="security" class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
   <div class="mb-5">
     <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="account_security_title">Siguria</h2>
     <p class="text-sm text-gray-500 mt-1" data-i18n="account_security_desc">Ndrysho password-in e llogarise.</p>
@@ -213,7 +258,7 @@
   </div>
 </div>
 
-          <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+          <div data-dashboard-section="media" class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
             <div class="mb-5">
               <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="pro_media_title">Logo dhe foto</h2>
               <p id="mediaPlanHint" class="text-sm text-gray-500 mt-1">FREE lejon deri 3 foto. PREMIUM lejon me shume.</p>
@@ -252,7 +297,7 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+          <div data-dashboard-section="reviews" class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
             <div class="flex items-start justify-between gap-4 mb-5">
               <div>
                 <h2 class="text-2xl font-extrabold text-gray-900">Reviews</h2>
@@ -264,14 +309,14 @@
           </div>
         </div>
 
-        <div class="space-y-6">
-          <div class="bg-white rounded-3xl shadow-xl p-6">
+        <div id="sideDashboardColumn" class="space-y-6">
+          <div data-dashboard-section="inbox" class="bg-white rounded-3xl shadow-xl p-6">
             <div class="text-sm font-bold text-gray-400 uppercase tracking-wider">Inbox</div>
             <p class="text-sm text-gray-500 mt-2">Njoftime nga EasyFix.</p>
             <div id="notificationsList" class="mt-4 space-y-3"></div>
           </div>
 
-          <div class="bg-white rounded-3xl shadow-xl p-6">
+          <div data-dashboard-section="overview settings" class="bg-white rounded-3xl shadow-xl p-6">
             <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="pro_current_plan">Plani aktual</div>
             <div id="sidePlanName" class="text-2xl font-extrabold text-gray-900 mt-2">FREE</div>
             <div id="premiumExpiresBox" class="text-sm text-gray-500 mt-2"></div>
@@ -285,7 +330,7 @@
             </button>
           </div>
 
-          <div class="bg-white rounded-3xl shadow-xl p-6">
+          <div data-dashboard-section="overview" class="bg-white rounded-3xl shadow-xl p-6">
             <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="account_summary">Permbledhje</div>
 
             <div class="mt-4 space-y-4">
@@ -306,15 +351,39 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-3xl shadow-xl p-6">
-            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="pro_help">Ndihme</div>
-            <p class="text-sm text-gray-500 mt-2" data-i18n="pro_help_desc">
-              Me vone ketu mund te shtojme statistika, boost history dhe menaxhim me te avancuar.
-            </p>
+          <div data-dashboard-section="settings" class="bg-white rounded-3xl shadow-xl p-6">
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider">Settings</div>
+            <div class="mt-4 space-y-4">
+              <div class="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                <div class="font-extrabold text-gray-900">Session</div>
+                <p class="text-sm text-gray-500 mt-1">Dil nga kjo pajisje.</p>
+                <button id="logoutBtn" class="mt-3 bg-gray-900 hover:bg-black text-white px-5 py-3 rounded-2xl font-bold" data-i18n="account_logout">
+                  Logout
+                </button>
+              </div>
+
+              <div class="rounded-2xl border border-red-100 bg-red-50 p-4">
+                <div class="font-extrabold text-red-800">Delete account</div>
+                <p class="text-sm text-red-700 mt-1">Kjo dergon nje email konfirmimi. Pas konfirmimit, account-i pro caktivizohet dhe listing-u largohet nga EasyFix.</p>
+                <div id="deleteAccountConfirm" class="hidden mt-4 rounded-2xl bg-white border border-red-100 p-4">
+                  <p class="text-sm font-semibold text-gray-800">Je i sigurt? Do te dergojme link konfirmimi ne email-in e listing-ut.</p>
+                  <div class="mt-3 flex flex-col sm:flex-row gap-2">
+                    <button id="confirmDeleteAccountBtn" type="button" class="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-2xl font-bold">Dergo email konfirmimi</button>
+                    <button id="cancelDeleteAccountBtn" type="button" class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 px-5 py-3 rounded-2xl font-bold">Anulo</button>
+                  </div>
+                </div>
+                <button id="deleteAccountBtn" type="button" class="mt-3 bg-white hover:bg-red-100 text-red-700 border border-red-200 px-5 py-3 rounded-2xl font-bold">
+                  Delete account
+                </button>
+                <p id="deleteAccountStatus" class="text-sm font-semibold mt-3"></p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
+    </div>
+  </div>
   </div>
 
 <script>
@@ -322,6 +391,7 @@ const API_URL = window.EASYFIX_CONFIG.API_URL;
 const { pagePath, goToPage } = window.EASYFIX_CONFIG;
 const { getUser, clearUser, apiFetch, translateApiError } = window.EASYFIX_AUTH;
 let currentFirm = null;
+let activeDashboardSection = "overview";
 document.getElementById("backHomeLink").href = pagePath("index.html");
 
 function tr(key, vars = {}) {
@@ -338,6 +408,59 @@ if (!currentUser || !currentUser.id) {
 }
 if (currentUser.role !== "pro") {
   goToPage("account.html");
+}
+
+function setDashboardSection(section = "overview") {
+  const allowed = new Set(["overview", "listing", "media", "reviews", "inbox", "security", "settings"]);
+  activeDashboardSection = allowed.has(section) ? section : "overview";
+
+  document.querySelectorAll("[data-dashboard-section]").forEach(el => {
+    const sections = String(el.dataset.dashboardSection || "").split(/\s+/).filter(Boolean);
+    el.classList.toggle("hidden", !sections.includes(activeDashboardSection));
+  });
+
+  document.querySelectorAll("[data-dashboard-nav]").forEach(btn => {
+    const isActive = btn.dataset.dashboardNav === activeDashboardSection;
+    btn.classList.toggle("bg-blue-600", isActive);
+    btn.classList.toggle("text-white", isActive);
+    btn.classList.toggle("shadow-lg", isActive);
+    btn.classList.toggle("shadow-blue-100", isActive);
+    btn.classList.toggle("text-gray-600", !isActive);
+    btn.classList.toggle("hover:bg-gray-50", !isActive);
+  });
+
+  const mainColumn = document.getElementById("mainDashboardColumn");
+  const sideColumn = document.getElementById("sideDashboardColumn");
+  const mainOnly = ["listing", "media", "reviews", "security"].includes(activeDashboardSection);
+  const sideOnly = ["inbox", "settings"].includes(activeDashboardSection);
+
+  if (mainColumn && sideColumn) {
+    mainColumn.classList.toggle("hidden", sideOnly);
+    sideColumn.classList.toggle("hidden", mainOnly);
+    mainColumn.style.gridColumn = mainOnly ? "1 / -1" : "";
+    sideColumn.style.gridColumn = sideOnly ? "1 / -1" : "";
+  }
+
+  try {
+    localStorage.setItem("easyfix_pro_dashboard_section", activeDashboardSection);
+  } catch {}
+}
+
+function initDashboardNavigation() {
+  document.querySelectorAll("[data-dashboard-nav]").forEach(btn => {
+    btn.addEventListener("click", () => setDashboardSection(btn.dataset.dashboardNav));
+  });
+
+  document.querySelectorAll("[data-dashboard-jump]").forEach(btn => {
+    btn.addEventListener("click", () => setDashboardSection(btn.dataset.dashboardJump));
+  });
+
+  let savedSection = "overview";
+  try {
+    savedSection = localStorage.getItem("easyfix_pro_dashboard_section") || "overview";
+  } catch {}
+
+  setDashboardSection(savedSection);
 }
 
 
@@ -411,7 +534,7 @@ function escapeHtml(value) {
 function renderStars(rating) {
   const safe = Math.max(0, Math.min(5, Number(rating || 0)));
   return "★★★★★".split("").map((star, index) =>
-    `<span class="${index < safe ? "text-amber-400" : "text-gray-300"}">${star}</span>`
+    `<span style="color:${index < safe ? "#f59e0b" : "#d1d5db"}">${star}</span>`
   ).join("");
 }
 
@@ -419,12 +542,16 @@ function renderReviews(data = {}) {
   const list = document.getElementById("reviewsList");
   const summary = document.getElementById("reviewsSummary");
   const average = document.getElementById("reviewsAverage");
+  const overviewReviewBox = document.getElementById("overviewReviewBox");
   const reviews = Array.isArray(data.reviews) ? data.reviews : [];
 
-  average.textContent = data.count ? `${data.averageRating || 0} ★` : "-";
+  average.innerHTML = data.count ? `${data.averageRating || 0} <span style="color:#f59e0b">★</span>` : "-";
   summary.textContent = data.count
     ? `${data.count} review${data.count === 1 ? "" : "s"} nga klientet`
     : "Ende nuk ka reviews.";
+  if (overviewReviewBox) {
+    overviewReviewBox.innerText = data.count ? `${data.averageRating || 0} (${data.count})` : "0";
+  }
 
   if (!reviews.length) {
     list.innerHTML = `<div class="text-sm text-gray-500 rounded-2xl border border-gray-100 bg-gray-50 p-4">Reviews nga klientet do te shfaqen ketu.</div>`;
@@ -434,20 +561,22 @@ function renderReviews(data = {}) {
   list.innerHTML = reviews.map(review => {
     const reviewerName = escapeHtml(review.reviewer_display_name || "Klient");
     const avatar = review.reviewer_avatar_url
-      ? `<img src="${escapeHtml(review.reviewer_avatar_url)}" class="w-11 h-11 rounded-2xl object-cover border border-gray-100" alt="">`
-      : `<div class="w-11 h-11 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center font-extrabold">${reviewerName.slice(0, 1)}</div>`;
+      ? `<img src="${escapeHtml(review.reviewer_avatar_url)}" class="rounded-full border border-gray-100 bg-gray-50" style="width:48px;height:48px;min-width:48px;max-width:48px;object-fit:cover;display:block;" alt="">`
+      : `<div class="rounded-full bg-blue-50 text-blue-700 flex items-center justify-center font-extrabold" style="width:48px;height:48px;min-width:48px;max-width:48px;">${reviewerName.slice(0, 1)}</div>`;
 
     return `
-      <div class="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-        <div class="flex items-start gap-3">
+      <div class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+        <div class="flex items-start gap-4">
           ${avatar}
           <div class="min-w-0 flex-1">
-            <div class="flex items-start justify-between gap-3">
-              <div class="font-extrabold text-gray-900">${reviewerName}</div>
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-3">
+              <div>
+                <div class="font-extrabold text-gray-900 leading-tight">${reviewerName}</div>
+                <div class="text-sm mt-1" style="letter-spacing:1px;">${renderStars(review.rating)}</div>
+              </div>
               <div class="text-xs text-gray-400 shrink-0">${formatDate(review.createdAt)}</div>
             </div>
-            <div class="text-sm mt-1">${renderStars(review.rating)}</div>
-            <p class="text-sm text-gray-600 mt-2 whitespace-pre-line">${escapeHtml(review.comment || "")}</p>
+            <p class="text-sm text-gray-600 mt-3 leading-relaxed whitespace-pre-line">${escapeHtml(review.comment || "")}</p>
           </div>
         </div>
       </div>
@@ -612,6 +741,7 @@ updateCategoryPlanHint(firm);
 
   const premium = firm.plan === "premium";
   document.getElementById("planBadge").innerText = premium ? "PREMIUM" : "FREE";
+  document.getElementById("overviewPlanBox").innerText = premium ? "PREMIUM" : "FREE";
   const sidePlanName = document.getElementById("sidePlanName");
 sidePlanName.childNodes[0].nodeValue = premium ? "PREMIUM" : "FREE";
 
@@ -620,9 +750,12 @@ sidePlanName.childNodes[0].nodeValue = premium ? "PREMIUM" : "FREE";
     : "Mund ta boost-osh listing-un per me shume shikueshmeri.";
 
   document.getElementById("emailVerifiedBox").innerText = firm.email_verified ? "Po" : "Jo";
-  document.getElementById("photoCountBox").innerText = Array.isArray(firm.photos) ? firm.photos.length : 0;
-  document.getElementById("listingStatusBox").innerText =
-    firm.payment_status === "active" ? "Aktiv" : (firm.payment_status || "Aktiv");
+  const photoCount = Array.isArray(firm.photos) ? firm.photos.length : 0;
+  const listingStatus = firm.payment_status === "active" ? "Aktiv" : (firm.payment_status || "Aktiv");
+  document.getElementById("photoCountBox").innerText = photoCount;
+  document.getElementById("overviewPhotoBox").innerText = photoCount;
+  document.getElementById("listingStatusBox").innerText = listingStatus;
+  document.getElementById("overviewStatusBox").innerText = listingStatus;
 
   renderPhotos(Array.isArray(firm.photos) ? firm.photos : []);
 
@@ -721,7 +854,7 @@ async function saveListing() {
   const categories = getSelectedCategories();
   const description = document.getElementById("description").value.trim();
 
-  if (!businessName || !phone || !city || !address || categories.length === 0) {
+  if (!businessName || !phone || !city || categories.length === 0) {
     showStatus("Ploteso te gjitha fushat kryesore.");
     return;
   }
@@ -893,9 +1026,72 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
   goToPage("auth.html");
 });
 
+const deleteAccountBtn = document.getElementById("deleteAccountBtn");
+const deleteAccountConfirm = document.getElementById("deleteAccountConfirm");
+const confirmDeleteAccountBtn = document.getElementById("confirmDeleteAccountBtn");
+const cancelDeleteAccountBtn = document.getElementById("cancelDeleteAccountBtn");
+const deleteAccountStatus = document.getElementById("deleteAccountStatus");
+
+function showDeleteAccountStatus(message = "", isError = false) {
+  if (!deleteAccountStatus) return;
+  deleteAccountStatus.textContent = message;
+  deleteAccountStatus.className = isError
+    ? "text-sm font-semibold mt-3 text-red-700"
+    : "text-sm font-semibold mt-3 text-green-700";
+}
+
+deleteAccountBtn?.addEventListener("click", () => {
+  deleteAccountConfirm?.classList.remove("hidden");
+  deleteAccountBtn.classList.add("hidden");
+  showDeleteAccountStatus("");
+});
+
+cancelDeleteAccountBtn?.addEventListener("click", () => {
+  deleteAccountConfirm?.classList.add("hidden");
+  deleteAccountBtn?.classList.remove("hidden");
+  showDeleteAccountStatus("");
+});
+
+confirmDeleteAccountBtn?.addEventListener("click", async () => {
+  if (!currentFirm?._id) {
+    showDeleteAccountStatus("Listing-u nuk u ngarkua ende.", true);
+    return;
+  }
+
+  confirmDeleteAccountBtn.disabled = true;
+  confirmDeleteAccountBtn.innerText = "Duke derguar...";
+
+  try {
+    const res = await apiFetch(`${API_URL}/pro/account/delete-request`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({})
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.success) {
+      showDeleteAccountStatus(translateApiError(data.error_code, "api_server_error"), true);
+      return;
+    }
+
+    showDeleteAccountStatus("Email-i i konfirmimit u dergua. Kontrollo inbox/spam.");
+    deleteAccountConfirm?.classList.add("hidden");
+  } catch (err) {
+    console.error(err);
+    showDeleteAccountStatus("Gabim serveri.", true);
+  } finally {
+    confirmDeleteAccountBtn.disabled = false;
+    confirmDeleteAccountBtn.innerText = "Dergo email konfirmimi";
+  }
+});
+
 document.querySelectorAll(".pro-category-checkbox").forEach(el => {
   el.addEventListener("change", () => enforceProCategoryLimit(el));
 });
+
+initDashboardNavigation();
 
 
 function handlePremiumReturn() {

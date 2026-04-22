@@ -239,7 +239,7 @@ async function submitRegister(e) {
   const logoFile = document.getElementById("logo").files[0] || null;
   const photoFiles = Array.from(document.getElementById("photos").files || []);
 
-  if (!ownerName || !ownerSurname || !ownerAddress || !email || !password || !confirmPassword) {
+  if (!ownerName || !ownerSurname || !email || !password || !confirmPassword) {
     showStatus("Plotëso të gjitha fushat e account-it.");
     return;
   }
@@ -259,7 +259,7 @@ async function submitRegister(e) {
     return;
   }
 
-  if (!businessName || !localPhone || !city || !businessAddress || categories.length === 0) {
+  if (!businessName || !localPhone || !city || categories.length === 0) {
   showStatus("Plotëso të gjitha fushat e listing-ut dhe zgjidh të paktën një kategori.");
   return;
 }

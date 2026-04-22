@@ -676,7 +676,7 @@ function getFirmRatingSummary(firm) {
 function renderRatingStars(rating) {
   const rounded = Math.round(Number(rating || 0));
   return "★★★★★".split("").map((star, index) =>
-    `<span class="${index < rounded ? "text-amber-400" : "text-gray-300"}">${star}</span>`
+    `<span style="color:${index < rounded ? "#f59e0b" : "#d1d5db"}">${star}</span>`
   ).join("");
 }
 

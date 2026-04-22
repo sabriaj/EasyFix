@@ -91,14 +91,15 @@
 
       <h3 class="text-xl font-bold text-blue-900">7) Your choices & rights</h3>
       <ul class="list-disc pl-6 space-y-2">
-        <li>You can request deletion of your business listing and related media.</li>
+        <li>Pro users can request deletion of their account and listing from dashboard Settings.</li>
         <li>You can request correction of inaccurate information.</li>
       </ul>
 
       <h3 class="text-xl font-bold text-blue-900">8) Data deletion requests</h3>
       <p>
-        To request deletion, use our Data Deletion page:
-        <a id="deleteLink" href="delete.html" class="text-blue-700 underline font-semibold">Delete data</a>.
+        Current pro accounts should request deletion from
+        <a id="dashboardLink" href="pro-dashboard.html" class="text-blue-700 underline font-semibold">Pro Dashboard Settings</a>.
+        This sends an email confirmation before the account and listing are removed from EasyFix.
       </p>
 
       <h3 class="text-xl font-bold text-blue-900">9) Contact</h3>
@@ -116,7 +117,7 @@
   <script>
     const { pagePath } = window.EASYFIX_CONFIG;
     document.getElementById("backHomeLink").href = pagePath("index.html");
-    document.getElementById("deleteLink").href = pagePath("delete.html");
+    document.getElementById("dashboardLink").href = pagePath("pro-dashboard.html");
     document.getElementById("contactLink").href = pagePath("contact.html");
 
     // put a real date when you publish if you want

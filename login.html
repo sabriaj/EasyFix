@@ -35,7 +35,7 @@
         </div>
 
         <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-1" data-i18n="address">Adresa</label>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Adresa <span class="text-gray-400 font-medium">(opsionale)</span></label>
           <input id="address" type="text" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500">
         </div>
       </div>
@@ -194,7 +194,7 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
   const address = document.getElementById("address").value.trim();
   const confirm = document.getElementById("confirm").value;
 
-  if (!name || !surname || !address || !email || !password || !confirm) {
+  if (!name || !surname || !email || !password || !confirm) {
     showStatus(t("msg_fill_all"));
     return;
   }

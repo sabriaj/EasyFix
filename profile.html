@@ -184,6 +184,55 @@ async function readJsonResponse(res) {
   };
 }
 
+async function fetchReviewsForFirm(firm) {
+  const ids = Array.from(new Set([
+    firm?._id,
+    firm?.id,
+    firm?._firmId,
+    firm?.owner_user_id
+  ].map(normalizeFirmId).filter(Boolean)));
+
+  for (const id of ids) {
+    try {
+      const res = await fetch(`${API_URL}/firms/${encodeURIComponent(id)}/reviews`);
+      const data = await readJsonResponse(res);
+      if (!res.ok || !data?.success) continue;
+
+      return {
+        reviews: Array.isArray(data.reviews) ? data.reviews : [],
+        averageRating: Number(data.averageRating || 0),
+        reviewCount: Number(data.count || data.reviewCount || 0)
+      };
+    } catch {}
+  }
+
+  return null;
+}
+
+async function hydrateProfileReviews(data) {
+  const firm = data?.firm || {};
+  const existingReviews = Array.isArray(data?.reviews) ? data.reviews : [];
+  const knownCount = Number(data?.reviewCount || data?.count || firm.reviewCount || firm.review_count || 0);
+
+  if (existingReviews.length || knownCount > 0) {
+    const reviewData = await fetchReviewsForFirm(firm);
+    if (reviewData && reviewData.reviews.length) {
+      return {
+        ...data,
+        reviews: reviewData.reviews,
+        averageRating: reviewData.averageRating,
+        reviewCount: reviewData.reviewCount
+      };
+    }
+  }
+
+  return {
+    ...data,
+    averageRating: Number(data?.averageRating || firm.averageRating || firm.rating_average || 0),
+    reviewCount: knownCount
+  };
+}
+
 function formatDate(value) {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("sq-AL");
@@ -192,7 +241,7 @@ function formatDate(value) {
 function renderStars(rating) {
   const safe = Math.max(0, Math.min(5, Number(rating || 0)));
   return "★★★★★".split("").map((star, index) =>
-    `<span class="${index < safe ? "text-amber-400" : "text-gray-300"}">${star}</span>`
+    `<span style="color:${index < safe ? "#f59e0b" : "#d1d5db"}">${star}</span>`
   ).join("");
 }
 
@@ -201,7 +250,8 @@ function renderStarButtons(rating) {
   return [1, 2, 3, 4, 5].map(value => `
     <button type="button"
       data-rating-value="${value}"
-      class="review-star-btn text-3xl leading-none transition ${value <= safe ? "text-amber-400" : "text-gray-300"} hover:text-amber-400"
+      class="review-star-btn text-3xl leading-none transition"
+      style="color:${value <= safe ? "#f59e0b" : "#d1d5db"}"
       aria-label="${value} yje">★</button>
   `).join("");
 }
@@ -211,7 +261,7 @@ function updateReviewStarInput() {
   if (!wrap) return;
   wrap.querySelectorAll(".review-star-btn").forEach(btn => {
     const value = Number(btn.dataset.ratingValue || 0);
-    btn.className = `review-star-btn text-3xl leading-none transition ${value <= selectedReviewRating ? "text-amber-400" : "text-gray-300"} hover:text-amber-400`;
+    btn.style.color = value <= selectedReviewRating ? "#f59e0b" : "#d1d5db";
   });
 }
 
@@ -293,12 +343,13 @@ async function loadFirmFromList(targetId) {
 
     const firm = findFirmInList(data, targetId);
     if (firm) {
+      const reviewCount = Number(firm.reviewCount || firm.review_count || 0);
       return {
         success: true,
         firm,
         reviews: [],
-        averageRating: 0,
-        reviewCount: 0
+        averageRating: Number(firm.averageRating || firm.rating_average || 0),
+        reviewCount
       };
     }
   }
@@ -440,7 +491,9 @@ async function unlockContact() {
 
 function renderReviews(reviews, averageRating, reviewCount) {
   currentReviews = Array.isArray(reviews) ? reviews : [];
-  document.getElementById("averageRating").textContent = reviewCount ? `${averageRating || 0} ★` : "-";
+  document.getElementById("averageRating").innerHTML = reviewCount
+    ? `${averageRating || 0} <span style="color:#f59e0b">★</span>`
+    : "-";
   document.getElementById("reviewCount").textContent = `${reviewCount || 0} reviews`;
   document.getElementById("reviewsSmallSummary").textContent = reviewCount ? `${averageRating || 0} / 5` : "";
 
@@ -453,19 +506,21 @@ function renderReviews(reviews, averageRating, reviewCount) {
   list.innerHTML = currentReviews.map(review => {
     const name = escapeHtml(review.reviewer_display_name || "Klient");
     const avatar = review.reviewer_avatar_url
-      ? `<img src="${escapeHtml(review.reviewer_avatar_url)}" class="w-11 h-11 rounded-2xl object-cover border border-gray-100" alt="">`
-      : `<div class="w-11 h-11 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center font-extrabold">${name.slice(0, 1)}</div>`;
+      ? `<img src="${escapeHtml(review.reviewer_avatar_url)}" class="rounded-full border border-gray-100 bg-gray-50" style="width:48px;height:48px;min-width:48px;max-width:48px;object-fit:cover;display:block;" alt="">`
+      : `<div class="rounded-full bg-blue-50 text-blue-700 flex items-center justify-center font-extrabold" style="width:48px;height:48px;min-width:48px;max-width:48px;">${name.slice(0, 1)}</div>`;
     return `
-      <div class="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-        <div class="flex items-start gap-3">
+      <div class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+        <div class="flex items-start gap-4">
           ${avatar}
           <div class="min-w-0 flex-1">
-            <div class="flex items-start justify-between gap-3">
-              <div class="font-extrabold text-gray-900">${name}</div>
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-3">
+              <div>
+                <div class="font-extrabold text-gray-900 leading-tight">${name}</div>
+                <div class="text-sm mt-1" style="letter-spacing:1px;">${renderStars(review.rating)}</div>
+              </div>
               <div class="text-xs text-gray-400 shrink-0">${formatDate(review.createdAt)}</div>
             </div>
-            <div class="text-sm mt-1">${renderStars(review.rating)}</div>
-            <p class="text-sm text-gray-600 mt-2 whitespace-pre-line">${escapeHtml(review.comment || "")}</p>
+            <p class="text-sm text-gray-600 mt-3 leading-relaxed whitespace-pre-line">${escapeHtml(review.comment || "")}</p>
           </div>
         </div>
       </div>
@@ -632,13 +687,14 @@ async function loadProfile() {
   }
 
   if (storedFirm) {
-    renderProfile({
+    const storedData = await hydrateProfileReviews({
       success: true,
       firm: storedFirm,
       reviews: [],
-      averageRating: 0,
-      reviewCount: 0
+      averageRating: Number(storedFirm.averageRating || storedFirm.rating_average || 0),
+      reviewCount: Number(storedFirm.reviewCount || storedFirm.review_count || 0)
     });
+    renderProfile(storedData);
     document.getElementById("loadingBox").classList.add("hidden");
     document.getElementById("errorBox").classList.add("hidden");
     document.getElementById("profileBox").classList.remove("hidden");
@@ -659,7 +715,8 @@ async function loadProfile() {
       data = fallbackData;
     }
 
-    renderProfile(data);
+    const hydratedData = await hydrateProfileReviews(data);
+    renderProfile(hydratedData);
     document.getElementById("loadingBox").classList.add("hidden");
     document.getElementById("errorBox").classList.add("hidden");
     document.getElementById("profileBox").classList.remove("hidden");

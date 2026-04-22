@@ -44,7 +44,7 @@
     <!-- Main -->
     <div id="accountBox" class="hidden space-y-6">
       <!-- Hero -->
-      <div class="glass-card rounded-3xl shadow-xl border border-white/60 overflow-hidden">
+      <div class="glass-card rounded-3xl shadow-xl border border-white/60 overflow-visible">
         <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-8 text-white">
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div class="flex items-center gap-4 min-w-0">
@@ -56,8 +56,9 @@
                   <span id="avatarInitials">EF</span>
                 </button>
                 <span class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white text-blue-700 border border-blue-100 shadow flex items-center justify-center text-sm font-extrabold pointer-events-none">+</span>
-                <div id="avatarMenu" class="hidden absolute left-0 top-[calc(100%+0.75rem)] w-56 max-w-[calc(100vw-2rem)] rounded-2xl bg-white text-gray-800 shadow-2xl border border-gray-100 p-2 z-50">
-                  <div class="absolute -top-2 left-8 w-4 h-4 rotate-45 bg-white border-l border-t border-gray-100"></div>
+                <div id="avatarMenu" class="hidden absolute rounded-2xl bg-white text-gray-800 shadow-2xl border border-gray-100 p-2 z-50"
+                  style="left:0;top:calc(100% + 0.75rem);width:14rem;max-width:calc(100vw - 2rem);">
+                  <div class="absolute bg-white border-l border-t border-gray-100" style="top:-0.5rem;left:2rem;width:1rem;height:1rem;transform:rotate(45deg);"></div>
                   <button id="changeAvatarBtn" type="button" class="relative w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-50">
                     <span class="w-8 h-8 rounded-full bg-blue-50 text-blue-700 flex items-center justify-center text-base">+</span>
                     <span>Ndrysho foton</span>
@@ -124,7 +125,7 @@
               </div>
 
               <div class="md:col-span-2">
-                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="address">Adresa</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Adresa <span class="text-gray-400 font-medium">(opsionale)</span></label>
                 <input id="address" type="text"
                   class="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
               </div>
@@ -349,7 +350,7 @@ async function readJsonResponse(res) {
 }
 
 function validateProfileFields(name, surname, address) {
-  if (!name || !surname || !address) {
+  if (!name || !surname) {
     return t("msg_fill_all");
   }
 
@@ -361,8 +362,8 @@ function validateProfileFields(name, surname, address) {
     return "Mbiemri duhet te kete te pakten 2 karaktere.";
   }
 
-  if (String(address).trim().length < 5) {
-    return "Adresa duhet te kete te pakten 5 karaktere.";
+  if (String(address).trim() && String(address).trim().length > 200) {
+    return "Adresa eshte shume e gjate.";
   }
 
   return "";
@@ -457,7 +458,7 @@ async function saveProfile() {
 
     if (!res.ok || !data.success) {
       if (data.error_code === "INVALID_FIELDS") {
-        showStatus("Kontrollo emrin, mbiemrin dhe adresen. Adresa duhet te kete te pakten 5 karaktere.", true);
+        showStatus("Kontrollo emrin, mbiemrin dhe adresen.", true);
         return;
       }
 

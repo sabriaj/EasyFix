@@ -81,6 +81,7 @@
     }
 
     let token = getDeleteTokenFromUrl();
+    let verifiedDeleteToken = "";
 
     async function startDeleteSession() {
       try {
@@ -100,6 +101,7 @@
         }
 
         emailLabel.textContent = j.email || "—";
+        verifiedDeleteToken = token;
         token = "";
         confirmBtn.disabled = false;
         confirmBtn.classList.remove("opacity-60");
@@ -131,7 +133,9 @@
 
       try {
         const r = await apiFetch(`${API_URL}/delete-confirm`, {
-          method: "POST"
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: verifiedDeleteToken })
         });
 
         const j = await r.json().catch(() => ({}));

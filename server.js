@@ -1716,8 +1716,9 @@ app.post("/pro/account/delete-request", requireUserSession, requireRole("pro"), 
 
 app.post("/delete-confirm", emailActionLimiter, async (req, res) => {
   try {
-    const tokenHash = getCookieValue(req, COOKIE_NAMES.deleteSession);
-    if (!tokenHash) return res.status(400).json({ success: false, error: "Missing delete session" });
+    const bodyToken = String(req.body?.token || req.body?.delete_token || req.body?.t || "").trim();
+    const tokenHash = bodyToken ? sha256Hex(bodyToken) : getCookieValue(req, COOKIE_NAMES.deleteSession);
+    if (!tokenHash) return res.status(400).json({ success: false, error: "Missing delete token" });
 
     const firm = await Firma.findOne({
       delete_token_hash: tokenHash,

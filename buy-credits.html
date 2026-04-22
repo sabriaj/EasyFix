@@ -6,14 +6,22 @@
   <title>Blej Kredi - EasyFix</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+  <script src="i18n.js"></script>
   <script src="https://app.lemonsqueezy.com/js/lemon.js" defer></script>
   <script src="lemon.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
 
   <div class="bg-white w-full max-w-xl rounded-2xl shadow-xl p-8">
-    <h1 class="text-3xl font-extrabold text-center text-gray-900 mb-2">Blej Kredi</h1>
-    <p class="text-center text-gray-600 mb-8">Zgjidh paketen qe deshiron.</p>
+    <div class="flex justify-end mb-4">
+      <div class="inline-flex rounded-full border border-gray-200 bg-gray-50 p-1 text-xs font-extrabold text-gray-600">
+        <button type="button" class="lang-option px-3 py-1 rounded-full" data-buy-lang="sq">SQ</button>
+        <button type="button" class="lang-option px-3 py-1 rounded-full" data-buy-lang="mk">MK</button>
+        <button type="button" class="lang-option px-3 py-1 rounded-full" data-buy-lang="en">EN</button>
+      </div>
+    </div>
+    <h1 class="text-3xl font-extrabold text-center text-gray-900 mb-2" data-i18n="buy_credits_title">Blej Kredi</h1>
+    <p class="text-center text-gray-600 mb-8" data-i18n="buy_credits_subtitle">Zgjidh paketen qe deshiron.</p>
 
     <div id="userBox" class="mb-6 text-center text-sm font-semibold text-gray-700"></div>
 
@@ -21,26 +29,26 @@
       <button onclick="buyCredits(1)"
         class="rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 p-6 text-center shadow-sm">
         <div class="text-2xl font-black text-blue-600 mb-2">1</div>
-        <div class="font-bold text-gray-900">1 Kredi</div>
+        <div class="font-bold text-gray-900" data-i18n="credits_pack_1_title">1 Kredi</div>
       </button>
 
       <button onclick="buyCredits(5)"
         class="rounded-2xl border-2 border-blue-600 bg-blue-50 hover:bg-blue-100 p-6 text-center shadow-sm">
         <div class="text-2xl font-black text-blue-700 mb-2">5</div>
-        <div class="font-bold text-gray-900">5 Kredi</div>
+        <div class="font-bold text-gray-900" data-i18n="credits_pack_5_title">5 Kredi</div>
       </button>
 
       <button onclick="buyCredits(10)"
         class="rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 p-6 text-center shadow-sm">
         <div class="text-2xl font-black text-blue-600 mb-2">10</div>
-        <div class="font-bold text-gray-900">10 Kredi</div>
+        <div class="font-bold text-gray-900" data-i18n="credits_pack_10_title">10 Kredi</div>
       </button>
     </div>
 
     <p id="status" class="text-center text-sm text-gray-600 mt-6"></p>
 
     <div class="mt-8 text-center">
-      <a id="backHomeLink" href="index.html" class="inline-block text-blue-600 font-bold hover:underline">Kthehu mbrapa</a>
+      <a id="backHomeLink" href="index.html" class="inline-block text-blue-600 font-bold hover:underline" data-i18n="back">Kthehu mbrapa</a>
     </div>
   </div>
 
@@ -50,7 +58,28 @@
 const API_URL = window.EASYFIX_CONFIG.API_URL;
 const { pagePath, goToPage } = window.EASYFIX_CONFIG;
 const { getUser, setUser, clearUser, apiFetch, translateApiError } = window.EASYFIX_AUTH;
+const { getLang, setLang, t, applyTranslations } = window.EASYFIX_I18N;
 document.getElementById("backHomeLink").href = pagePath("index.html");
+
+function applyPageLanguage() {
+  applyTranslations(document);
+  document.documentElement.setAttribute("lang", getLang());
+  document.title = t("buy_credits_page_title");
+  document.querySelectorAll("[data-buy-lang]").forEach(btn => {
+    const active = btn.getAttribute("data-buy-lang") === getLang();
+    btn.className = active
+      ? "lang-option px-3 py-1 rounded-full bg-white text-blue-700 shadow-sm"
+      : "lang-option px-3 py-1 rounded-full hover:text-blue-700";
+  });
+}
+
+document.querySelectorAll("[data-buy-lang]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    setLang(btn.getAttribute("data-buy-lang"));
+    applyPageLanguage();
+    renderUserSummary();
+  });
+});
 
 function showStatus(msg, isError = false) {
   const el = document.getElementById("status");
@@ -58,6 +87,15 @@ function showStatus(msg, isError = false) {
   el.className = isError
     ? "text-center text-sm text-red-600 mt-6"
     : "text-center text-sm text-gray-600 mt-6";
+}
+
+function renderUserSummary(userData) {
+  const user = userData || getUser();
+  if (!user) return;
+  document.getElementById("userBox").innerText = t("credits_user_summary", {
+    email: user.email || "",
+    credits: Number(user.credits || 0)
+  });
 }
 
 function updateCreditsUI(credits) {
@@ -75,7 +113,7 @@ async function handleSuccessReturn() {
   const user = getUser();
   if (!user || !user.id) return;
 
-  showStatus("Duke rifreskuar kredite...");
+  showStatus(t("credits_refreshing"));
 
   setTimeout(async () => {
     try {
@@ -83,19 +121,17 @@ async function handleSuccessReturn() {
       const data = await res.json();
 
       if (!res.ok) {
-        showStatus("Pagesa u krye, por kredite s'u rifreskuan ende.", true);
+        showStatus(t("credits_payment_refresh_pending"), true);
         return;
       }
 
       updateCreditsUI(data.user.credits);
+      renderUserSummary(data.user);
 
-      document.getElementById("userBox").innerText =
-        `I kycur si: ${data.user.email} - Kredite aktuale: ${data.user.credits}`;
-
-      showStatus("Pagesa u krye me sukses.");
+      showStatus(t("credits_payment_success"));
     } catch (err) {
       console.error(err);
-      showStatus("Gabim gjate rifreskimit te kredive.", true);
+      showStatus(t("credits_refresh_error"), true);
     }
   }, 1500);
 }
@@ -123,16 +159,15 @@ async function loadUser() {
       return;
     }
 
-    document.getElementById("userBox").innerText =
-      `I kycur si: ${data.user.email} - Kredite aktuale: ${data.user.credits}`;
+    renderUserSummary(data.user);
 
     if (window.location.search.includes("success=1")) {
-      showStatus("Nese pagesa u krye me sukses, kredite do te perditesohen pas pak.");
+      showStatus(t("credits_payment_pending"));
       setTimeout(loadUser, 2500);
     }
   } catch (err) {
     console.error(err);
-    showStatus("Gabim gjate ngarkimit te user-it", true);
+    showStatus(t("credits_user_load_error"), true);
   }
 }
 
@@ -144,7 +179,7 @@ async function buyCredits(pack) {
     return;
   }
 
-  showStatus("Duke u lidhur me pagesen...");
+  showStatus(t("credits_connecting_payment"));
 
   try {
     const res = await apiFetch(`${API_URL}/credits/buy`, {
@@ -166,17 +201,18 @@ async function buyCredits(pack) {
     }
 
     if (!data.checkoutUrl) {
-      showStatus("Nuk u kthye checkout link", true);
+      showStatus(t("credits_missing_checkout"), true);
       return;
     }
 
     window.location.href = data.checkoutUrl;
   } catch (err) {
     console.error(err);
-    showStatus("Gabim serveri", true);
+    showStatus(t("server_error_try_later"), true);
   }
 }
 
+applyPageLanguage();
 loadUser();
 handleSuccessReturn();
 </script>

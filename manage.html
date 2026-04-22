@@ -44,7 +44,7 @@
         If this email exists in our system, we will send a link that expires in 1 hour.
       </p>
       <div class="text-xs text-gray-500 pt-2">
-        Want to delete your listing? Use <a id="deleteLinkRequest" class="underline text-blue-700" href="delete.html">Data Deletion</a>.
+        Need to delete a current pro account? Sign in and use <a id="dashboardDeleteLinkRequest" class="underline text-blue-700" href="pro-dashboard.html">Pro Dashboard Settings</a>.
       </div>
     </div>
 
@@ -77,7 +77,7 @@
       </button>
 
       <div class="text-xs text-gray-500 pt-2">
-        Deletion is done via email confirmation: <a id="deleteLinkEdit" class="underline text-blue-700" href="delete.html">Data Deletion</a>.
+        Current account deletion is handled in <a id="dashboardDeleteLinkEdit" class="underline text-blue-700" href="pro-dashboard.html">Pro Dashboard Settings</a>.
       </div>
     </div>
   </main>
@@ -93,8 +93,8 @@
   const { apiFetch } = window.EASYFIX_AUTH;
   document.getElementById("privacyLink").href = pagePath("privacy.html");
   document.getElementById("backHomeLink").href = pagePath("index.html");
-  document.getElementById("deleteLinkRequest").href = pagePath("delete.html");
-  document.getElementById("deleteLinkEdit").href = pagePath("delete.html");
+  document.getElementById("dashboardDeleteLinkRequest").href = pagePath("pro-dashboard.html");
+  document.getElementById("dashboardDeleteLinkEdit").href = pagePath("pro-dashboard.html");
 
     const msg = document.getElementById("msg");
     const requestCard = document.getElementById("requestCard");

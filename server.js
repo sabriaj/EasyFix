@@ -328,6 +328,28 @@ async function geocodeNominatim({ address, city, countryIso2 }) {
   }
 }
 
+async function geocodeFirmLocation({ address, city, countryIso2 }) {
+  const addressText = String(address || "").trim();
+  const cityText = String(city || "").trim();
+  const countryText = normalizeCountry(countryIso2);
+
+  const precise = await geocodeNominatim({
+    address: addressText,
+    city: cityText,
+    countryIso2: countryText
+  });
+
+  if (precise || !cityText || !addressText) {
+    return precise;
+  }
+
+  return geocodeNominatim({
+    address: "",
+    city: cityText,
+    countryIso2: countryText
+  });
+}
+
 /* ================= SCHEMA ================= */
 const firmaSchema = new mongoose.Schema(
   {
@@ -634,6 +656,7 @@ const userSchema = new mongoose.Schema(
     name: String,
     surname: String,
     address: String,
+    avatarUrl: String,
     
 
     email: { type: String, unique: true, required: true, index: true },
@@ -652,6 +675,7 @@ const userSchema = new mongoose.Schema(
     email_verified: { type: Boolean, default: false },
     email_otp_hash: String,
     email_otp_expires: Date,
+    deleted_at: Date,
   },
   { timestamps: true }
 );
@@ -661,6 +685,74 @@ const User = mongoose.model("User", userSchema);
 const SALT = 10;
 
 const requireUserSession = createRequireUserSession({ User, sendError, errorWithTime });
+
+/* ================= REVIEWS / NOTIFICATIONS ================= */
+const reviewSchema = new mongoose.Schema(
+  {
+    reviewer_user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    reviewer_display_name: { type: String, required: true },
+    reviewer_avatar_url: { type: String, default: "" },
+    firm_id: { type: mongoose.Schema.Types.ObjectId, ref: "Firma", required: true, index: true },
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    comment: { type: String, required: true, maxlength: 1000 }
+  },
+  { timestamps: true }
+);
+
+reviewSchema.index({ reviewer_user_id: 1, firm_id: 1 }, { unique: true });
+
+const Review = mongoose.model("Review", reviewSchema);
+
+const notificationSchema = new mongoose.Schema(
+  {
+    recipient_user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    firm_id: { type: mongoose.Schema.Types.ObjectId, ref: "Firma", index: true },
+    review_id: { type: mongoose.Schema.Types.ObjectId, ref: "Review" },
+    type: { type: String, default: "review" },
+    title: { type: String, required: true },
+    message: { type: String, required: true },
+    is_read: { type: Boolean, default: false, index: true },
+    read_at: Date
+  },
+  { timestamps: true }
+);
+
+notificationSchema.index({ recipient_user_id: 1, createdAt: -1 });
+
+const Notification = mongoose.model("Notification", notificationSchema);
+
+async function appendReviewSummariesToFirms(firms = []) {
+  const list = Array.isArray(firms) ? firms : [];
+  const ids = list.map(firm => firm?._id).filter(Boolean);
+  if (!ids.length) return list;
+
+  const summaries = await Review.aggregate([
+    { $match: { firm_id: { $in: ids } } },
+    {
+      $group: {
+        _id: "$firm_id",
+        averageRating: { $avg: "$rating" },
+        reviewCount: { $sum: 1 }
+      }
+    }
+  ]);
+
+  const summaryMap = new Map(
+    summaries.map(item => [
+      String(item._id),
+      {
+        averageRating: Math.round(Number(item.averageRating || 0) * 10) / 10,
+        reviewCount: Number(item.reviewCount || 0)
+      }
+    ])
+  );
+
+  return list.map(firm => ({
+    ...firm,
+    averageRating: summaryMap.get(String(firm._id))?.averageRating || 0,
+    reviewCount: summaryMap.get(String(firm._id))?.reviewCount || 0
+  }));
+}
 
 
 /* ================= USER SIGNUP (CLIENT) ================= */
@@ -674,11 +766,11 @@ app.post("/user/signup", authRateLimiter, async (req, res) => {
     address = String(address || "").trim();
     password = String(password || "");
 
-    if (!name || !surname || !address || !email || !password) {
+    if (!name || !surname || !email || !password) {
       return sendError(res, 400, "PLOTESO_TEDHENAT");
     }
 
-    if (!validateNameLike(name) || !validateNameLike(surname) || !validateAddressLike(address)) {
+    if (!validateNameLike(name) || !validateNameLike(surname) || (address && !validateAddressLike(address))) {
       return sendError(res, 400, "INVALID_FIELDS");
     }
 
@@ -690,7 +782,7 @@ app.post("/user/signup", authRateLimiter, async (req, res) => {
       return sendError(res, 400, "PASSWORD_SHKURT");
     }
 
-    const exists = await User.findOne({ email }).lean();
+    const exists = await User.findOne({ email, deleted_at: { $exists: false } }).lean();
     if (exists) {
       return sendError(res, 409, "EMAIL_EKZISTON");
     }
@@ -702,6 +794,7 @@ const user = await User.create({
   name,
   surname,
   address,
+  avatarUrl: "",
   email,
   password_hash: hash,
   session_token: sessionToken,
@@ -719,6 +812,7 @@ return res.json({
     name: user.name,
     surname: user.surname,
     address: user.address,
+    avatarUrl: user.avatarUrl || "",
     email: user.email,
     role: user.role,
     credits: user.credits,
@@ -742,11 +836,11 @@ app.post("/pro/signup", authRateLimiter, async (req, res) => {
     address = String(address || "").trim();
     password = String(password || "");
 
-    if (!name || !surname || !address || !email || !password) {
+    if (!name || !surname || !email || !password) {
       return sendError(res, 400, "PLOTESO_TEDHENAT");
     }
 
-    if (!validateNameLike(name) || !validateNameLike(surname) || !validateAddressLike(address)) {
+    if (!validateNameLike(name) || !validateNameLike(surname) || (address && !validateAddressLike(address))) {
       return sendError(res, 400, "INVALID_FIELDS");
     }
 
@@ -758,7 +852,7 @@ app.post("/pro/signup", authRateLimiter, async (req, res) => {
       return sendError(res, 400, "PASSWORD_SHKURT");
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email, deleted_at: { $exists: false } });
 
     if (existingUser) {
       if (existingUser.role !== "pro") {
@@ -800,6 +894,7 @@ app.post("/pro/signup", authRateLimiter, async (req, res) => {
           name: existingUser.name,
           surname: existingUser.surname,
           address: existingUser.address,
+          avatarUrl: existingUser.avatarUrl || "",
           email: existingUser.email,
           role: existingUser.role,
           credits: existingUser.credits,
@@ -814,6 +909,7 @@ app.post("/pro/signup", authRateLimiter, async (req, res) => {
       name,
       surname,
       address,
+      avatarUrl: "",
       email,
       password_hash: hash,
       session_token: sessionToken,
@@ -832,6 +928,7 @@ app.post("/pro/signup", authRateLimiter, async (req, res) => {
         name: user.name,
         surname: user.surname,
         address: user.address,
+        avatarUrl: user.avatarUrl || "",
         email: user.email,
         role: user.role,
         credits: user.credits,
@@ -905,6 +1002,8 @@ app.post("/user/login", authRateLimiter, async (req, res) => {
     const user = await User.findOne({ email });
 if (!user) return sendError(res, 400, "INVALID_CREDENTIALS");
 
+if (user.deleted_at) return sendError(res, 400, "INVALID_CREDENTIALS");
+
 const ok = await bcrypt.compare(password, user.password_hash || "");
 if (!ok) return sendError(res, 400, "INVALID_CREDENTIALS");
 
@@ -921,6 +1020,7 @@ return res.json({
     name: user.name,
     surname: user.surname,
     address: user.address,
+    avatarUrl: user.avatarUrl || "",
     email: user.email,
     role: user.role,
     credits: user.credits,
@@ -963,6 +1063,7 @@ app.get("/user/me/:id", requireUserSession, async (req, res) => {
         name: req.authUser.name,
         surname: req.authUser.surname,
         address: req.authUser.address,
+        avatarUrl: req.authUser.avatarUrl || "",
         email: req.authUser.email,
         credits: req.authUser.credits,
       },
@@ -996,11 +1097,11 @@ app.put("/user/me/:id", requireUserSession, async (req, res) => {
       return sendError(res, 403, "FORBIDDEN");
     }
 
-    if (!name || !surname || !address) {
+    if (!name || !surname) {
       return sendError(res, 400, "MISSING_FIELDS");
     }
 
-    if (!validateNameLike(name) || !validateNameLike(surname) || !validateAddressLike(address)) {
+    if (!validateNameLike(name) || !validateNameLike(surname) || (address && !validateAddressLike(address))) {
       return sendError(res, 400, "INVALID_FIELDS");
     }
 
@@ -1027,12 +1128,111 @@ app.put("/user/me/:id", requireUserSession, async (req, res) => {
         name: updatedUser.name,
         surname: updatedUser.surname,
         address: updatedUser.address,
+        avatarUrl: updatedUser.avatarUrl || "",
         email: updatedUser.email,
         credits: updatedUser.credits
       }
     });
   } catch (err) {
     errorWithTime("USER UPDATE ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+/* ================= UPDATE USER AVATAR ================= */
+app.put("/user/me/:id/avatar", requireUserSession, upload.single("avatar"), async (req, res) => {
+  try {
+    const userId = String(req.params.id || "").trim();
+
+    if (!userId) {
+      return sendError(res, 400, "MISSING_USER_ID");
+    }
+
+    if (!isValidObjectId(mongoose, userId)) {
+      return sendError(res, 400, "INVALID_USER_ID");
+    }
+
+    if (String(req.authUser._id) !== userId) {
+      return sendError(res, 403, "FORBIDDEN");
+    }
+
+    if (String(req.authUser.role || "") !== "client") {
+      return sendError(res, 403, "FORBIDDEN");
+    }
+
+    if (!req.file) {
+      return sendError(res, 400, "MISSING_FIELDS");
+    }
+
+    const avatarUrl = await uploadBufferToCloudinary(req.file.buffer, "easyfix/avatars");
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: { avatarUrl } },
+      { new: true }
+    ).lean();
+
+    if (!updatedUser) {
+      return sendError(res, 404, "USER_NOT_FOUND");
+    }
+
+    return res.json({
+      success: true,
+      user: {
+        id: String(updatedUser._id),
+        name: updatedUser.name,
+        surname: updatedUser.surname,
+        address: updatedUser.address,
+        avatarUrl: updatedUser.avatarUrl || "",
+        email: updatedUser.email,
+        credits: updatedUser.credits
+      }
+    });
+  } catch (err) {
+    errorWithTime("USER AVATAR UPDATE ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+app.delete("/user/me/:id/avatar", requireUserSession, async (req, res) => {
+  try {
+    const userId = String(req.params.id || "").trim();
+
+    if (!userId) {
+      return sendError(res, 400, "MISSING_USER_ID");
+    }
+
+    if (!isValidObjectId(mongoose, userId)) {
+      return sendError(res, 400, "INVALID_USER_ID");
+    }
+
+    if (String(req.authUser._id) !== userId || String(req.authUser.role || "") !== "client") {
+      return sendError(res, 403, "FORBIDDEN");
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: { avatarUrl: "" } },
+      { new: true }
+    ).lean();
+
+    if (!updatedUser) {
+      return sendError(res, 404, "USER_NOT_FOUND");
+    }
+
+    return res.json({
+      success: true,
+      user: {
+        id: String(updatedUser._id),
+        name: updatedUser.name,
+        surname: updatedUser.surname,
+        address: updatedUser.address,
+        avatarUrl: "",
+        email: updatedUser.email,
+        credits: updatedUser.credits
+      }
+    });
+  } catch (err) {
+    errorWithTime("USER AVATAR REMOVE ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }
 });
@@ -1216,6 +1416,173 @@ app.post("/contact", contactLimiter, requireUserSession, requireRole("client"), 
   }
 });
 
+/* ================= REVIEWS ================= */
+app.get("/firms/:id/reviews", async (req, res) => {
+  try {
+    const firmId = String(req.params.id || "").trim();
+
+    if (!isValidObjectId(mongoose, firmId)) {
+      return sendError(res, 400, "INVALID_FIELDS");
+    }
+
+    const reviews = await Review.find({ firm_id: firmId })
+      .select("-__v")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const avg = reviews.length
+      ? reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length
+      : 0;
+
+    return res.json({
+      success: true,
+      averageRating: Math.round(avg * 10) / 10,
+      count: reviews.length,
+      reviews
+    });
+  } catch (err) {
+    errorWithTime("REVIEWS LIST ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+app.post("/firms/:id/reviews", requireUserSession, requireRole("client"), async (req, res) => {
+  try {
+    const firmId = String(req.params.id || "").trim();
+    const rating = Number(req.body?.rating);
+    const comment = String(req.body?.comment || "").trim();
+
+    if (!isValidObjectId(mongoose, firmId)) {
+      return sendError(res, 400, "INVALID_FIELDS");
+    }
+
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5 || !hasText(comment, 3, 1000)) {
+      return sendError(res, 400, "INVALID_FIELDS");
+    }
+
+    const firm = await Firma.findById(firmId)
+      .select("_id name owner_user_id payment_status deleted_at")
+      .lean();
+
+    if (!firm || !isRealFirmRecord(firm) || !isFirmVisibleStatus(firm.payment_status)) {
+      return sendError(res, 404, "FIRM_NOT_FOUND");
+    }
+
+    const reviewer = await User.findById(req.authUser._id)
+      .select("_id name surname avatarUrl role")
+      .lean();
+
+    if (!reviewer || reviewer.role !== "client") {
+      return sendError(res, 403, "FORBIDDEN");
+    }
+
+    const reviewerDisplayName = `${reviewer.name || ""} ${reviewer.surname || ""}`.trim() || "EasyFix client";
+    const existingReview = await Review.findOne({
+      reviewer_user_id: reviewer._id,
+      firm_id: firm._id
+    });
+
+    let review;
+    let created = false;
+
+    if (existingReview) {
+      existingReview.reviewer_display_name = reviewerDisplayName;
+      existingReview.reviewer_avatar_url = reviewer.avatarUrl || "";
+      existingReview.rating = rating;
+      existingReview.comment = comment;
+      review = await existingReview.save();
+    } else {
+      created = true;
+      review = await Review.create({
+        reviewer_user_id: reviewer._id,
+        reviewer_display_name: reviewerDisplayName,
+        reviewer_avatar_url: reviewer.avatarUrl || "",
+        firm_id: firm._id,
+        rating,
+        comment
+      });
+
+      if (firm.owner_user_id) {
+        await Notification.create({
+          recipient_user_id: firm.owner_user_id,
+          firm_id: firm._id,
+          review_id: review._id,
+          type: "review",
+          title: "You received a new review",
+          message: `${reviewerDisplayName} left a ${rating}-star review.`
+        });
+      }
+    }
+
+    return res.status(created ? 201 : 200).json({
+      success: true,
+      created,
+      review
+    });
+  } catch (err) {
+    if (err?.code === 11000) {
+      return sendError(res, 409, "DUPLICATE_REVIEW");
+    }
+
+    errorWithTime("REVIEW SAVE ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+app.get("/pro/reviews/me", requireUserSession, requireRole("pro"), async (req, res) => {
+  try {
+    const firm = await Firma.findOne({ owner_user_id: req.authUser._id })
+      .select("_id")
+      .lean();
+
+    if (!firm) {
+      return sendError(res, 404, "FIRM_NOT_FOUND");
+    }
+
+    const reviews = await Review.find({ firm_id: firm._id })
+      .select("-__v")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const avg = reviews.length
+      ? reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length
+      : 0;
+
+    return res.json({
+      success: true,
+      averageRating: Math.round(avg * 10) / 10,
+      count: reviews.length,
+      reviews
+    });
+  } catch (err) {
+    errorWithTime("PRO REVIEWS ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+app.get("/pro/notifications/me", requireUserSession, requireRole("pro"), async (req, res) => {
+  try {
+    const notifications = await Notification.find({ recipient_user_id: req.authUser._id })
+      .select("-__v")
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+    await Notification.updateMany(
+      { recipient_user_id: req.authUser._id, is_read: false },
+      { $set: { is_read: true, read_at: new Date() } }
+    );
+
+    return res.json({
+      success: true,
+      notifications
+    });
+  } catch (err) {
+    errorWithTime("PRO NOTIFICATIONS ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
 /* ================= OWNER MANAGE ================= */
 
 registerOwnerRoutes({
@@ -1270,6 +1637,38 @@ registerPayNowRoutes({
 });
 
 /* ================= DATA DELETION ================= */
+async function sendDeleteConfirmationForFirm({ firm, reason = "" }) {
+  const token = makeToken();
+  const tokenHash = sha256Hex(token);
+  const expires = new Date(Date.now() + DELETE_TOKEN_HOURS * 60 * 60 * 1000);
+
+  await Firma.updateOne(
+    { _id: firm._id },
+    { $set: { delete_token_hash: tokenHash, delete_token_expires: expires } }
+  );
+
+  const encodedToken = encodeURIComponent(token);
+  const confirmUrl =
+    `${FRONTEND_BASE_URL}/delete-confirm.html?token=${encodedToken}#token=${encodedToken}`;
+
+  await sendMail({
+    to: firm.email,
+    subject: "EasyFix - Confirm account deletion",
+    text: `Per me konfirmu fshirjen e account-it dhe listing-ut, kliko linkun:\n${confirmUrl}\n\n` +
+      `Ky link skadon per ${DELETE_TOKEN_HOURS} ore.\n` +
+      (reason ? `Arsyeja: ${reason}\n` : ""),
+    html: `
+      <div style="font-family:Arial;line-height:1.6">
+        <h2>EasyFix</h2>
+        <p>Per me konfirmu fshirjen e account-it dhe listing-ut, kliko:</p>
+        <p><a href="${confirmUrl}">${confirmUrl}</a></p>
+        <p style="color:#666">Ky link skadon per ${DELETE_TOKEN_HOURS} ore.</p>
+        ${reason ? `<p><b>Arsyeja:</b> ${reason}</p>` : ""}
+      </div>
+    `,
+  });
+}
+
 app.post("/delete-request", emailActionLimiter, async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
@@ -1284,33 +1683,7 @@ app.post("/delete-request", emailActionLimiter, async (req, res) => {
       return res.json({ success: true, message: "If the email exists, we sent a confirmation link." });
     }
 
-    const token = makeToken();
-    const tokenHash = sha256Hex(token);
-    const expires = new Date(Date.now() + DELETE_TOKEN_HOURS * 60 * 60 * 1000);
-
-    await Firma.updateOne(
-      { _id: firm._id },
-      { $set: { delete_token_hash: tokenHash, delete_token_expires: expires } }
-    );
-
-    const confirmUrl =
-      `${FRONTEND_BASE_URL}/delete-confirm.html?token=${encodeURIComponent(token)}`;
-
-    await sendMail({
-      to: email,
-      subject: "EasyFix - Confirm data deletion",
-      text:`Per me konfirmu fshirjen e listing-ut, kliko linkun:\n${confirmUrl}\n\n` +`Ky link skadon per ${DELETE_TOKEN_HOURS} ore.\n` +
-        (reason ? `Arsyeja: ${reason}\n` : ""),
-      html: `
-        <div style="font-family:Arial;line-height:1.6">
-          <h2>EasyFix</h2>
-          <p>Per me konfirmu fshirjen e listing-ut, kliko:</p>
-          <p><a href="${confirmUrl}">${confirmUrl}</a></p>
-          <p style="color:#666">Ky link skadon per ${DELETE_TOKEN_HOURS} ore.</p>
-          ${reason ? `<p><b>Arsyeja:</b> ${reason}</p>` : ""}
-        </div>
-      `,
-    });
+    await sendDeleteConfirmationForFirm({ firm, reason });
 
     return res.json({ success: true, message: "If the email exists, we sent a confirmation link." });
   } catch (err) {
@@ -1319,15 +1692,38 @@ app.post("/delete-request", emailActionLimiter, async (req, res) => {
   }
 });
 
+app.post("/pro/account/delete-request", requireUserSession, requireRole("pro"), emailActionLimiter, async (req, res) => {
+  try {
+    if (!resend) return sendError(res, 500, "EMAIL_SERVICE_NOT_CONFIGURED");
+
+    const reason = String(req.body?.reason || "").trim().slice(0, 500);
+    const firm = await Firma.findOne({
+      owner_user_id: req.authUser._id,
+      $or: [{ deleted_at: { $exists: false } }, { deleted_at: null }]
+    }).select("_id email owner_user_id").lean();
+
+    if (!firm) {
+      return sendError(res, 404, "FIRM_NOT_FOUND");
+    }
+
+    await sendDeleteConfirmationForFirm({ firm, reason });
+    return res.json({ success: true });
+  } catch (err) {
+    errorWithTime("PRO DELETE REQUEST ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
 app.post("/delete-confirm", emailActionLimiter, async (req, res) => {
   try {
-    const tokenHash = getCookieValue(req, COOKIE_NAMES.deleteSession);
-    if (!tokenHash) return res.status(400).json({ success: false, error: "Missing delete session" });
+    const bodyToken = String(req.body?.token || req.body?.delete_token || req.body?.t || "").trim();
+    const tokenHash = bodyToken ? sha256Hex(bodyToken) : getCookieValue(req, COOKIE_NAMES.deleteSession);
+    if (!tokenHash) return res.status(400).json({ success: false, error: "Missing delete token" });
 
     const firm = await Firma.findOne({
       delete_token_hash: tokenHash,
       delete_token_expires: { $gt: new Date() },
-    }).select("_id").lean();
+    }).select("_id email owner_user_id").lean();
 
     if (!firm) {
       clearCookie(res, COOKIE_NAMES.deleteSession);
@@ -1347,6 +1743,31 @@ app.post("/delete-confirm", emailActionLimiter, async (req, res) => {
         $unset: { delete_token_hash: "", delete_token_expires: "" },
       }
     );
+
+    if (firm.owner_user_id) {
+      const deletedEmail = `deleted-${String(firm.owner_user_id)}@deleted.easyfix.local`;
+      await User.updateOne(
+        { _id: firm.owner_user_id, role: "pro" },
+        {
+          $set: {
+            name: "Deleted",
+            surname: "Account",
+            address: "",
+            avatarUrl: "",
+            email: deletedEmail,
+            password_hash: "",
+            deleted_at: nowD
+          },
+          $unset: {
+            session_token: "",
+            email_otp_hash: "",
+            email_otp_expires: ""
+          }
+        }
+      );
+
+      await Notification.deleteMany({ recipient_user_id: firm.owner_user_id });
+    }
 
     clearCookie(res, COOKIE_NAMES.deleteSession);
     return res.json({ success: true });
@@ -1560,11 +1981,11 @@ app.post(
       const catsLimited = applyCategoryPlanLimit(parsedCats, freePlan);
       const primaryCategory = catsLimited[0] || null;
 
-      if (!name || !email || !phoneNorm || !address || !cityNorm || !primaryCategory) {
+      if (!name || !email || !phoneNorm || !cityNorm || !primaryCategory) {
         return sendError(res, 400, "MISSING_FIELDS");
       }
 
-      if (!isValidEmail(email) || !validateNameLike(name) || !validateAddressLike(address) || !hasText(cityNorm, 2, 80) || !validateDescriptionValue(descriptionNorm)) {
+      if (!isValidEmail(email) || !validateNameLike(name) || (address && !validateAddressLike(address)) || !hasText(cityNorm, 2, 80) || !validateDescriptionValue(descriptionNorm)) {
         return sendError(res, 400, "INVALID_FIELDS");
       }
 
@@ -1588,8 +2009,9 @@ app.post(
         return sendError(res, 409, "EMAIL_EXISTS");
       }
 
-      const geo = await geocodeNominatim({
-        address: String(address || "").trim(),
+      const addressNorm = String(address || "").trim();
+      const geo = await geocodeFirmLocation({
+        address: addressNorm,
         city: cityNorm,
         countryIso2: countryNorm
       });
@@ -1623,7 +2045,7 @@ app.post(
             phone: phoneNorm,
             phone_verified: false,
             phone_verified_at: null,
-            address,
+            address: addressNorm,
             city: cityNorm,
             owner_user_id: owner_user_id ? String(owner_user_id) : null,
             description: descriptionNorm,
@@ -1723,7 +2145,7 @@ app.get("/firms", async (req, res) => {
       .sort({ is_boosted: -1, createdAt: -1 })
       .lean();
 
-    const normalized = firms.map(f => {
+    const normalized = await appendReviewSummariesToFirms(firms.map(f => {
       const safePhotos = Array.isArray(f.photos) ? f.photos : [];
       const visiblePhotos = f.plan === "premium"
         ? safePhotos.slice(0, planPhotoLimit.premium)
@@ -1733,7 +2155,7 @@ app.get("/firms", async (req, res) => {
         ...f,
         photos: visiblePhotos
       };
-    });
+    }));
 
     return res.json(normalized);
   } catch (err) {
@@ -1935,15 +2357,15 @@ app.put("/pro/firma/:id", requireUserSession, requireRole("pro"), async (req, re
     const catsLimited = applyCategoryPlanLimit(parsedCats, effectivePlan);
     const primaryCategory = catsLimited[0] || null;
 
-    if (!name || !phoneNorm || !address || !city || !primaryCategory) {
+    if (!name || !phoneNorm || !city || !primaryCategory) {
       return sendError(res, 400, "MISSING_FIELDS");
     }
 
-    if (!validateNameLike(name) || !validateAddressLike(address) || !hasText(city, 2, 80) || !validateDescriptionValue(description)) {
+    if (!validateNameLike(name) || (address && !validateAddressLike(address)) || !hasText(city, 2, 80) || !validateDescriptionValue(description)) {
       return sendError(res, 400, "INVALID_FIELDS");
     }
 
-    const geo = await geocodeNominatim({
+    const geo = await geocodeFirmLocation({
       address,
       city,
       countryIso2: country
@@ -2127,7 +2549,7 @@ app.get("/firms/near", async (req, res) => {
       .sort({ is_boosted: -1, createdAt: -1 })
       .lean();
 
-    const normalized = firms.map(f => {
+    const normalized = await appendReviewSummariesToFirms(firms.map(f => {
       const safePhotos = Array.isArray(f.photos) ? f.photos : [];
       const visiblePhotos = f.plan === "premium"
         ? safePhotos.slice(0, planPhotoLimit.premium)
@@ -2137,12 +2559,77 @@ app.get("/firms/near", async (req, res) => {
         ...f,
         photos: visiblePhotos
       };
-    });
+    }));
 
     return res.json(normalized);
   } catch (err) {
     errorWithTime("FIRMS NEAR ERROR:", err);
     return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+app.get("/firms/:id", async (req, res) => {
+  try {
+    const firmId = String(req.params.id || "").trim();
+
+    if (!isValidObjectId(mongoose, firmId)) {
+      return sendError(res, 400, "INVALID_FIELDS");
+    }
+
+    const firm = await Firma.findOne({
+      $or: [
+        { _id: firmId },
+        { owner_user_id: firmId }
+      ]
+    })
+      .select("-__v")
+      .lean();
+
+    if (!firm || !isRealFirmRecord(firm) || !isFirmVisibleStatus(firm.payment_status)) {
+      return sendError(res, 404, "FIRM_NOT_FOUND");
+    }
+
+    const safePhotos = Array.isArray(firm.photos) ? firm.photos : [];
+    const visiblePhotos = firm.plan === "premium"
+      ? safePhotos.slice(0, planPhotoLimit.premium)
+      : safePhotos.slice(0, planPhotoLimit.free);
+
+    const reviews = await Review.find({ firm_id: firm._id })
+      .select("-__v")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const avg = reviews.length
+      ? reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length
+      : 0;
+
+    const publicFirm = {
+      _id: firm._id,
+      name: firm.name,
+      address: firm.address,
+      city: firm.city,
+      description: firm.description || "",
+      categories: Array.isArray(firm.categories) ? firm.categories : undefined,
+      category: firm.category,
+      country: firm.country,
+      plan: firm.plan || "free",
+      payment_status: firm.payment_status,
+      logoUrl: firm.logoUrl || "",
+      photos: visiblePhotos,
+      createdAt: firm.createdAt,
+      updatedAt: firm.updatedAt
+    };
+
+    return res.json({
+      success: true,
+      firm: publicFirm,
+      reviews,
+      averageRating: Math.round(avg * 10) / 10,
+      reviewCount: reviews.length
+    });
+  } catch (err) {
+    errorWithTime("PUBLIC FIRM DETAIL ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
   }
 });
 

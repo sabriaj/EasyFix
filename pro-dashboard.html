@@ -5,18 +5,219 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EasyFix - Pro Dashboard</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="i18n.js"></script>
   <script src="easyfix-config.js"></script>
   <script src="auth-client.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+  <style>
+    @media (max-width: 767px) {
+      body {
+        background: #f8fafc;
+      }
+      body > .max-w-6xl {
+        padding: 1rem 0.875rem 2rem;
+      }
+      #dashboardBox {
+        gap: 0;
+      }
+      #dashboardBox > .bg-gradient-to-r {
+        border-radius: 1.35rem;
+        box-shadow: 0 16px 34px rgba(37, 99, 235, 0.16);
+      }
+      #dashboardBox > .bg-gradient-to-r > div {
+        padding: 1rem;
+        gap: 0.85rem;
+      }
+      #heroBusinessName {
+        font-size: 1.45rem;
+        line-height: 1.15;
+      }
+      #heroEmail {
+        margin-top: 0.35rem;
+        font-size: 0.82rem;
+        line-height: 1.25;
+        word-break: break-word;
+      }
+      #heroPlanBox {
+        min-width: 0 !important;
+        width: 100%;
+        padding: 0.75rem 0.9rem !important;
+        border-radius: 1rem !important;
+      }
+      #planBadge {
+        font-size: 1.25rem;
+        line-height: 1.15;
+      }
+      #boostInfo {
+        margin-top: 0.25rem;
+        font-size: 0.78rem;
+        line-height: 1.25;
+      }
+      #dashboardBox > .grid {
+        gap: 0.9rem;
+      }
+      aside {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: min(82vw, 19rem);
+        transform: translateX(-105%);
+        transition: transform 180ms ease;
+        z-index: 30;
+        border-radius: 0 1.35rem 1.35rem 0 !important;
+        border-left: 0;
+        box-shadow: 22px 0 55px rgba(15, 23, 42, 0.18);
+        padding: 1rem;
+        overflow-y: auto;
+      }
+      body.pro-mobile-nav-open aside {
+        transform: translateX(0);
+      }
+      body.pro-mobile-nav-open {
+        overflow: hidden;
+      }
+      #mobileDashboardNavBackdrop {
+        display: block;
+      }
+      body.pro-mobile-nav-open #mobileDashboardNavBackdrop {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      #mobileDashboardNavBtn {
+        display: inline-flex !important;
+        width: auto;
+        height: 2.5rem;
+        gap: 0.45rem;
+        padding: 0 0.85rem;
+        border-radius: 9999px;
+        background: #fff;
+        border: 1px solid #dbeafe;
+        color: #1e3a8a;
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.14);
+        font-size: 0.78rem;
+        font-weight: 900;
+      }
+      #mobileDashboardNavBackdrop {
+        display: block !important;
+      }
+      aside [data-i18n="dashboard_menu"] {
+        display: block;
+        padding: 0.25rem 0.35rem 0.85rem;
+        color: #94a3b8;
+      }
+      aside > div:last-child {
+        flex-direction: column;
+        gap: 0.45rem;
+        padding-bottom: 0;
+        overflow: visible;
+      }
+      .dashboard-nav-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        width: 100%;
+        padding: 0.85rem 0.95rem !important;
+        border-radius: 1rem !important;
+        font-size: 0.9rem !important;
+        background: #f8fafc;
+      }
+      .dashboard-nav-btn.bg-blue-600 {
+        background: #2563eb !important;
+        color: #fff !important;
+        box-shadow: 0 12px 24px rgba(37, 99, 235, 0.24) !important;
+      }
+      .dashboard-nav-btn.bg-blue-600 .pro-nav-icon {
+        color: #fff;
+        opacity: 1;
+      }
+      .pro-nav-icon {
+        display: inline-flex !important;
+        width: 1rem;
+        min-width: 1rem;
+        justify-content: center;
+        color: #64748b;
+        font-size: 0.95rem;
+        opacity: 0.95;
+      }
+      #dashboardContentGrid,
+      #mainDashboardColumn,
+      #sideDashboardColumn {
+        gap: 0.9rem;
+      }
+      [data-dashboard-section] {
+        border-radius: 1.25rem !important;
+        padding: 1rem !important;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07) !important;
+      }
+      [data-dashboard-section] h2 {
+        font-size: 1.25rem;
+        line-height: 1.2;
+      }
+      [data-dashboard-section] p {
+        line-height: 1.35;
+      }
+      [data-dashboard-section="overview"] > .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.65rem;
+      }
+      [data-dashboard-section="overview"] > .grid > div,
+      #sideDashboardColumn [data-dashboard-section="overview"] .rounded-2xl {
+        padding: 0.85rem !important;
+        border-radius: 1rem !important;
+      }
+      [data-dashboard-section="overview"] .mt-5 {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.55rem;
+      }
+      [data-dashboard-section="overview"] .mt-5 button,
+      #saveListingBtn,
+      #saveMediaBtn,
+      #changePasswordBtn,
+      #boostBtn,
+      #logoutBtn,
+      #deleteAccountBtn {
+        width: 100%;
+        padding-top: 0.8rem !important;
+        padding-bottom: 0.8rem !important;
+        border-radius: 1rem !important;
+      }
+      #categoryMultiBox {
+        grid-template-columns: 1fr;
+        gap: 0.55rem;
+      }
+      #photosGrid {
+        gap: 0.65rem;
+      }
+    }
+    #mobileDashboardNavBtn,
+    #mobileDashboardNavBackdrop {
+      display: none;
+    }
+    #mobileDashboardNavBackdrop {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+    }
+    .pro-nav-icon {
+      display: none;
+      width: 1rem;
+      min-width: 1rem;
+      justify-content: center;
+      color: #64748b;
+      font-size: 0.88rem;
+      opacity: 0.9;
+    }
+  </style>
 </head>
 <body class="bg-gray-100 min-h-screen text-gray-800">
 
   <div class="max-w-6xl mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-6">
       <a id="backHomeLink" href="index.html" class="text-sm font-bold text-blue-600 hover:underline" data-i18n="back_home">Kthehu te faqja kryesore</a>
-      <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-bold" data-i18n="account_logout">
-        Logout
+      <button id="mobileDashboardNavBtn" type="button" class="items-center justify-center" aria-label="Menu">
+        <i class="fas fa-bars text-sm"></i>
+        <span>Menu</span>
       </button>
     </div>
 
@@ -45,9 +246,56 @@
 
       <div id="statusBox" class="hidden rounded-2xl px-4 py-3 text-sm font-semibold"></div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 space-y-6">
-          <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+      <div id="mobileDashboardNavBackdrop" class="fixed inset-0 bg-gray-900/35 z-20"></div>
+      <div class="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 items-start">
+        <aside class="bg-white rounded-3xl shadow-xl border border-gray-100 p-3 lg:sticky lg:top-6">
+          <div class="text-xs font-extrabold uppercase tracking-wider text-gray-400 px-3 py-2" data-i18n="dashboard_menu">Menu</div>
+          <div class="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-1 lg:pb-0">
+            <button type="button" data-dashboard-nav="overview" class="dashboard-nav-btn shrink-0 text-left px-4 py-3 rounded-2xl text-sm font-extrabold transition"><i class="pro-nav-icon fas fa-chart-pie"></i><span data-i18n="dashboard_overview">Overview</span></button>
+            <button type="button" data-dashboard-nav="listing" class="dashboard-nav-btn shrink-0 text-left px-4 py-3 rounded-2xl text-sm font-extrabold transition"><i class="pro-nav-icon fas fa-id-card"></i><span data-i18n="dashboard_listing_profile">Listing Profile</span></button>
+            <button type="button" data-dashboard-nav="media" class="dashboard-nav-btn shrink-0 text-left px-4 py-3 rounded-2xl text-sm font-extrabold transition"><i class="pro-nav-icon fas fa-images"></i><span data-i18n="dashboard_media">Media</span></button>
+            <button type="button" data-dashboard-nav="reviews" class="dashboard-nav-btn shrink-0 text-left px-4 py-3 rounded-2xl text-sm font-extrabold transition"><i class="pro-nav-icon fas fa-star"></i><span data-i18n="dashboard_reviews">Reviews</span></button>
+            <button type="button" data-dashboard-nav="inbox" class="dashboard-nav-btn shrink-0 text-left px-4 py-3 rounded-2xl text-sm font-extrabold transition"><i class="pro-nav-icon fas fa-inbox"></i><span data-i18n="dashboard_inbox">Inbox</span></button>
+            <button type="button" data-dashboard-nav="security" class="dashboard-nav-btn shrink-0 text-left px-4 py-3 rounded-2xl text-sm font-extrabold transition"><i class="pro-nav-icon fas fa-shield-halved"></i><span data-i18n="dashboard_security">Security</span></button>
+            <button type="button" data-dashboard-nav="settings" class="dashboard-nav-btn shrink-0 text-left px-4 py-3 rounded-2xl text-sm font-extrabold transition"><i class="pro-nav-icon fas fa-gear"></i><span data-i18n="dashboard_settings">Settings</span></button>
+          </div>
+        </aside>
+
+        <div class="min-w-0">
+      <div id="dashboardContentGrid" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div id="mainDashboardColumn" class="lg:col-span-2 space-y-6">
+          <div data-dashboard-section="overview" class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+            <div class="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="dashboard_overview">Overview</h2>
+                <p class="text-sm text-gray-500 mt-1" data-i18n="dashboard_overview_desc">Shiko gjendjen e listing-ut dhe veprimet kryesore.</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div class="rounded-2xl bg-blue-50 border border-blue-100 p-4">
+                <div class="text-xs text-blue-500 font-bold uppercase">Plan</div>
+                <div id="overviewPlanBox" class="text-xl font-extrabold text-gray-900 mt-1">FREE</div>
+              </div>
+              <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+                <div class="text-xs text-gray-400 font-bold uppercase" data-i18n="dashboard_status">Status</div>
+                <div id="overviewStatusBox" class="text-xl font-extrabold text-gray-900 mt-1" data-i18n="status_active">Aktiv</div>
+              </div>
+              <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+                <div class="text-xs text-gray-400 font-bold uppercase" data-i18n="dashboard_photos">Foto</div>
+                <div id="overviewPhotoBox" class="text-xl font-extrabold text-gray-900 mt-1">0</div>
+              </div>
+              <div class="rounded-2xl bg-amber-50 border border-amber-100 p-4">
+                <div class="text-xs text-amber-600 font-bold uppercase" data-i18n="dashboard_reviews">Reviews</div>
+                <div id="overviewReviewBox" class="text-xl font-extrabold text-gray-900 mt-1">0</div>
+              </div>
+            </div>
+            <div class="mt-5 flex flex-wrap gap-3">
+              <button type="button" data-dashboard-jump="listing" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-2xl font-bold" data-i18n="dashboard_edit_listing">Edito listing-un</button>
+              <button type="button" data-dashboard-jump="media" class="bg-gray-900 hover:bg-black text-white px-5 py-3 rounded-2xl font-bold" data-i18n="dashboard_manage_media">Menaxho media</button>
+            </div>
+          </div>
+
+          <div data-dashboard-section="listing" class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
             <div class="flex items-center justify-between mb-5">
               <div>
                 <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="pro_profile_title">Profili i listing-ut</h2>
@@ -153,9 +401,11 @@
 </div>
 
               <div class="md:col-span-2">
-                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="register_business_address">Adresa</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2"><span data-i18n="address">Adresa</span> <span class="text-gray-400 font-medium" data-i18n="optional_label">(opsionale)</span></label>
                 <input id="address" type="text"
-                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500">
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 outline-none focus:border-blue-500"
+                  data-i18n-placeholder="pro_address_placeholder" placeholder="p.sh. Qendra, rruga 5 ose vetem nr. 12">
+                <p class="text-xs text-gray-400 mt-2" data-i18n="pro_address_hint">Qyteti perdoret per afersi. Adresa mund te jete e shkurter ose informale.</p>
               </div>
 
               <div class="md:col-span-2">
@@ -176,7 +426,7 @@
           </div>
 
           
-            <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+            <div data-dashboard-section="security" class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
   <div class="mb-5">
     <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="account_security_title">Siguria</h2>
     <p class="text-sm text-gray-500 mt-1" data-i18n="account_security_desc">Ndrysho password-in e llogarise.</p>
@@ -213,7 +463,7 @@
   </div>
 </div>
 
-          <div class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+          <div data-dashboard-section="media" class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
             <div class="mb-5">
               <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="pro_media_title">Logo dhe foto</h2>
               <p id="mediaPlanHint" class="text-sm text-gray-500 mt-1">FREE lejon deri 3 foto. PREMIUM lejon me shume.</p>
@@ -241,7 +491,7 @@
               <div class="mt-6">
   <h3 class="text-lg font-extrabold text-gray-900 mb-3" data-i18n="pro_current_logo">Logo aktuale</h3>
   <div id="logoPreviewBox" class="w-24 h-24 rounded-2xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center">
-    <span class="text-xs text-gray-400" data-i18n="no_logo">Pa logo</span>
+    <span class="text-xs text-gray-400" data-i18n="pro_logo_none">Pa logo</span>
   </div>
 </div>
             </div>
@@ -251,10 +501,27 @@
               <div id="photosGrid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
             </div>
           </div>
+
+          <div data-dashboard-section="reviews" class="bg-white rounded-3xl shadow-xl p-6 md:p-7">
+            <div class="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <h2 class="text-2xl font-extrabold text-gray-900" data-i18n="dashboard_reviews">Reviews</h2>
+                <p id="reviewsSummary" class="text-sm text-gray-500 mt-1" data-i18n="reviews_loading">Duke ngarkuar reviews...</p>
+              </div>
+              <div id="reviewsAverage" class="text-right text-2xl font-extrabold text-amber-500">-</div>
+            </div>
+            <div id="reviewsList" class="space-y-3"></div>
+          </div>
         </div>
 
-        <div class="space-y-6">
-          <div class="bg-white rounded-3xl shadow-xl p-6">
+        <div id="sideDashboardColumn" class="space-y-6">
+          <div data-dashboard-section="inbox" class="bg-white rounded-3xl shadow-xl p-6">
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="dashboard_inbox">Inbox</div>
+            <p class="text-sm text-gray-500 mt-2" data-i18n="dashboard_inbox_desc">Njoftime nga EasyFix.</p>
+            <div id="notificationsList" class="mt-4 space-y-3"></div>
+          </div>
+
+          <div data-dashboard-section="overview settings" class="bg-white rounded-3xl shadow-xl p-6">
             <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="pro_current_plan">Plani aktual</div>
             <div id="sidePlanName" class="text-2xl font-extrabold text-gray-900 mt-2">FREE</div>
             <div id="premiumExpiresBox" class="text-sm text-gray-500 mt-2"></div>
@@ -268,13 +535,13 @@
             </button>
           </div>
 
-          <div class="bg-white rounded-3xl shadow-xl p-6">
+          <div data-dashboard-section="overview" class="bg-white rounded-3xl shadow-xl p-6">
             <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="account_summary">Permbledhje</div>
 
             <div class="mt-4 space-y-4">
               <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
                 <div class="text-xs text-gray-400 font-bold uppercase" data-i18n="pro_email_verified">Email i verifikuar</div>
-                <div id="emailVerifiedBox" class="text-base font-extrabold text-gray-900 mt-1">Po</div>
+                <div id="emailVerifiedBox" class="text-base font-extrabold text-gray-900 mt-1" data-i18n="yes">Po</div>
               </div>
 
               <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
@@ -284,20 +551,44 @@
 
               <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
                 <div class="text-xs text-gray-400 font-bold uppercase" data-i18n="pro_listing_status">Listing status</div>
-                <div id="listingStatusBox" class="text-base font-extrabold text-gray-900 mt-1">Aktiv</div>
+                <div id="listingStatusBox" class="text-base font-extrabold text-gray-900 mt-1" data-i18n="status_active">Aktiv</div>
               </div>
             </div>
           </div>
 
-          <div class="bg-white rounded-3xl shadow-xl p-6">
-            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="pro_help">Ndihme</div>
-            <p class="text-sm text-gray-500 mt-2" data-i18n="pro_help_desc">
-              Me vone ketu mund te shtojme statistika, boost history dhe menaxhim me te avancuar.
-            </p>
+          <div data-dashboard-section="settings" class="bg-white rounded-3xl shadow-xl p-6">
+            <div class="text-sm font-bold text-gray-400 uppercase tracking-wider" data-i18n="dashboard_settings">Settings</div>
+            <div class="mt-4 space-y-4">
+              <div class="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                <div class="font-extrabold text-gray-900" data-i18n="account_session">Session</div>
+                <p class="text-sm text-gray-500 mt-1" data-i18n="account_session_desc">Dil nga kjo pajisje.</p>
+                <button id="logoutBtn" class="mt-3 bg-gray-900 hover:bg-black text-white px-5 py-3 rounded-2xl font-bold" data-i18n="account_logout">
+                  Logout
+                </button>
+              </div>
+
+              <div class="rounded-2xl border border-red-100 bg-red-50 p-4">
+                <div class="font-extrabold text-red-800" data-i18n="delete_account">Delete account</div>
+                <p class="text-sm text-red-700 mt-1" data-i18n="delete_account_desc">Kjo dergon nje email konfirmimi. Pas konfirmimit, account-i pro caktivizohet dhe listing-u largohet nga EasyFix.</p>
+                <div id="deleteAccountConfirm" class="hidden mt-4 rounded-2xl bg-white border border-red-100 p-4">
+                  <p class="text-sm font-semibold text-gray-800" data-i18n="delete_account_confirm_desc">Je i sigurt? Do te dergojme link konfirmimi ne email-in e listing-ut.</p>
+                  <div class="mt-3 flex flex-col sm:flex-row gap-2">
+                    <button id="confirmDeleteAccountBtn" type="button" class="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-2xl font-bold" data-i18n="send_confirmation_email">Dergo email konfirmimi</button>
+                    <button id="cancelDeleteAccountBtn" type="button" class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 px-5 py-3 rounded-2xl font-bold" data-i18n="cancel">Anulo</button>
+                  </div>
+                </div>
+                <button id="deleteAccountBtn" type="button" class="mt-3 bg-white hover:bg-red-100 text-red-700 border border-red-200 px-5 py-3 rounded-2xl font-bold">
+                  <span data-i18n="delete_account">Delete account</span>
+                </button>
+                <p id="deleteAccountStatus" class="text-sm font-semibold mt-3"></p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
+    </div>
+  </div>
   </div>
 
 <script>
@@ -305,6 +596,7 @@ const API_URL = window.EASYFIX_CONFIG.API_URL;
 const { pagePath, goToPage } = window.EASYFIX_CONFIG;
 const { getUser, clearUser, apiFetch, translateApiError } = window.EASYFIX_AUTH;
 let currentFirm = null;
+let activeDashboardSection = "overview";
 document.getElementById("backHomeLink").href = pagePath("index.html");
 
 function tr(key, vars = {}) {
@@ -315,12 +607,96 @@ function getDashboardPlanLabel() {
   return currentFirm?.plan === "premium" ? tr("plan_standard_title") : tr("plan_basic_title");
 }
 
+function getDateLocale() {
+  const lang = window.EASYFIX_I18N?.getLang ? window.EASYFIX_I18N.getLang() : "sq";
+  if (lang === "mk") return "mk-MK";
+  if (lang === "en") return "en-US";
+  return "sq-AL";
+}
+
 const currentUser = getUser();
 if (!currentUser || !currentUser.id) {
   goToPage("auth.html");
 }
 if (currentUser.role !== "pro") {
   goToPage("account.html");
+}
+
+function setDashboardSection(section = "overview") {
+  const allowed = new Set(["overview", "listing", "media", "reviews", "inbox", "security", "settings"]);
+  activeDashboardSection = allowed.has(section) ? section : "overview";
+
+  document.querySelectorAll("[data-dashboard-section]").forEach(el => {
+    const sections = String(el.dataset.dashboardSection || "").split(/\s+/).filter(Boolean);
+    el.classList.toggle("hidden", !sections.includes(activeDashboardSection));
+  });
+
+  document.querySelectorAll("[data-dashboard-nav]").forEach(btn => {
+    const isActive = btn.dataset.dashboardNav === activeDashboardSection;
+    btn.classList.toggle("bg-blue-600", isActive);
+    btn.classList.toggle("text-white", isActive);
+    btn.classList.toggle("shadow-lg", isActive);
+    btn.classList.toggle("shadow-blue-100", isActive);
+    btn.classList.toggle("text-gray-600", !isActive);
+    btn.classList.toggle("hover:bg-gray-50", !isActive);
+  });
+
+  const mainColumn = document.getElementById("mainDashboardColumn");
+  const sideColumn = document.getElementById("sideDashboardColumn");
+  const mainOnly = ["listing", "media", "reviews", "security"].includes(activeDashboardSection);
+  const sideOnly = ["inbox", "settings"].includes(activeDashboardSection);
+
+  if (mainColumn && sideColumn) {
+    mainColumn.classList.toggle("hidden", sideOnly);
+    sideColumn.classList.toggle("hidden", mainOnly);
+    mainColumn.style.gridColumn = mainOnly ? "1 / -1" : "";
+    sideColumn.style.gridColumn = sideOnly ? "1 / -1" : "";
+  }
+
+  try {
+    localStorage.setItem("easyfix_pro_dashboard_section", activeDashboardSection);
+  } catch {}
+}
+
+function initDashboardNavigation() {
+  document.querySelectorAll("[data-dashboard-nav]").forEach(btn => {
+    btn.addEventListener("click", () => setDashboardSection(btn.dataset.dashboardNav));
+  });
+
+  document.querySelectorAll("[data-dashboard-jump]").forEach(btn => {
+    btn.addEventListener("click", () => setDashboardSection(btn.dataset.dashboardJump));
+  });
+
+  let savedSection = "overview";
+  try {
+    savedSection = localStorage.getItem("easyfix_pro_dashboard_section") || "overview";
+  } catch {}
+
+  const hashSection = String(window.location.hash || "").replace(/^#/, "");
+  setDashboardSection(hashSection || savedSection);
+}
+
+function closeMobileDashboardNav() {
+  document.body.classList.remove("pro-mobile-nav-open");
+}
+
+function initMobileDashboardNav() {
+  const btn = document.getElementById("mobileDashboardNavBtn");
+  const backdrop = document.getElementById("mobileDashboardNavBackdrop");
+
+  btn?.addEventListener("click", () => {
+    document.body.classList.toggle("pro-mobile-nav-open");
+  });
+  backdrop?.addEventListener("click", closeMobileDashboardNav);
+  document.querySelectorAll("[data-dashboard-nav]").forEach(navBtn => {
+    navBtn.addEventListener("click", closeMobileDashboardNav);
+  });
+  window.addEventListener("keydown", event => {
+    if (event.key === "Escape") closeMobileDashboardNav();
+  });
+  window.addEventListener("resize", () => {
+    if (!window.matchMedia("(max-width: 767px)").matches) closeMobileDashboardNav();
+  });
 }
 
 
@@ -372,6 +748,124 @@ function renderPhotos(photos = []) {
     wrap.innerHTML = `<img src="${src}" class="w-full h-32 object-cover">`;
     grid.appendChild(wrap);
   });
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("sq-AL");
+}
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
+function renderStars(rating) {
+  const safe = Math.max(0, Math.min(5, Number(rating || 0)));
+  return "★★★★★".split("").map((star, index) =>
+    `<span style="color:${index < safe ? "#f59e0b" : "#d1d5db"}">${star}</span>`
+  ).join("");
+}
+
+function renderReviews(data = {}) {
+  const list = document.getElementById("reviewsList");
+  const summary = document.getElementById("reviewsSummary");
+  const average = document.getElementById("reviewsAverage");
+  const overviewReviewBox = document.getElementById("overviewReviewBox");
+  const reviews = Array.isArray(data.reviews) ? data.reviews : [];
+
+  average.innerHTML = data.count ? `${data.averageRating || 0} <span style="color:#f59e0b">★</span>` : "-";
+  summary.textContent = data.count
+    ? tr("reviews_count_from_clients", { count: data.count })
+    : tr("reviews_empty");
+  if (overviewReviewBox) {
+    overviewReviewBox.innerText = data.count ? `${data.averageRating || 0} (${data.count})` : "0";
+  }
+
+  if (!reviews.length) {
+    list.innerHTML = `<div class="text-sm text-gray-500 rounded-2xl border border-gray-100 bg-gray-50 p-4">${tr("reviews_customer_empty")}</div>`;
+    return;
+  }
+
+  list.innerHTML = reviews.map(review => {
+    const reviewerName = escapeHtml(review.reviewer_display_name || "Klient");
+    const avatar = review.reviewer_avatar_url
+      ? `<img src="${escapeHtml(review.reviewer_avatar_url)}" class="rounded-full border border-gray-100 bg-gray-50" style="width:48px;height:48px;min-width:48px;max-width:48px;object-fit:cover;display:block;" alt="">`
+      : `<div class="rounded-full bg-blue-50 text-blue-700 flex items-center justify-center font-extrabold" style="width:48px;height:48px;min-width:48px;max-width:48px;">${reviewerName.slice(0, 1)}</div>`;
+
+    return `
+      <div class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+        <div class="flex items-start gap-4">
+          ${avatar}
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-3">
+              <div>
+                <div class="font-extrabold text-gray-900 leading-tight">${reviewerName}</div>
+                <div class="text-sm mt-1" style="letter-spacing:1px;">${renderStars(review.rating)}</div>
+              </div>
+              <div class="text-xs text-gray-400 shrink-0">${formatDate(review.createdAt)}</div>
+            </div>
+            <p class="text-sm text-gray-600 mt-3 leading-relaxed whitespace-pre-line">${escapeHtml(review.comment || "")}</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderNotifications(items = []) {
+  const list = document.getElementById("notificationsList");
+  if (!list) return;
+
+  if (!items.length) {
+    list.innerHTML = `<div class="text-sm text-gray-500 rounded-2xl border border-gray-100 bg-gray-50 p-4">Nuk ka njoftime.</div>`;
+    return;
+  }
+
+  list.innerHTML = items.slice(0, 5).map(item => `
+    <div class="rounded-2xl border ${item.is_read ? "border-gray-100 bg-gray-50" : "border-blue-100 bg-blue-50"} p-4">
+      <div class="text-sm font-extrabold text-gray-900">${escapeHtml(item.title || "Njoftim")}</div>
+      <p class="text-sm text-gray-600 mt-1">${escapeHtml(item.message || "")}</p>
+      <div class="text-xs text-gray-400 mt-2">${formatDate(item.createdAt)}</div>
+    </div>
+  `).join("");
+}
+
+async function loadProReviews() {
+  try {
+    const res = await apiFetch(`${API_URL}/pro/reviews/me`);
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      renderReviews({ reviews: [], count: 0, averageRating: 0 });
+      return;
+    }
+    renderReviews(data);
+  } catch (err) {
+    console.error(err);
+    renderReviews({ reviews: [], count: 0, averageRating: 0 });
+  }
+}
+
+async function loadNotifications() {
+  try {
+    const res = await apiFetch(`${API_URL}/pro/notifications/me`);
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      renderNotifications([]);
+      return;
+    }
+    renderNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+  } catch (err) {
+    console.error(err);
+    renderNotifications([]);
+  }
 }
 
 function getSelectedCategories() {
@@ -483,17 +977,21 @@ updateCategoryPlanHint(firm);
 
   const premium = firm.plan === "premium";
   document.getElementById("planBadge").innerText = premium ? "PREMIUM" : "FREE";
+  document.getElementById("overviewPlanBox").innerText = premium ? "PREMIUM" : "FREE";
   const sidePlanName = document.getElementById("sidePlanName");
 sidePlanName.childNodes[0].nodeValue = premium ? "PREMIUM" : "FREE";
 
   document.getElementById("boostInfo").innerText = premium
-    ? "Listing-u yt ka perparesi ne renditje."
-    : "Mund ta boost-osh listing-un per me shume shikueshmeri.";
+    ? tr("pro_boost_premium_info")
+    : tr("pro_boost_free_info");
 
-  document.getElementById("emailVerifiedBox").innerText = firm.email_verified ? "Po" : "Jo";
-  document.getElementById("photoCountBox").innerText = Array.isArray(firm.photos) ? firm.photos.length : 0;
-  document.getElementById("listingStatusBox").innerText =
-    firm.payment_status === "active" ? "Aktiv" : (firm.payment_status || "Aktiv");
+  document.getElementById("emailVerifiedBox").innerText = firm.email_verified ? tr("yes") : tr("no");
+  const photoCount = Array.isArray(firm.photos) ? firm.photos.length : 0;
+  const listingStatus = firm.payment_status === "active" ? tr("status_active") : (firm.payment_status || tr("status_active"));
+  document.getElementById("photoCountBox").innerText = photoCount;
+  document.getElementById("overviewPhotoBox").innerText = photoCount;
+  document.getElementById("listingStatusBox").innerText = listingStatus;
+  document.getElementById("overviewStatusBox").innerText = listingStatus;
 
   renderPhotos(Array.isArray(firm.photos) ? firm.photos : []);
 
@@ -504,15 +1002,15 @@ sidePlanName.childNodes[0].nodeValue = premium ? "PREMIUM" : "FREE";
 if (firm.logoUrl) {
   logoPreviewBox.innerHTML = `<img src="${firm.logoUrl}" class="w-full h-full object-cover">`;
 } else {
-  logoPreviewBox.innerHTML = `<span class="text-xs text-gray-400">Pa logo</span>`;
+  logoPreviewBox.innerHTML = `<span class="text-xs text-gray-400">${tr("pro_logo_none")}</span>`;
 }
 
   const mediaPlanHint = document.getElementById("mediaPlanHint");
 
 if (premium) {
-  mediaPlanHint.innerText = "Plani PREMIUM lejon deri 10 foto.";
+  mediaPlanHint.innerText = tr("pro_media_plan_premium_hint");
 } else {
-  mediaPlanHint.innerText = "Plani FREE lejon deri 3 foto. Per me shume foto, kalo ne PREMIUM.";
+  mediaPlanHint.innerText = tr("pro_media_plan_free_hint");
 }
 
 
@@ -530,20 +1028,20 @@ if (premium) {
 
 if (premium && firm.boost_expires_at) {
   const d = new Date(firm.boost_expires_at);
-  premiumExpiresBox.innerText = `Aktiv deri me: ${d.toLocaleDateString("sq-AL")}`;
+  premiumExpiresBox.innerText = tr("premium_active_until", { date: d.toLocaleDateString(getDateLocale()) });
 } else {
-  premiumExpiresBox.innerText = "Aktualisht je ne planin falas.";
+  premiumExpiresBox.innerText = tr("free_plan_current");
 }
 
 
   const boostBtn = document.getElementById("boostBtn");
 
 if (premium) {
-  boostBtn.innerText = "Premium aktiv";
+  boostBtn.innerText = tr("premium_active");
   boostBtn.disabled = true;
   boostBtn.className = "mt-5 w-full bg-amber-500 text-white py-3 rounded-2xl font-bold shadow-lg shadow-amber-100 transition cursor-default";
 } else {
-  boostBtn.innerText = "Kaloni ne Premium";
+  boostBtn.innerText = tr("pro_upgrade");
   boostBtn.disabled = false;
   boostBtn.className = "mt-5 w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-2xl font-bold shadow-lg shadow-green-100 transition";
 }
@@ -567,12 +1065,13 @@ async function loadDashboard() {
     }
 
     fillDashboard(data.firm);
+    await Promise.all([loadProReviews(), loadNotifications()]);
 
     document.getElementById("loadingBox").classList.add("hidden");
     document.getElementById("dashboardBox").classList.remove("hidden");
   } catch (err) {
     console.error(err);
-    showError("Gabim gjate ngarkimit te dashboard-it.");
+    showError(tr("pro_load_error"));
   }
 }
 
@@ -591,8 +1090,8 @@ async function saveListing() {
   const categories = getSelectedCategories();
   const description = document.getElementById("description").value.trim();
 
-  if (!businessName || !phone || !city || !address || categories.length === 0) {
-    showStatus("Ploteso te gjitha fushat kryesore.");
+  if (!businessName || !phone || !city || categories.length === 0) {
+    showStatus(tr("msg_fill_all"));
     return;
   }
 
@@ -606,7 +1105,7 @@ async function saveListing() {
 
   const btn = document.getElementById("saveListingBtn");
   btn.disabled = true;
-  btn.innerText = "Duke ruajtur...";
+  btn.innerText = tr("account_saving");
 
   try {
     const res = await apiFetch(`${API_URL}/pro/firma/${currentFirm._id}`, {
@@ -634,13 +1133,13 @@ async function saveListing() {
     }
 
     fillDashboard(data.firm);
-    showStatus("Ndryshimet u ruajten me sukses.", "success");
+    showStatus(tr("account_saved_success"), "success");
   } catch (err) {
     console.error(err);
-    showStatus("Gabim serveri.");
+    showStatus(tr("server_error_try_later"));
   } finally {
     btn.disabled = false;
-    btn.innerText = "Ruaj ndryshimet";
+    btn.innerText = tr("account_save_changes");
   }
 }
 
@@ -656,13 +1155,13 @@ async function saveMedia() {
   const photoFiles = Array.from(document.getElementById("newPhotos").files || []);
 
   if (!logoFile && photoFiles.length === 0) {
-    showStatus("Zgjidh logon ose fotot qe deshiron t'i ndryshosh.");
+    showStatus(tr("pro_choose_media"));
     return;
   }
 
   const btn = document.getElementById("saveMediaBtn");
   btn.disabled = true;
-  btn.innerText = "Duke ruajtur...";
+  btn.innerText = tr("account_saving");
 
   try {
     const formData = new FormData();
@@ -692,13 +1191,13 @@ async function saveMedia() {
     document.getElementById("newPhotos").value = "";
 
     fillDashboard(data.firm);
-    showStatus("Media u ruajt me sukses.", "success");
+    showStatus(tr("pro_media_saved_success"), "success");
   } catch (err) {
     console.error(err);
-    showStatus("Gabim serveri.");
+    showStatus(tr("server_error_try_later"));
   } finally {
     btn.disabled = false;
-    btn.innerText = "Ruaj media";
+    btn.innerText = tr("pro_save_media");
   }
 }
 
@@ -714,13 +1213,13 @@ document.getElementById("boostBtn").addEventListener("click", async () => {
   }
 
   if (!currentFirm || !currentFirm._id) {
-    showStatus("Firma nuk u ngarkua ende.");
+    showStatus(tr("listing_not_loaded"));
     return;
   }
 
   const btn = document.getElementById("boostBtn");
   btn.disabled = true;
-  btn.innerText = "Duke hapur pagesen...";
+  btn.innerText = tr("credits_opening_payment");
 
   try {
     const res = await apiFetch(`${API_URL}/pro/premium/checkout`, {
@@ -742,14 +1241,14 @@ document.getElementById("boostBtn").addEventListener("click", async () => {
     }
 
     if (!data.checkoutUrl) {
-      showStatus("Nuk u kthye checkout link.");
+      showStatus(tr("credits_missing_checkout"));
       return;
     }
 
     window.location.href = data.checkoutUrl;
   } catch (err) {
     console.error(err);
-    showStatus("Gabim serveri.");
+    showStatus(tr("server_error_try_later"));
   } finally {
     btn.disabled = false;
   }
@@ -763,9 +1262,73 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
   goToPage("auth.html");
 });
 
+const deleteAccountBtn = document.getElementById("deleteAccountBtn");
+const deleteAccountConfirm = document.getElementById("deleteAccountConfirm");
+const confirmDeleteAccountBtn = document.getElementById("confirmDeleteAccountBtn");
+const cancelDeleteAccountBtn = document.getElementById("cancelDeleteAccountBtn");
+const deleteAccountStatus = document.getElementById("deleteAccountStatus");
+
+function showDeleteAccountStatus(message = "", isError = false) {
+  if (!deleteAccountStatus) return;
+  deleteAccountStatus.textContent = message;
+  deleteAccountStatus.className = isError
+    ? "text-sm font-semibold mt-3 text-red-700"
+    : "text-sm font-semibold mt-3 text-green-700";
+}
+
+deleteAccountBtn?.addEventListener("click", () => {
+  deleteAccountConfirm?.classList.remove("hidden");
+  deleteAccountBtn.classList.add("hidden");
+  showDeleteAccountStatus("");
+});
+
+cancelDeleteAccountBtn?.addEventListener("click", () => {
+  deleteAccountConfirm?.classList.add("hidden");
+  deleteAccountBtn?.classList.remove("hidden");
+  showDeleteAccountStatus("");
+});
+
+confirmDeleteAccountBtn?.addEventListener("click", async () => {
+  if (!currentFirm?._id) {
+    showDeleteAccountStatus(tr("listing_not_loaded"), true);
+    return;
+  }
+
+  confirmDeleteAccountBtn.disabled = true;
+  confirmDeleteAccountBtn.innerText = tr("delete_email_sending");
+
+  try {
+    const res = await apiFetch(`${API_URL}/pro/account/delete-request`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({})
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.success) {
+      showDeleteAccountStatus(translateApiError(data.error_code, "api_server_error"), true);
+      return;
+    }
+
+    showDeleteAccountStatus(tr("delete_email_sent"));
+    deleteAccountConfirm?.classList.add("hidden");
+  } catch (err) {
+    console.error(err);
+    showDeleteAccountStatus(tr("server_error_try_later"), true);
+  } finally {
+    confirmDeleteAccountBtn.disabled = false;
+    confirmDeleteAccountBtn.innerText = tr("send_confirmation_email");
+  }
+});
+
 document.querySelectorAll(".pro-category-checkbox").forEach(el => {
   el.addEventListener("change", () => enforceProCategoryLimit(el));
 });
+
+initDashboardNavigation();
+initMobileDashboardNav();
 
 
 function handlePremiumReturn() {
@@ -773,7 +1336,7 @@ function handlePremiumReturn() {
   const premium = params.get("premium");
 
   if (premium === "success") {
-    showStatus("Pagesa u krye. Premium po perditesohet...", "success");
+    showStatus(tr("premium_payment_success"), "success");
 
     setTimeout(async () => {
       const cleanUrl = window.location.pathname;
@@ -812,23 +1375,23 @@ async function changePassword() {
   const confirmNewPassword = document.getElementById("confirmNewPassword").value.trim();
 
   if (!currentPassword || !newPassword || !confirmNewPassword) {
-    showPasswordStatus("Ploteso te gjitha fushat.", true);
+    showPasswordStatus(tr("msg_fill_all"), true);
     return;
   }
 
   if (newPassword.length < 6) {
-    showPasswordStatus("Password i ri duhet te kete te pakten 6 karaktere.", true);
+    showPasswordStatus(tr("account_password_min"), true);
     return;
   }
 
   if (newPassword !== confirmNewPassword) {
-    showPasswordStatus("Password-et nuk perputhen.", true);
+    showPasswordStatus(tr("login_password_mismatch"), true);
     return;
   }
 
   const btn = document.getElementById("changePasswordBtn");
   btn.disabled = true;
-  btn.innerText = "Duke ndryshuar...";
+  btn.innerText = tr("account_changing_password");
 
   try {
     const res = await apiFetch(`${API_URL}/user/password/${user.id}`, {
@@ -853,13 +1416,13 @@ async function changePassword() {
     document.getElementById("newPassword").value = "";
     document.getElementById("confirmNewPassword").value = "";
 
-    showPasswordStatus("Password-i u ndryshua me sukses.");
+    showPasswordStatus(tr("account_password_changed"));
   } catch (err) {
     console.error(err);
-    showPasswordStatus("Gabim serveri.", true);
+    showPasswordStatus(tr("server_error_try_later"), true);
   } finally {
     btn.disabled = false;
-    btn.innerText = "Ndrysho Password";
+    btn.innerText = tr("account_change_password");
   }
 }
 

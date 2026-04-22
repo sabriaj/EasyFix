@@ -15,7 +15,7 @@
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EasyFix - Data Deletion Request</title>
+  <title>EasyFix - Account Deletion</title>
   <link rel="stylesheet" href="styles.css">
 
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
@@ -37,37 +37,25 @@
   </header>
 
   <main class="container mx-auto px-4 py-10 max-w-2xl">
-    <h2 class="text-3xl font-bold text-blue-900 mb-2">Data Deletion Request</h2>
+    <h2 class="text-3xl font-bold text-blue-900 mb-2">Account Deletion</h2>
     <p class="text-gray-700 mb-6">
-      Enter the business email used during registration. We will send you a confirmation link.
+      Current pro account deletion is handled from the pro dashboard Settings page.
     </p>
 
     <div id="msg" class="hidden rounded-lg p-3 text-sm mb-4"></div>
 
     <div class="bg-white rounded-xl shadow p-6 space-y-4">
-      <div class="text-sm text-gray-600">
-        <p><b>What will be deleted:</b> your business listing data and associated media (logo/photos) when applicable.</p>
-        <p><b>Security:</b> deletion requires email confirmation.</p>
+      <div class="text-sm text-gray-600 space-y-2">
+        <p><b>What will be deleted:</b> the pro account and the connected business listing.</p>
+        <p><b>Security:</b> deletion requires email confirmation from inside the logged-in pro dashboard.</p>
       </div>
 
-      <form id="delForm" class="space-y-4">
-        <div>
-          <label class="font-semibold">Business email</label>
-          <input id="delEmail" type="email" required class="w-full border p-3 rounded-lg" placeholder="email@company.com" />
-        </div>
-
-        <div>
-          <label class="font-semibold">Reason (optional)</label>
-          <textarea id="delReason" rows="4" class="w-full border p-3 rounded-lg" placeholder="Optional..."></textarea>
-        </div>
-
-        <button class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold">
-          Send confirmation link
-        </button>
-      </form>
+      <a id="dashboardLink" href="pro-dashboard.html" class="block text-center w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold">
+        Open Pro Dashboard Settings
+      </a>
 
       <div class="text-xs text-gray-500 pt-2">
-        Need to update your listing instead? Use <a id="manageLink" class="underline text-blue-700" href="manage.html">Manage Listing</a>.
+        Need help? Use <a id="contactLink" class="underline text-blue-700" href="contact.html">Contact</a>.
       </div>
     </div>
   </main>
@@ -78,54 +66,11 @@
 
   <script src="easyfix-config.js"></script>
   <script>
-    const { API_URL, pagePath } = window.EASYFIX_CONFIG;
+    const { pagePath } = window.EASYFIX_CONFIG;
     document.getElementById("privacyLink").href = pagePath("privacy.html");
     document.getElementById("backHomeLink").href = pagePath("index.html");
-    document.getElementById("manageLink").href = pagePath("manage.html");
-
-    const form = document.getElementById("delForm");
-    const msg = document.getElementById("msg");
-
-    function show(kind, text) {
-      msg.classList.remove("hidden");
-      msg.className = "rounded-lg p-3 text-sm mb-4 " + (kind === "ok"
-        ? "bg-green-50 text-green-700 border border-green-200"
-        : "bg-red-50 text-red-700 border border-red-200");
-      msg.textContent = text;
-    }
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const email = document.getElementById("delEmail").value.trim();
-      const reason = document.getElementById("delReason").value.trim();
-
-      if (!email) {
-        show("err", "Please enter a valid email.");
-        return;
-      }
-
-      show("ok", "Sending request...");
-
-      try {
-        const r = await fetch(`${API_URL}/delete-request`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, reason })
-        });
-
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok || !j.success) {
-          show("err", j?.error || "Request failed.");
-          return;
-        }
-
-        show("ok", "If this email exists, we sent a confirmation link. Please check your inbox (and spam).");
-        form.reset();
-      } catch (err) {
-        show("err", "Network error. Please try again.");
-      }
-    });
+    document.getElementById("dashboardLink").href = pagePath("pro-dashboard.html");
+    document.getElementById("contactLink").href = pagePath("contact.html");
   </script>
 </body>
 </html>

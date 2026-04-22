@@ -65,8 +65,22 @@
       msg.textContent = text;
     }
 
-    const params = new URLSearchParams(window.location.search);
-    let token = (params.get("token") || "").trim();
+    function getDeleteTokenFromUrl() {
+      const fromSearch = new URLSearchParams(window.location.search);
+      const hashText = String(window.location.hash || "").replace(/^#/, "");
+      const fromHash = new URLSearchParams(hashText);
+      const candidates = [
+        fromSearch.get("token"),
+        fromSearch.get("delete_token"),
+        fromSearch.get("t"),
+        fromHash.get("token"),
+        fromHash.get("delete_token"),
+        fromHash.get("t")
+      ];
+      return String(candidates.find(Boolean) || "").trim();
+    }
+
+    let token = getDeleteTokenFromUrl();
 
     async function startDeleteSession() {
       try {

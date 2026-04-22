@@ -1647,8 +1647,9 @@ async function sendDeleteConfirmationForFirm({ firm, reason = "" }) {
     { $set: { delete_token_hash: tokenHash, delete_token_expires: expires } }
   );
 
+  const encodedToken = encodeURIComponent(token);
   const confirmUrl =
-    `${FRONTEND_BASE_URL}/delete-confirm.html?token=${encodeURIComponent(token)}`;
+    `${FRONTEND_BASE_URL}/delete-confirm.html?token=${encodedToken}#token=${encodedToken}`;
 
   await sendMail({
     to: firm.email,

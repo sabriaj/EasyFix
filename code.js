@@ -192,10 +192,13 @@ function updatePhoneUi() {
   const cfg = getPhoneConfig();
 
   phoneInput.maxLength = cfg.maxDigits;
-  phoneInput.placeholder = "Numri lokal";
+  phoneInput.placeholder = tr("phone_label");
 
   if (phoneHelp) {
-    phoneHelp.textContent = `Shkruaj vetëm numrat lokalë pa ${cfg.dialCode}. Maksimum ${cfg.maxDigits} shifra.`;
+    phoneHelp.textContent = tr("phone_hint", {
+      dialCode: cfg.dialCode,
+      maxDigits: cfg.maxDigits
+    });
   }
 }
 
@@ -435,6 +438,8 @@ if (phoneCodeSelectEl && phoneInputEl) {
 
   updatePhoneUi();
 }
+
+window.addEventListener("easyfix:languagechange", updatePhoneUi);
 
 document.getElementById("sendOtpBtn").addEventListener("click", sendOtp);
 document.getElementById("verifyOtpBtn").addEventListener("click", verifyOtp);

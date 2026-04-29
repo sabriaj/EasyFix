@@ -22,10 +22,6 @@
 
     <form id="verifyForm" class="space-y-4">
       <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1" data-i18n="email">Email</label>
-        <input id="email" type="email" autocomplete="email" class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-blue-500">
-      </div>
-      <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1" data-i18n="code_label">Code</label>
         <input id="code" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-center text-xl tracking-widest outline-none focus:border-blue-500">
       </div>
@@ -46,6 +42,7 @@
     const { apiAuthFetch, translateApiError } = window.EASYFIX_AUTH;
     let resendTimer = null;
     let resendSecondsLeft = 0;
+    let pendingEmail = "";
 
     function showStatus(message, type = "error") {
       const box = document.getElementById("statusBox");
@@ -72,7 +69,7 @@
     }
 
     function currentEmail() {
-      return document.getElementById("email").value.trim().toLowerCase();
+      return pendingEmail;
     }
 
     function updateSentMessage() {
@@ -104,21 +101,18 @@
     const emailFromQuery = String(params.get("email") || "").trim().toLowerCase();
     const emailFromStorage = String(window.sessionStorage.getItem("easyfix_pending_verify_email") || "").trim().toLowerCase();
     const initialEmail = emailFromQuery || emailFromStorage;
-    const emailInput = document.getElementById("email");
-    emailInput.value = initialEmail;
-    if (initialEmail) {
-      emailInput.readOnly = true;
-      emailInput.classList.add("bg-gray-50", "text-gray-600");
-    }
+    pendingEmail = initialEmail;
     document.getElementById("loginLink").href = pagePath("login.html");
     applyTranslations(document);
     document.documentElement.setAttribute("lang", getLang());
     updateSentMessage();
     if (initialEmail) {
       setResendCooldown(45);
+    } else {
+      showStatus(t("verify_email_missing_email"));
+      document.getElementById("verifyBtn").disabled = true;
+      document.getElementById("resendBtn").disabled = true;
     }
-
-    emailInput.addEventListener("input", updateSentMessage);
 
     document.getElementById("code").addEventListener("input", (event) => {
       event.target.value = String(event.target.value || "").replace(/\D/g, "").slice(0, 6);
@@ -128,8 +122,12 @@
       event.preventDefault();
       const email = currentEmail();
       const code = document.getElementById("code").value.trim();
-      if (!email || !code) {
-        showStatus(t("api_missing_email_code"));
+      if (!email) {
+        showStatus(t("verify_email_missing_email"));
+        return;
+      }
+      if (!code) {
+        showStatus(t("api_invalid_code_format"));
         return;
       }
 

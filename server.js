@@ -693,6 +693,27 @@ const userSchema = new mongoose.Schema(
 
 const User = mongoose.model("User", userSchema);
 
+const pendingSignupSchema = new mongoose.Schema(
+  {
+    name: String,
+    surname: String,
+    address: String,
+    avatarUrl: { type: String, default: "" },
+    email: { type: String, unique: true, required: true, index: true },
+    password_hash: String,
+    role: { type: String, enum: ["client"], default: "client" },
+    credits: { type: Number, default: 3 },
+    email_otp_hash: String,
+    email_otp_expires: Date,
+    email_otp_attempts: { type: Number, default: 0 },
+    email_otp_last_sent_at: Date,
+    expires_at: { type: Date, required: true, index: { expires: 0 } },
+  },
+  { timestamps: true }
+);
+
+const PendingSignup = mongoose.model("PendingSignup", pendingSignupSchema);
+
 const SALT = 10;
 
 const requireUserSession = createRequireUserSession({ User, sendError, errorWithTime });
@@ -701,11 +722,11 @@ function makeCodeExpiry() {
   return new Date(Date.now() + EMAIL_OTP_EXPIRES_MINUTES * 60 * 1000);
 }
 
-async function sendUserVerificationEmail({ user, code }) {
-  const verifyUrl = `${FRONTEND_BASE_URL}/verify-email.html?email=${encodeURIComponent(user.email)}`;
+async function sendUserVerificationEmail({ email, code }) {
+  const verifyUrl = `${FRONTEND_BASE_URL}/verify-email.html?email=${encodeURIComponent(email)}`;
 
   await sendMail({
-    to: user.email,
+    to: email,
     subject: "EasyFix - Verify your email",
     text: `Your EasyFix verification code is ${code}. It expires in ${EMAIL_OTP_EXPIRES_MINUTES} minutes. Verify here: ${verifyUrl}`,
     html: `
@@ -733,8 +754,25 @@ async function issueUserVerificationCode(user) {
   user.email_otp_last_sent_at = new Date();
   user.email_verification_required = true;
   await user.save();
-  await sendUserVerificationEmail({ user, code });
+  await sendUserVerificationEmail({ email: user.email, code });
   log("[mail] User verification email sent:", user.email);
+}
+
+async function issuePendingSignupVerificationCode(pendingSignup) {
+  if (!resend) {
+    throw new Error("EMAIL_SERVICE_NOT_CONFIGURED");
+  }
+
+  const code = makeOtp6();
+  log("[mail] Pending signup verification email queued:", pendingSignup.email);
+  pendingSignup.email_otp_hash = sha256Hex(code);
+  pendingSignup.email_otp_expires = makeCodeExpiry();
+  pendingSignup.email_otp_attempts = 0;
+  pendingSignup.email_otp_last_sent_at = new Date();
+  pendingSignup.expires_at = makeCodeExpiry();
+  await pendingSignup.save();
+  await sendUserVerificationEmail({ email: pendingSignup.email, code });
+  log("[mail] Pending signup verification email sent:", pendingSignup.email);
 }
 
 async function sendPasswordResetEmail({ user, code }) {
@@ -854,9 +892,19 @@ app.post("/user/signup", authRateLimiter, async (req, res) => {
       return sendError(res, 400, "PASSWORD_SHKURT");
     }
 
-    const exists = await User.findOne({ email, deleted_at: { $exists: false } }).lean();
+    const exists = await User.findOne({ email, deleted_at: { $exists: false } });
     if (exists) {
-      return sendError(res, 409, "EMAIL_EKZISTON");
+      const isStaleUnverifiedClient =
+        exists.role === "client" &&
+        exists.email_verification_required &&
+        !exists.email_verified;
+
+      if (!isStaleUnverifiedClient) {
+        return sendError(res, 409, "EMAIL_EKZISTON");
+      }
+
+      await User.deleteOne({ _id: exists._id });
+      log("[auth] Removed stale unverified client before pending signup:", email);
     }
 
     if (!resend) {
@@ -865,26 +913,25 @@ app.post("/user/signup", authRateLimiter, async (req, res) => {
 
     const hash = await bcrypt.hash(password, SALT);
 
-    const user = await User.create({
-      name,
-      surname,
-      address,
-      avatarUrl: "",
-      email,
-      password_hash: hash,
-      role: "client",
-      credits: 3,
-      email_verified: false,
-      email_verified_at: null,
-      email_verification_required: true
-    });
+    let pendingSignup = await PendingSignup.findOne({ email });
+    if (!pendingSignup) {
+      pendingSignup = new PendingSignup({ email });
+    }
 
-    await issueUserVerificationCode(user);
+    pendingSignup.name = name;
+    pendingSignup.surname = surname;
+    pendingSignup.address = address;
+    pendingSignup.avatarUrl = "";
+    pendingSignup.password_hash = hash;
+    pendingSignup.role = "client";
+    pendingSignup.credits = 3;
+
+    await issuePendingSignupVerificationCode(pendingSignup);
 
     return res.json({
       success: true,
       requiresVerification: true,
-      email: user.email
+      email: pendingSignup.email
     });
   } catch (err) {
     errorWithTime("USER SIGNUP ERROR:", err);
@@ -1118,40 +1165,60 @@ app.post("/auth/verify-email", emailOtpVerifyLimiter, async (req, res) => {
     if (!email || !code) return sendError(res, 400, "MISSING_EMAIL_CODE");
     if (!/^\d{6}$/.test(code)) return sendError(res, 400, "INVALID_CODE_FORMAT");
 
-    const user = await User.findOne({ email, deleted_at: { $exists: false } });
-    if (!user) return sendError(res, 400, "INVALID_CODE");
+    const pendingSignup = await PendingSignup.findOne({ email });
+    if (!pendingSignup) return sendError(res, 400, "INVALID_CODE");
 
-    if (user.email_verified) {
-      return res.json({ success: true, verified: true });
-    }
-
-    if (!user.email_otp_hash || !user.email_otp_expires) {
+    if (!pendingSignup.email_otp_hash || !pendingSignup.email_otp_expires) {
       return sendError(res, 400, "NO_ACTIVE_CODE");
     }
 
-    if (new Date(user.email_otp_expires).getTime() <= Date.now()) {
+    if (new Date(pendingSignup.email_otp_expires).getTime() <= Date.now()) {
+      await PendingSignup.deleteOne({ _id: pendingSignup._id });
       return sendError(res, 400, "CODE_EXPIRED");
     }
 
-    const attempts = Number(user.email_otp_attempts || 0);
+    const attempts = Number(pendingSignup.email_otp_attempts || 0);
     if (attempts >= EMAIL_OTP_MAX_ATTEMPTS) {
       return sendError(res, 429, "TOO_MANY_ATTEMPTS");
     }
 
-    if (sha256Hex(code) !== user.email_otp_hash) {
-      user.email_otp_attempts = attempts + 1;
-      await user.save();
+    if (sha256Hex(code) !== pendingSignup.email_otp_hash) {
+      pendingSignup.email_otp_attempts = attempts + 1;
+      await pendingSignup.save();
       return sendError(res, 400, "INVALID_CODE");
     }
 
-    user.email_verified = true;
-    user.email_verified_at = new Date();
-    user.email_verification_required = false;
-    user.email_otp_hash = undefined;
-    user.email_otp_expires = undefined;
-    user.email_otp_attempts = 0;
-    user.email_otp_last_sent_at = undefined;
-    await user.save();
+    const existingUser = await User.findOne({ email, deleted_at: { $exists: false } });
+    if (existingUser) {
+      const isStaleUnverifiedClient =
+        existingUser.role === "client" &&
+        existingUser.email_verification_required &&
+        !existingUser.email_verified;
+
+      if (!isStaleUnverifiedClient) {
+        await PendingSignup.deleteOne({ _id: pendingSignup._id });
+        return sendError(res, 409, "EMAIL_EKZISTON");
+      }
+
+      await User.deleteOne({ _id: existingUser._id });
+    }
+
+    const user = await User.create({
+      name: pendingSignup.name,
+      surname: pendingSignup.surname,
+      address: pendingSignup.address,
+      avatarUrl: pendingSignup.avatarUrl || "",
+      email: pendingSignup.email,
+      password_hash: pendingSignup.password_hash,
+      role: "client",
+      credits: pendingSignup.credits,
+      email_verified: true,
+      email_verified_at: new Date(),
+      email_verification_required: false,
+    });
+
+    await PendingSignup.deleteOne({ _id: pendingSignup._id });
+    log("[auth] Verified pending signup and created user:", user.email);
 
     return res.json({ success: true, verified: true });
   } catch (err) {
@@ -1166,19 +1233,15 @@ async function handleSendUserVerification(req, res) {
     if (!email) return sendError(res, 400, "MISSING_EMAIL");
     if (!resend) return sendError(res, 500, "EMAIL_SERVICE_NOT_CONFIGURED");
 
-    log("[auth] Verification email requested:", email);
-    const user = await User.findOne({ email, deleted_at: { $exists: false } });
-    if (!user) return sendError(res, 404, "USER_NOT_FOUND");
+    log("[auth] Pending signup verification email requested:", email);
+    const pendingSignup = await PendingSignup.findOne({ email });
+    if (!pendingSignup) return sendError(res, 404, "PENDING_SIGNUP_NOT_FOUND");
 
-    if (user.email_verified) {
-      return res.json({ success: true, alreadyVerified: true });
-    }
-
-    if (user.email_otp_last_sent_at && !canResendOtp(user.email_otp_last_sent_at, EMAIL_OTP_MIN_SECONDS)) {
+    if (pendingSignup.email_otp_last_sent_at && !canResendOtp(pendingSignup.email_otp_last_sent_at, EMAIL_OTP_MIN_SECONDS)) {
       return sendError(res, 429, "OTP_COOLDOWN", { retry_after_seconds: EMAIL_OTP_MIN_SECONDS });
     }
 
-    await issueUserVerificationCode(user);
+    await issuePendingSignupVerificationCode(pendingSignup);
     return res.json({ success: true });
   } catch (err) {
     errorWithTime("USER EMAIL RESEND ERROR:", err);

@@ -119,6 +119,7 @@
       UNAUTHORIZED: "api_unauthorized",
       FORBIDDEN: "api_forbidden",
       USER_NOT_FOUND: "api_user_not_found",
+      PENDING_SIGNUP_NOT_FOUND: "api_pending_signup_not_found",
       CHECKOUT_CREATE_FAILED: "api_checkout_create_failed",
       CHECKOUT_URL_MISSING: "api_checkout_url_missing"
     };

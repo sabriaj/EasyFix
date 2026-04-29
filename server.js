@@ -284,7 +284,7 @@ function normalizePhone(raw) {
 
 /* ===== OTP HELPERS ===== */
 function makeOtp6() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(crypto.randomInt(100000, 1000000));
 }
 
 function canResendOtp(lastSentAt, minSeconds) {
@@ -673,8 +673,19 @@ const userSchema = new mongoose.Schema(
     credits: { type: Number, default: 0 },
 
     email_verified: { type: Boolean, default: false },
+    email_verified_at: Date,
+    email_verification_required: { type: Boolean, default: false },
     email_otp_hash: String,
     email_otp_expires: Date,
+    email_otp_attempts: { type: Number, default: 0 },
+    email_otp_last_sent_at: Date,
+    password_reset_otp_hash: String,
+    password_reset_otp_expires: Date,
+    password_reset_otp_attempts: { type: Number, default: 0 },
+    password_reset_otp_last_sent_at: Date,
+    password_reset_verified_at: Date,
+    password_reset_token_hash: String,
+    password_reset_token_expires: Date,
     deleted_at: Date,
   },
   { timestamps: true }
@@ -685,6 +696,67 @@ const User = mongoose.model("User", userSchema);
 const SALT = 10;
 
 const requireUserSession = createRequireUserSession({ User, sendError, errorWithTime });
+
+function makeCodeExpiry() {
+  return new Date(Date.now() + EMAIL_OTP_EXPIRES_MINUTES * 60 * 1000);
+}
+
+async function sendUserVerificationEmail({ user, code }) {
+  const verifyUrl = `${FRONTEND_BASE_URL}/verify-email.html?email=${encodeURIComponent(user.email)}`;
+
+  await sendMail({
+    to: user.email,
+    subject: "EasyFix - Verify your email",
+    text: `Your EasyFix verification code is ${code}. It expires in ${EMAIL_OTP_EXPIRES_MINUTES} minutes. Verify here: ${verifyUrl}`,
+    html: `
+      <div style="font-family:Arial;line-height:1.6">
+        <h2>EasyFix</h2>
+        <p>Use this code to verify your email:</p>
+        <p style="font-size:28px;font-weight:700;letter-spacing:2px">${code}</p>
+        <p style="color:#666">This code expires in ${EMAIL_OTP_EXPIRES_MINUTES} minutes.</p>
+        <p><a href="${verifyUrl}">Open verification page</a></p>
+      </div>
+    `,
+  });
+}
+
+async function issueUserVerificationCode(user) {
+  if (!resend) {
+    throw new Error("EMAIL_SERVICE_NOT_CONFIGURED");
+  }
+
+  const code = makeOtp6();
+  log("[mail] User verification email queued:", user.email);
+  user.email_otp_hash = sha256Hex(code);
+  user.email_otp_expires = makeCodeExpiry();
+  user.email_otp_attempts = 0;
+  user.email_otp_last_sent_at = new Date();
+  user.email_verification_required = true;
+  await user.save();
+  await sendUserVerificationEmail({ user, code });
+  log("[mail] User verification email sent:", user.email);
+}
+
+async function sendPasswordResetEmail({ user, code }) {
+  const resetUrl = `${FRONTEND_BASE_URL}/reset-code.html?email=${encodeURIComponent(user.email)}`;
+
+  log("[mail] Password reset email sending:", user.email);
+  await sendMail({
+    to: user.email,
+    subject: "EasyFix - Password reset code",
+    text: `Your EasyFix password reset code is ${code}. It expires in ${EMAIL_OTP_EXPIRES_MINUTES} minutes. Continue here: ${resetUrl}`,
+    html: `
+      <div style="font-family:Arial;line-height:1.6">
+        <h2>EasyFix</h2>
+        <p>Use this code to reset your password:</p>
+        <p style="font-size:28px;font-weight:700;letter-spacing:2px">${code}</p>
+        <p style="color:#666">This code expires in ${EMAIL_OTP_EXPIRES_MINUTES} minutes.</p>
+        <p><a href="${resetUrl}">Continue password reset</a></p>
+      </div>
+    `,
+  });
+  log("[mail] Password reset email sent:", user.email);
+}
 
 /* ================= REVIEWS / NOTIFICATIONS ================= */
 const reviewSchema = new mongoose.Schema(
@@ -787,37 +859,33 @@ app.post("/user/signup", authRateLimiter, async (req, res) => {
       return sendError(res, 409, "EMAIL_EKZISTON");
     }
 
-const hash = await bcrypt.hash(password, SALT);
-const sessionToken = crypto.randomBytes(32).toString("hex");
+    if (!resend) {
+      return sendError(res, 500, "EMAIL_SERVICE_NOT_CONFIGURED");
+    }
 
-const user = await User.create({
-  name,
-  surname,
-  address,
-  avatarUrl: "",
-  email,
-  password_hash: hash,
-  session_token: sessionToken,
-  role: "client",
-  credits: 3,
-});
+    const hash = await bcrypt.hash(password, SALT);
 
-appendUserSessionCookie(res, sessionToken);
+    const user = await User.create({
+      name,
+      surname,
+      address,
+      avatarUrl: "",
+      email,
+      password_hash: hash,
+      role: "client",
+      credits: 3,
+      email_verified: false,
+      email_verified_at: null,
+      email_verification_required: true
+    });
 
-return res.json({
-  success: true,
-  sessionToken,
-  user: {
-    id: String(user._id),
-    name: user.name,
-    surname: user.surname,
-    address: user.address,
-    avatarUrl: user.avatarUrl || "",
-    email: user.email,
-    role: user.role,
-    credits: user.credits,
-  }
-});
+    await issueUserVerificationCode(user);
+
+    return res.json({
+      success: true,
+      requiresVerification: true,
+      email: user.email
+    });
   } catch (err) {
     errorWithTime("USER SIGNUP ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
@@ -878,6 +946,9 @@ app.post("/pro/signup", authRateLimiter, async (req, res) => {
       existingUser.name = name;
       existingUser.surname = surname;
       existingUser.address = address;
+      existingUser.email_verified = true;
+      existingUser.email_verified_at = existingUser.email_verified_at || new Date();
+      existingUser.email_verification_required = false;
 
       const sessionToken = crypto.randomBytes(32).toString("hex");
       existingUser.session_token = sessionToken;
@@ -915,6 +986,9 @@ app.post("/pro/signup", authRateLimiter, async (req, res) => {
       session_token: sessionToken,
       role: "pro",
       credits: 0,
+      email_verified: true,
+      email_verified_at: new Date(),
+      email_verification_required: false,
     });
 
     appendUserSessionCookie(res, sessionToken);
@@ -1007,6 +1081,10 @@ if (user.deleted_at) return sendError(res, 400, "INVALID_CREDENTIALS");
 const ok = await bcrypt.compare(password, user.password_hash || "");
 if (!ok) return sendError(res, 400, "INVALID_CREDENTIALS");
 
+if (user.email_verification_required && !user.email_verified) {
+  return sendError(res, 403, "EMAIL_NOT_VERIFIED");
+}
+
 const sessionToken = crypto.randomBytes(32).toString("hex");
 user.session_token = sessionToken;
 await user.save();
@@ -1028,6 +1106,205 @@ return res.json({
 });
   } catch (err) {
     errorWithTime("USER LOGIN ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+app.post("/auth/verify-email", emailOtpVerifyLimiter, async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const code = String(req.body?.code || "").trim();
+
+    if (!email || !code) return sendError(res, 400, "MISSING_EMAIL_CODE");
+    if (!/^\d{6}$/.test(code)) return sendError(res, 400, "INVALID_CODE_FORMAT");
+
+    const user = await User.findOne({ email, deleted_at: { $exists: false } });
+    if (!user) return sendError(res, 400, "INVALID_CODE");
+
+    if (user.email_verified) {
+      return res.json({ success: true, verified: true });
+    }
+
+    if (!user.email_otp_hash || !user.email_otp_expires) {
+      return sendError(res, 400, "NO_ACTIVE_CODE");
+    }
+
+    if (new Date(user.email_otp_expires).getTime() <= Date.now()) {
+      return sendError(res, 400, "CODE_EXPIRED");
+    }
+
+    const attempts = Number(user.email_otp_attempts || 0);
+    if (attempts >= EMAIL_OTP_MAX_ATTEMPTS) {
+      return sendError(res, 429, "TOO_MANY_ATTEMPTS");
+    }
+
+    if (sha256Hex(code) !== user.email_otp_hash) {
+      user.email_otp_attempts = attempts + 1;
+      await user.save();
+      return sendError(res, 400, "INVALID_CODE");
+    }
+
+    user.email_verified = true;
+    user.email_verified_at = new Date();
+    user.email_verification_required = false;
+    user.email_otp_hash = undefined;
+    user.email_otp_expires = undefined;
+    user.email_otp_attempts = 0;
+    user.email_otp_last_sent_at = undefined;
+    await user.save();
+
+    return res.json({ success: true, verified: true });
+  } catch (err) {
+    errorWithTime("USER EMAIL VERIFY ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+async function handleSendUserVerification(req, res) {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    if (!email) return sendError(res, 400, "MISSING_EMAIL");
+    if (!resend) return sendError(res, 500, "EMAIL_SERVICE_NOT_CONFIGURED");
+
+    log("[auth] Verification email requested:", email);
+    const user = await User.findOne({ email, deleted_at: { $exists: false } });
+    if (!user) return sendError(res, 404, "USER_NOT_FOUND");
+
+    if (user.email_verified) {
+      return res.json({ success: true, alreadyVerified: true });
+    }
+
+    if (user.email_otp_last_sent_at && !canResendOtp(user.email_otp_last_sent_at, EMAIL_OTP_MIN_SECONDS)) {
+      return sendError(res, 429, "OTP_COOLDOWN", { retry_after_seconds: EMAIL_OTP_MIN_SECONDS });
+    }
+
+    await issueUserVerificationCode(user);
+    return res.json({ success: true });
+  } catch (err) {
+    errorWithTime("USER EMAIL RESEND ERROR:", err);
+    return sendError(res, 500, err.message === "EMAIL_SERVICE_NOT_CONFIGURED" ? "EMAIL_SERVICE_NOT_CONFIGURED" : "SERVER_ERROR");
+  }
+}
+
+app.post("/auth/resend-verification", emailActionLimiter, handleSendUserVerification);
+app.post("/auth/send-verification", emailActionLimiter, handleSendUserVerification);
+app.post("/send-verification", emailActionLimiter, handleSendUserVerification);
+
+app.post("/auth/password/forgot", emailActionLimiter, async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    if (!email) return sendError(res, 400, "MISSING_EMAIL");
+    if (!resend) return sendError(res, 500, "EMAIL_SERVICE_NOT_CONFIGURED");
+
+    const user = await User.findOne({ email, deleted_at: { $exists: false } });
+    if (!user) {
+      return res.json({ success: true });
+    }
+
+    if (user.password_reset_otp_last_sent_at && !canResendOtp(user.password_reset_otp_last_sent_at, EMAIL_OTP_MIN_SECONDS)) {
+      return sendError(res, 429, "OTP_COOLDOWN", { retry_after_seconds: EMAIL_OTP_MIN_SECONDS });
+    }
+
+    const code = makeOtp6();
+    user.password_reset_otp_hash = sha256Hex(code);
+    user.password_reset_otp_expires = makeCodeExpiry();
+    user.password_reset_otp_attempts = 0;
+    user.password_reset_otp_last_sent_at = new Date();
+    user.password_reset_verified_at = undefined;
+    user.password_reset_token_hash = undefined;
+    user.password_reset_token_expires = undefined;
+    await user.save();
+    await sendPasswordResetEmail({ user, code });
+
+    return res.json({ success: true });
+  } catch (err) {
+    errorWithTime("PASSWORD FORGOT ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+app.post("/auth/password/verify-code", emailOtpVerifyLimiter, async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const code = String(req.body?.code || "").trim();
+
+    if (!email || !code) return sendError(res, 400, "MISSING_EMAIL_CODE");
+    if (!/^\d{6}$/.test(code)) return sendError(res, 400, "INVALID_CODE_FORMAT");
+
+    const user = await User.findOne({ email, deleted_at: { $exists: false } });
+    if (!user || !user.password_reset_otp_hash || !user.password_reset_otp_expires) {
+      return sendError(res, 400, "NO_ACTIVE_CODE");
+    }
+
+    if (new Date(user.password_reset_otp_expires).getTime() <= Date.now()) {
+      return sendError(res, 400, "CODE_EXPIRED");
+    }
+
+    const attempts = Number(user.password_reset_otp_attempts || 0);
+    if (attempts >= EMAIL_OTP_MAX_ATTEMPTS) {
+      return sendError(res, 429, "TOO_MANY_ATTEMPTS");
+    }
+
+    if (sha256Hex(code) !== user.password_reset_otp_hash) {
+      user.password_reset_otp_attempts = attempts + 1;
+      await user.save();
+      return sendError(res, 400, "INVALID_CODE");
+    }
+
+    const resetToken = makeToken();
+    user.password_reset_verified_at = new Date();
+    user.password_reset_token_hash = sha256Hex(resetToken);
+    user.password_reset_token_expires = makeCodeExpiry();
+    await user.save();
+
+    return res.json({ success: true, verified: true, resetToken });
+  } catch (err) {
+    errorWithTime("PASSWORD CODE VERIFY ERROR:", err);
+    return sendError(res, 500, "SERVER_ERROR");
+  }
+});
+
+app.post("/auth/password/reset", authRateLimiter, async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const resetToken = String(req.body?.resetToken || "").trim();
+    const password = String(req.body?.password || "");
+
+    if (!email || !resetToken || !password) return sendError(res, 400, "MISSING_FIELDS");
+    if (!validatePasswordValue(password)) return sendError(res, 400, "PASSWORD_SHKURT");
+
+    const user = await User.findOne({ email, deleted_at: { $exists: false } });
+    if (!user || !user.password_reset_token_hash || !user.password_reset_token_expires) {
+      return sendError(res, 400, "NO_ACTIVE_CODE");
+    }
+
+    if (new Date(user.password_reset_token_expires).getTime() <= Date.now()) {
+      return sendError(res, 400, "CODE_EXPIRED");
+    }
+
+    if (sha256Hex(resetToken) !== user.password_reset_token_hash) {
+      return sendError(res, 400, "INVALID_CODE");
+    }
+
+    if (!user.password_reset_verified_at) {
+      return sendError(res, 400, "CODE_NOT_VERIFIED");
+    }
+
+    user.password_hash = await bcrypt.hash(password, SALT);
+    user.password_reset_otp_hash = undefined;
+    user.password_reset_otp_expires = undefined;
+    user.password_reset_otp_attempts = 0;
+    user.password_reset_otp_last_sent_at = undefined;
+    user.password_reset_verified_at = undefined;
+    user.password_reset_token_hash = undefined;
+    user.password_reset_token_expires = undefined;
+    user.session_token = undefined;
+    await user.save();
+    clearCookie(res, COOKIE_NAMES.userSession);
+
+    return res.json({ success: true });
+  } catch (err) {
+    errorWithTime("PASSWORD RESET ERROR:", err);
     return sendError(res, 500, "SERVER_ERROR");
   }
 });

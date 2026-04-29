@@ -64,6 +64,10 @@
       <button id="toggleBtn" class="text-blue-600 font-bold hover:underline"></button>
     </div>
 
+    <div class="text-center mt-3">
+      <a id="forgotPasswordLink" href="forgot-password.html" class="text-sm text-blue-600 font-semibold hover:underline" data-i18n="forgot_password_link">Forgot password?</a>
+    </div>
+
     <div class="text-center mt-4">
       <a id="backAuthLink" href="auth.html" class="text-sm text-gray-500 hover:text-gray-700" data-i18n="back">Kthehu mbrapa</a>
     </div>
@@ -80,6 +84,7 @@ function applyPageTranslations() {
   applyTranslations(document);
   document.documentElement.setAttribute("lang", getLang());
   document.getElementById("backAuthLink").href = pagePath("auth.html");
+  document.getElementById("forgotPasswordLink").href = pagePath("forgot-password.html");
   updateTexts();
 }
 
@@ -113,6 +118,7 @@ function updateTexts() {
   document.getElementById("toggleBtn").innerText = isSignup
     ? t("login_have_account")
     : t("login_no_account");
+  document.getElementById("forgotPasswordLink").classList.toggle("hidden", isSignup);
 
   document.getElementById("name").placeholder = t("name_label");
   document.getElementById("surname").placeholder = t("surname_label");
@@ -156,6 +162,13 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.error_code === "EMAIL_NOT_VERIFIED") {
+          showStatus(t("api_email_not_verified"), "info");
+          setTimeout(() => {
+            goToPage(`verify-email.html?email=${encodeURIComponent(email)}`);
+          }, 500);
+          return;
+        }
         showStatus(translateApiError(data.error_code, "login_error"));
         return;
       }
@@ -231,21 +244,11 @@ document.getElementById("authForm").addEventListener("submit", async (e) => {
       return;
     }
 
-    setUser({
-      id: data.user.id || data.user._id,
-      name: data.user.name,
-      surname: data.user.surname,
-      address: data.user.address,
-      email: data.user.email,
-      role: data.user.role,
-      credits: data.user.credits,
-      sessionToken: data.sessionToken
-    });
-
-    showStatus(t("login_account_created"), "success");
+    showStatus(t("signup_check_email"), "success");
+    window.sessionStorage.setItem("easyfix_pending_verify_email", data.email || email);
 
     setTimeout(() => {
-      goToPage("index.html");
+      goToPage(`verify-email.html?email=${encodeURIComponent(data.email || email)}`);
     }, 700);
   } catch (err) {
     console.error(err);

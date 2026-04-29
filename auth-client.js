@@ -92,7 +92,11 @@
 
     const map = {
       MISSING_FIELDS: "api_missing_fields",
+      PLOTESO_TEDHENAT: "api_missing_fields",
       INVALID_FIELDS: "api_invalid_fields",
+      INVALID_EMAIL: "api_invalid_email",
+      INVALID_CREDENTIALS: "api_invalid_credentials",
+      PASSWORD_SHKURT: "api_password_short",
       INVALID_PLAN: "api_invalid_plan",
       EMAIL_NOT_VERIFIED: "api_email_not_verified",
       EMAIL_EKZISTON: "api_email_exists",
@@ -107,11 +111,15 @@
       NO_ACTIVE_CODE: "api_no_active_code",
       CODE_EXPIRED: "api_code_expired",
       TOO_MANY_ATTEMPTS: "api_too_many_attempts",
+      OTP_COOLDOWN: "api_otp_cooldown",
+      CODE_NOT_VERIFIED: "api_code_not_verified",
+      INVALID_JSON_RESPONSE: "api_invalid_json_response",
       MISSING_LAT_LNG: "api_missing_lat_lng",
       NO_CREDITS: "api_no_credits",
       UNAUTHORIZED: "api_unauthorized",
       FORBIDDEN: "api_forbidden",
       USER_NOT_FOUND: "api_user_not_found",
+      PENDING_SIGNUP_NOT_FOUND: "api_pending_signup_not_found",
       CHECKOUT_CREATE_FAILED: "api_checkout_create_failed",
       CHECKOUT_URL_MISSING: "api_checkout_url_missing"
     };

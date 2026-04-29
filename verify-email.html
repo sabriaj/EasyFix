@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyFix - Verify Email</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="i18n.js"></script>
+  <script src="easyfix-config.js"></script>
+  <script src="auth-client.js"></script>
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+  <main class="w-full max-w-md bg-white rounded-3xl shadow-xl p-6 sm:p-8">
+    <div class="text-center mb-6">
+      <h1 class="text-3xl font-extrabold text-gray-900">EasyFix</h1>
+      <p id="sentMessage" class="text-sm text-gray-600 mt-2" data-i18n="verify_email_page_subtitle">Enter the code we sent to your email.</p>
+    </div>
+
+    <h2 class="text-2xl font-bold text-center text-gray-900 mb-5" data-i18n="verify_email_title">Verify Email</h2>
+    <div id="statusBox" class="hidden mb-4 rounded-xl px-4 py-3 text-sm font-semibold"></div>
+
+    <form id="verifyForm" class="space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1" data-i18n="code_label">Code</label>
+        <input id="code" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-center text-xl tracking-widest outline-none focus:border-blue-500">
+      </div>
+      <button id="verifyBtn" type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 font-bold transition" data-i18n="verify_btn">Verify</button>
+    </form>
+
+    <button id="resendBtn" type="button" class="w-full mt-3 bg-gray-900 hover:bg-black text-white rounded-xl py-3 font-bold transition" data-i18n="resend_code_btn">Resend code</button>
+
+    <div class="text-center mt-5">
+      <a id="loginLink" href="login.html" class="text-sm text-gray-500 hover:text-gray-700" data-i18n="back_to_login">Back to login</a>
+    </div>
+  </main>
+
+  <script>
+    const API_URL = window.EASYFIX_CONFIG.API_URL;
+    const { pagePath, goToPage } = window.EASYFIX_CONFIG;
+    const { t, applyTranslations, getLang } = window.EASYFIX_I18N;
+    const { apiAuthFetch, translateApiError } = window.EASYFIX_AUTH;
+    let resendTimer = null;
+    let resendSecondsLeft = 0;
+    let pendingEmail = "";
+
+    function showStatus(message, type = "error") {
+      const box = document.getElementById("statusBox");
+      box.classList.remove("hidden");
+      box.className = type === "success"
+        ? "mb-4 rounded-xl px-4 py-3 text-sm font-semibold bg-green-100 text-green-700"
+        : type === "info"
+          ? "mb-4 rounded-xl px-4 py-3 text-sm font-semibold bg-blue-100 text-blue-700"
+          : "mb-4 rounded-xl px-4 py-3 text-sm font-semibold bg-red-100 text-red-700";
+      box.textContent = message;
+    }
+
+    async function readJsonResponse(res) {
+      const text = await res.text();
+      try {
+        return text ? JSON.parse(text) : {};
+      } catch {
+        return {
+          success: false,
+          error_code: "INVALID_JSON_RESPONSE",
+          error: text.slice(0, 160)
+        };
+      }
+    }
+
+    function currentEmail() {
+      return pendingEmail;
+    }
+
+    function updateSentMessage() {
+      const email = currentEmail();
+      document.getElementById("sentMessage").textContent = email
+        ? t("verify_code_sent_to", { email })
+        : t("verify_email_page_subtitle");
+    }
+
+    function setResendCooldown(seconds = 45) {
+      const btn = document.getElementById("resendBtn");
+      window.clearInterval(resendTimer);
+      resendSecondsLeft = seconds;
+      btn.disabled = true;
+      btn.textContent = t("resend_countdown", { sec: resendSecondsLeft });
+      resendTimer = window.setInterval(() => {
+        resendSecondsLeft -= 1;
+        if (resendSecondsLeft <= 0) {
+          window.clearInterval(resendTimer);
+          btn.disabled = false;
+          btn.textContent = t("resend_code_btn");
+          return;
+        }
+        btn.textContent = t("resend_countdown", { sec: resendSecondsLeft });
+      }, 1000);
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const emailFromQuery = String(params.get("email") || "").trim().toLowerCase();
+    const emailFromStorage = String(window.sessionStorage.getItem("easyfix_pending_verify_email") || "").trim().toLowerCase();
+    const initialEmail = emailFromQuery || emailFromStorage;
+    pendingEmail = initialEmail;
+    document.getElementById("loginLink").href = pagePath("login.html");
+    applyTranslations(document);
+    document.documentElement.setAttribute("lang", getLang());
+    updateSentMessage();
+    if (initialEmail) {
+      setResendCooldown(45);
+    } else {
+      showStatus(t("verify_email_missing_email"));
+      document.getElementById("verifyBtn").disabled = true;
+      document.getElementById("resendBtn").disabled = true;
+    }
+
+    document.getElementById("code").addEventListener("input", (event) => {
+      event.target.value = String(event.target.value || "").replace(/\D/g, "").slice(0, 6);
+    });
+
+    document.getElementById("verifyForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const email = currentEmail();
+      const code = document.getElementById("code").value.trim();
+      if (!email) {
+        showStatus(t("verify_email_missing_email"));
+        return;
+      }
+      if (!code) {
+        showStatus(t("api_invalid_code_format"));
+        return;
+      }
+
+      const btn = document.getElementById("verifyBtn");
+      btn.disabled = true;
+      btn.textContent = t("msg_verifying_code");
+      try {
+        const res = await apiAuthFetch(`${API_URL}/auth/verify-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, code })
+        });
+        const data = await readJsonResponse(res);
+        if (!res.ok) {
+          showStatus(translateApiError(data.error_code, "api_invalid_code"));
+          return;
+        }
+        window.sessionStorage.removeItem("easyfix_pending_verify_email");
+        showStatus(t("verify_email_success_login"), "success");
+        setTimeout(() => goToPage("login.html"), 900);
+      } catch (err) {
+        console.error(err);
+        showStatus(t("api_server_error"));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = t("verify_btn");
+      }
+    });
+
+    document.getElementById("resendBtn").addEventListener("click", async () => {
+      const email = currentEmail();
+      if (!email) {
+        showStatus(t("api_missing_email"));
+        return;
+      }
+      const btn = document.getElementById("resendBtn");
+      btn.disabled = true;
+      btn.textContent = t("msg_sending_code");
+      try {
+        const res = await apiAuthFetch(`${API_URL}/auth/resend-verification`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        });
+        const data = await readJsonResponse(res);
+        if (!res.ok) {
+          showStatus(translateApiError(data.error_code, "api_server_error"));
+          if (data.error_code === "INVALID_JSON_RESPONSE") {
+            console.error("Verification resend returned non-JSON response:", data.error);
+          }
+          return;
+        }
+        showStatus(t("msg_code_sent"), "success");
+        setResendCooldown(Number(data.retry_after_seconds || 45));
+      } catch (err) {
+        console.error(err);
+        showStatus(t("api_server_error"));
+      } finally {
+        if (resendSecondsLeft <= 0) {
+          btn.disabled = false;
+          btn.textContent = t("resend_code_btn");
+        }
+      }
+    });
+  </script>
+</body>
+</html>

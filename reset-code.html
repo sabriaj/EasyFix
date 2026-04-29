@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyFix - Reset Code</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="i18n.js"></script>
+  <script src="easyfix-config.js"></script>
+  <script src="auth-client.js"></script>
+  <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+  <main class="w-full max-w-md bg-white rounded-3xl shadow-xl p-6 sm:p-8">
+    <div class="text-center mb-6">
+      <h1 class="text-3xl font-extrabold text-gray-900">EasyFix</h1>
+      <p class="text-sm text-gray-600 mt-2" data-i18n="reset_code_subtitle">Enter the password reset code.</p>
+    </div>
+    <h2 class="text-2xl font-bold text-center text-gray-900 mb-5" data-i18n="reset_code_title">Verification code</h2>
+    <p id="sentMessage" class="text-sm text-center text-gray-600 mb-5"></p>
+    <div id="statusBox" class="hidden mb-4 rounded-xl px-4 py-3 text-sm font-semibold"></div>
+    <form id="codeForm" class="space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1" data-i18n="code_label">Code</label>
+        <input id="code" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-center text-xl tracking-widest outline-none focus:border-blue-500">
+      </div>
+      <button id="submitBtn" type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 font-bold transition" data-i18n="continue_btn">Continue</button>
+    </form>
+  </main>
+  <script>
+    const API_URL = window.EASYFIX_CONFIG.API_URL;
+    const { goToPage } = window.EASYFIX_CONFIG;
+    const { t, applyTranslations, getLang } = window.EASYFIX_I18N;
+    const { apiAuthFetch, translateApiError } = window.EASYFIX_AUTH;
+
+    function showStatus(message, type = "error") {
+      const box = document.getElementById("statusBox");
+      box.classList.remove("hidden");
+      box.className = type === "success"
+        ? "mb-4 rounded-xl px-4 py-3 text-sm font-semibold bg-green-100 text-green-700"
+        : type === "info"
+          ? "mb-4 rounded-xl px-4 py-3 text-sm font-semibold bg-blue-100 text-blue-700"
+          : "mb-4 rounded-xl px-4 py-3 text-sm font-semibold bg-red-100 text-red-700";
+      box.textContent = message;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const resetEmail = (
+      String(params.get("email") || "").trim().toLowerCase() ||
+      String(window.sessionStorage.getItem("easyfix_reset_email") || "").trim().toLowerCase()
+    );
+    if (resetEmail) {
+      window.sessionStorage.setItem("easyfix_reset_email", resetEmail);
+      document.getElementById("sentMessage").textContent = t("verify_code_sent_to", { email: resetEmail });
+    } else {
+      document.getElementById("sentMessage").textContent = t("reset_email_missing");
+      document.getElementById("submitBtn").disabled = true;
+    }
+    applyTranslations(document);
+    document.documentElement.setAttribute("lang", getLang());
+    document.getElementById("code").addEventListener("input", (event) => {
+      event.target.value = String(event.target.value || "").replace(/\D/g, "").slice(0, 6);
+    });
+
+    document.getElementById("codeForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const email = String(window.sessionStorage.getItem("easyfix_reset_email") || resetEmail || "").trim().toLowerCase();
+      const code = document.getElementById("code").value.trim();
+      if (!email || !code) {
+        showStatus(t("api_missing_email_code"));
+        return;
+      }
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      btn.textContent = t("msg_verifying_code");
+      try {
+        const res = await apiAuthFetch(`${API_URL}/auth/password/verify-code`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, code })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showStatus(translateApiError(data.error_code, "api_invalid_code"));
+          return;
+        }
+        showStatus(t("msg_code_verified"), "success");
+        window.sessionStorage.setItem("easyfix_reset_email", email);
+        window.sessionStorage.setItem("easyfix_reset_code", code);
+        window.sessionStorage.setItem("easyfix_reset_token", String(data.resetToken || ""));
+        setTimeout(() => goToPage("reset-password.html"), 600);
+      } catch (err) {
+        console.error(err);
+        showStatus(t("api_server_error"));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = t("continue_btn");
+      }
+    });
+  </script>
+</body>
+</html>

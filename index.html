@@ -33,8 +33,6 @@
   <script src="i18n.js"></script>
   <script src="easyfix-config.js"></script>
   <script src="auth-client.js"></script>
-  <script src="https://app.lemonsqueezy.com/js/lemon.js" defer></script>
-  <script src="lemon.js"></script>
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
   <meta name="theme-color" content="#2563eb">
 
@@ -1340,7 +1338,7 @@ async function continueCreditsPayment() {
   try {
     setCreditsModalStatus(t("credits_preparing_payment"));
 
-    const res = await apiFetch(`${API_URL}/credits/buy`, {
+    const res = await apiFetch(`${API_URL}/agentaos/credits/buy`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -1364,7 +1362,7 @@ async function continueCreditsPayment() {
     }
 
     setCreditsModalStatus(t("credits_opening_payment"));
-    await window.EASYFIX_LEMON.openCheckout(data.checkoutUrl);
+    window.location.href = data.checkoutUrl;
   } catch (err) {
     console.error(err);
     setCreditsModalStatus(t("api_server_error"), true);
@@ -1569,7 +1567,7 @@ updateCreditPackUI();
         </button>
 
         <p class="text-xs text-gray-400 text-center mt-3" data-i18n="credits_secure_payment">
-          Pagesa perpunohet ne menyre te sigurt permes Lemon Squeezy.
+          Pagesa përpunohet në mënyrë të sigurt përmes AgentaOS.
         </p>
 
         <p id="creditsModalStatus" class="text-sm text-gray-500 mt-4 text-center"></p>

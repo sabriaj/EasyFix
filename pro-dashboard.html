@@ -1222,7 +1222,7 @@ document.getElementById("boostBtn").addEventListener("click", async () => {
   btn.innerText = tr("credits_opening_payment");
 
   try {
-    const res = await apiFetch(`${API_URL}/pro/premium/checkout`, {
+    const res = await apiFetch(`${API_URL}/agentaos/pro/premium/checkout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

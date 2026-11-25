@@ -9,6 +9,7 @@ import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { Resend } from "resend";
 import bcrypt from "bcrypt";
+import { AgentaOS } from "@agentaos/pay";
 import { createRequireAdmin } from "./lib/admin-auth.js";
 import { registerAdminRoutes } from "./lib/admin-routes.js";
 import { createRequireUserSession, requireRole } from "./lib/auth.js";
@@ -24,6 +25,7 @@ import { runCleanup as runCleanupMaintenance } from "./lib/maintenance.js";
 import { processPaymentWebhook } from "./lib/payment-webhook.js";
 import { applyCategoryPlanLimit, parseCategoriesFromBody } from "./lib/plan-helpers.js";
 import { createPaymentVariantHelpers } from "./lib/payment-variants.js";
+import { createAgentaProductHelpers, handleAgentaOSWebhook, recoverExpiredAgentaOSReceipts, registerAgentaCheckoutRoutes } from "./lib/agentaos-payments.js";
 import { createRateLimiter, getRateLimitClientIp } from "./lib/rate-limit.js";
 import {
   appendResponseCookie,
@@ -105,10 +107,10 @@ app.use((req, res, next) => {
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://app.lemonsqueezy.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com",
     "connect-src 'self' https:",
-    "frame-src https://app.lemonsqueezy.com",
-    "form-action 'self' https://app.lemonsqueezy.com"
+    "frame-src https://app.agentaos.ai",
+    "form-action 'self' https://app.agentaos.ai"
   ].join("; ");
 
   res.setHeader("Content-Security-Policy", csp);
@@ -196,6 +198,16 @@ const VARIANT_PREMIUM = String(process.env.VARIANT_PREMIUM || "");
 const VARIANT_CREDITS_1 = String(process.env.VARIANT_CREDITS_1 || "");
 const VARIANT_CREDITS_5 = String(process.env.VARIANT_CREDITS_5 || "");
 const VARIANT_CREDITS_10 = String(process.env.VARIANT_CREDITS_10 || "");
+
+const AGENTAOS_API_KEY = String(process.env.AGENTAOS_API_KEY || "").trim();
+const AGENTAOS_WEBHOOK_SECRET = String(process.env.AGENTAOS_WEBHOOK_SECRET || "").trim();
+const AGENTAOS_PRODUCT_PREMIUM = String(process.env.AGENTAOS_PRODUCT_PREMIUM || "3dade5ed-b72c-46bf-aa13-8b7b54377818").trim();
+const AGENTAOS_PRODUCT_CREDITS_1 = String(process.env.AGENTAOS_PRODUCT_CREDITS_1 || "5b2e91d3-9123-4ba0-ad9d-9c8c29284323").trim();
+const AGENTAOS_PRODUCT_CREDITS_5 = String(process.env.AGENTAOS_PRODUCT_CREDITS_5 || "36e362cd-785e-4de8-8fdc-36761fed201c").trim();
+const AGENTAOS_PRODUCT_CREDITS_10 = String(process.env.AGENTAOS_PRODUCT_CREDITS_10 || "9dfccb84-fce0-46fb-814c-8bb6c85d3440").trim();
+const agentaosClient = AGENTAOS_API_KEY ? new AgentaOS(AGENTAOS_API_KEY) : null;
+const agentaProducts = createAgentaProductHelpers({ premium: AGENTAOS_PRODUCT_PREMIUM, credits1: AGENTAOS_PRODUCT_CREDITS_1, credits5: AGENTAOS_PRODUCT_CREDITS_5, credits10: AGENTAOS_PRODUCT_CREDITS_10 });
+const AGENTAOS_EXPECTED_LIVEMODE = AGENTAOS_API_KEY.startsWith("sk_live_");
 
 
 
@@ -408,6 +420,16 @@ const firmaSchema = new mongoose.Schema(
 is_boosted: { type: Boolean, default: false, index: true },
 boost_expires_at: Date,
 
+agentaos_customer_id: String,
+agentaos_subscription_id: { type: String, index: true },
+agentaos_product_id: String,
+agentaos_subscription_status: String,
+agentaos_current_period_start: Date,
+agentaos_current_period_end: Date,
+agentaos_cancel_at_period_end: Boolean,
+  payment_lock_token: String,
+  payment_lock_until: Date,
+
 payment_status: { type: String, default: "active", index: true }, // active | expired
 
 
@@ -452,6 +474,81 @@ const webhookReceiptSchema = new mongoose.Schema(
   { timestamps: true }
 );
 const WebhookReceipt = mongoose.model("WebhookReceipt", webhookReceiptSchema);
+
+const agentaEventReceiptSchema = new mongoose.Schema({
+  event_key: { type: String, unique: true, sparse: true, required: true, index: true },
+  event_id: { type: String, required: true, index: true },
+  event_type: { type: String, required: true },
+  status: { type: String, enum: ["processing", "processed", "retry_wait", "failed", "permanent_failed"], required: true, index: true },
+  claim_token: String,
+  lease_until: Date,
+  attempt_count: { type: Number, default: 0 },
+  next_retry_at: Date,
+  failure_kind: String,
+  last_error: String,
+  event_payload: mongoose.Schema.Types.Mixed,
+  processed_at: Date
+}, { timestamps: true });
+agentaEventReceiptSchema.index({ status: 1, next_retry_at: 1, lease_until: 1 });
+const AgentaEventReceipt = mongoose.model("AgentaEventReceipt", agentaEventReceiptSchema);
+
+const agentaPaymentSchema = new mongoose.Schema({
+  provider: { type: String, default: "agentaos", index: true },
+  provider_transaction_id: { type: String, unique: true, required: true, index: true },
+  provider_session_id: { type: String, required: true, index: true },
+  provider_event_id: String,
+  provider_subscription_id: { type: String, index: true },
+  provider_customer_id: String,
+  dispute_id: String,
+  dispute_status: String,
+  user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
+  firm_id: { type: mongoose.Schema.Types.ObjectId, ref: "Firma", index: true },
+  product_id: { type: String, required: true, index: true },
+  product_kind: { type: String, enum: ["credits", "premium"], required: true },
+  credit_amount: { type: Number, default: 0 },
+  amount: String,
+  currency: String,
+  status: { type: String, default: "pending", index: true },
+  fulfillment_status: { type: String, enum: ["pending", "fulfilled", "failed", "disputed"], default: "pending", index: true },
+  livemode: { type: Boolean, required: true },
+  paid_at: Date,
+  refunded_at: Date
+}, { timestamps: true });
+const AgentaPayment = mongoose.model("AgentaPayment", agentaPaymentSchema);
+
+const agentaSubscriptionSchema = new mongoose.Schema({
+  provider_subscription_id: { type: String, unique: true, required: true, index: true },
+  provider_customer_id: String,
+  user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
+  firm_id: { type: mongoose.Schema.Types.ObjectId, ref: "Firma", index: true },
+  product_id: String,
+  link_id: String,
+  provider_status: { type: String, index: true },
+  currency: String,
+  amount_minor: Number,
+  current_period_start: Date,
+  current_period_end: Date,
+  cancel_at_period_end: Boolean,
+  last_successful_payment_at: Date,
+  last_event_type: String,
+  last_event_id: String,
+  event_ids: { type: [String], default: [] },
+  lock_token: String,
+  lock_until: Date,
+  lock_fence: { type: Number, default: 0 },
+  livemode: Boolean
+}, { timestamps: true });
+const AgentaSubscription = mongoose.model("AgentaSubscription", agentaSubscriptionSchema);
+
+const agentaCheckoutAttemptSchema = new mongoose.Schema({
+  scope: { type: String, unique: true, required: true, index: true },
+  idempotency_key: { type: String, required: true },
+  status: { type: String, enum: ["creating", "pending", "completed", "failed"], default: "creating", index: true },
+  checkout_url: String,
+  session_id: { type: String, index: true },
+  expires_at: { type: Date, required: true }
+}, { timestamps: true });
+const AgentaCheckoutAttempt = mongoose.model("AgentaCheckoutAttempt", agentaCheckoutAttemptSchema);
 
 /* ================= PLAN RULES ================= */
 const planPhotoLimit = { free: 3, premium: 10 };
@@ -516,7 +613,7 @@ const requireAdmin = createRequireAdmin({ adminKey: ADMIN_KEY, sendError });
 
 /* ================= JSON (SKIP WEBHOOK RAW BODY) ================= */
 app.use((req, res, next) => {
-  if (req.path === "/webhook") {
+  if (req.path === "/webhook" || req.path === "/agentaos/webhook") {
     return next();
   }
   return jsonBodyParser(req, res, next);
@@ -635,6 +732,47 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
   }
 });
 
+app.post("/agentaos/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  if (!AGENTAOS_API_KEY || !AGENTAOS_WEBHOOK_SECRET || !agentaosClient) {
+    return res.status(503).send("Webhook is not configured");
+  }
+  if (!AGENTAOS_API_KEY.startsWith("sk_test_") && !AGENTAOS_API_KEY.startsWith("sk_live_")) {
+    return res.status(503).send("Payment mode is not configured");
+  }
+  try {
+    const result = await handleAgentaOSWebhook({
+      rawBody: req.body,
+      signature: String(req.headers["x-agentaos-signature"] || ""),
+      secret: AGENTAOS_WEBHOOK_SECRET,
+      client: agentaosClient,
+      EventReceipt: AgentaEventReceipt,
+      AgentaPayment,
+      AgentaSubscription,
+      CheckoutAttempt: AgentaCheckoutAttempt,
+      User,
+      Firma,
+      products: agentaProducts,
+      expectedLivemode: AGENTAOS_EXPECTED_LIVEMODE,
+      loadLatestSubscription: async (subscriptionId) => {
+        if (!agentaosClient) return null;
+        let offset = 0;
+        for (;;) {
+          const page = await agentaosClient.subscriptions.list({ limit: 100, offset });
+          const match = page.items.find((item) => String(item.id) === subscriptionId);
+          if (match) return match;
+          if (!page.hasMore) return null;
+          offset += page.items.length;
+        }
+      },
+      log: (message, detail) => errorWithTime(message, detail)
+    });
+    return res.status(result.status).send(result.text);
+  } catch (err) {
+    errorWithTime("AGENTAOS WEBHOOK PROCESSING ERROR:", err);
+    return res.status(500).send("Webhook processing failed");
+  }
+});
+
 
 /* ================= CONTACT UNLOCKS ================= */
 const contactUnlockSchema = new mongoose.Schema(
@@ -671,6 +809,7 @@ const userSchema = new mongoose.Schema(
     },
 
     credits: { type: Number, default: 0 },
+    agentaos_credit_transactions: { type: [String], default: [] },
 
     email_verified: { type: Boolean, default: false },
     email_verified_at: Date,
@@ -1975,6 +2114,52 @@ registerPayNowRoutes({
   isValidObjectId: (value) => isValidObjectId(mongoose, value),
   isFirmVisibleStatus
 });
+
+registerAgentaCheckoutRoutes({
+  app,
+  AgentaOS: agentaosClient,
+  products: agentaProducts,
+  User,
+  Firma,
+  requireUserSession,
+  requireRole,
+  sendError,
+  FRONTEND_BASE_URL,
+  FRONTEND_SUCCESS_URL,
+  errorWithTime,
+  getPayNowFirm: async (req) => {
+    const tokenHash = getCookieValue(req, COOKIE_NAMES.paySession);
+    if (!tokenHash) return null;
+    const firm = await Firma.findOne({ pay_token_hash: tokenHash, pay_token_expires: { $gt: new Date() }, deleted_at: null })
+      .select("_id email name deleted_at")
+      .lean();
+    return firm && isRealFirmRecord(firm) ? firm : null;
+  },
+  CheckoutAttempt: AgentaCheckoutAttempt
+});
+
+const agentaRecoveryTimer = setInterval(() => {
+  if (mongoose.connection.readyState !== 1 || !AGENTAOS_WEBHOOK_SECRET || !agentaosClient) return;
+  recoverExpiredAgentaOSReceipts({
+    EventReceipt: AgentaEventReceipt,
+    processing: {
+      EventReceipt: AgentaEventReceipt, AgentaPayment, AgentaSubscription, CheckoutAttempt: AgentaCheckoutAttempt,
+      User, Firma, products: agentaProducts, expectedLivemode: AGENTAOS_EXPECTED_LIVEMODE,
+      loadLatestSubscription: async (subscriptionId) => {
+        let offset = 0;
+        for (;;) {
+          const page = await agentaosClient.subscriptions.list({ limit: 100, offset });
+          const match = page.items.find((item) => String(item.id) === subscriptionId);
+          if (match) return match;
+          if (!page.hasMore) return null;
+          offset += page.items.length;
+        }
+      }
+    },
+    log: (message, detail) => errorWithTime(message, detail)
+  }).catch(() => errorWithTime("AgentaOS receipt recovery scan failed"));
+}, 10_000);
+agentaRecoveryTimer.unref?.();
 
 /* ================= DATA DELETION ================= */
 async function sendDeleteConfirmationForFirm({ firm, reason = "" }) {

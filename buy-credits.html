@@ -7,8 +7,6 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" href="easyfix-icons-pack/favicon.ico" sizes="any">
   <script src="i18n.js"></script>
-  <script src="https://app.lemonsqueezy.com/js/lemon.js" defer></script>
-  <script src="lemon.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
 
@@ -57,7 +55,7 @@
 <script>
 const API_URL = window.EASYFIX_CONFIG.API_URL;
 const { pagePath, goToPage } = window.EASYFIX_CONFIG;
-const { getUser, setUser, clearUser, apiFetch, translateApiError } = window.EASYFIX_AUTH;
+const { getUser, clearUser, apiFetch, translateApiError } = window.EASYFIX_AUTH;
 const { getLang, setLang, t, applyTranslations } = window.EASYFIX_I18N;
 document.getElementById("backHomeLink").href = pagePath("index.html");
 
@@ -98,44 +96,7 @@ function renderUserSummary(userData) {
   });
 }
 
-function updateCreditsUI(credits) {
-  const user = getUser();
-  if (!user) return;
-
-  setUser({ ...user, credits });
-}
-
-async function handleSuccessReturn() {
-  const params = new URLSearchParams(window.location.search);
-
-  if (params.get("success") !== "1") return;
-
-  const user = getUser();
-  if (!user || !user.id) return;
-
-  showStatus(t("credits_refreshing"));
-
-  setTimeout(async () => {
-    try {
-      const res = await apiFetch(`${API_URL}/user/me/${user.id}`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        showStatus(t("credits_payment_refresh_pending"), true);
-        return;
-      }
-
-      updateCreditsUI(data.user.credits);
-      renderUserSummary(data.user);
-
-      showStatus(t("credits_payment_success"));
-    } catch (err) {
-      console.error(err);
-      showStatus(t("credits_refresh_error"), true);
-    }
-  }, 1500);
-}
-
+let returnRefreshAttempts = 0;
 async function loadUser() {
   const user = getUser();
 
@@ -162,8 +123,16 @@ async function loadUser() {
     renderUserSummary(data.user);
 
     if (window.location.search.includes("success=1")) {
-      showStatus(t("credits_payment_pending"));
-      setTimeout(loadUser, 2500);
+      const params = new URLSearchParams(window.location.search);
+      const expected = Number(params.get("before") || 0) + Number(params.get("pack") || 0);
+      if (Number(data.user.credits || 0) >= expected && Number(params.get("pack") || 0) > 0) {
+        showStatus(t("credits_payment_success"));
+      } else {
+        showStatus(t("credits_payment_pending"));
+        returnRefreshAttempts += 1;
+        if (returnRefreshAttempts < 20) setTimeout(loadUser, 2500);
+        else showStatus(t("credits_payment_refresh_pending"), true);
+      }
     }
   } catch (err) {
     console.error(err);
@@ -182,7 +151,7 @@ async function buyCredits(pack) {
   showStatus(t("credits_connecting_payment"));
 
   try {
-    const res = await apiFetch(`${API_URL}/credits/buy`, {
+    const res = await apiFetch(`${API_URL}/agentaos/credits/buy`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -214,7 +183,6 @@ async function buyCredits(pack) {
 
 applyPageLanguage();
 loadUser();
-handleSuccessReturn();
 </script>
 </body>
 </html>

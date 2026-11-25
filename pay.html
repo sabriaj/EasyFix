@@ -170,7 +170,7 @@
     payBtn.textContent = "Duke te derguar te pagesa...";
 
     try {
-      const url = `${API_URL}/pay-now/checkout?plan=${encodeURIComponent(selectedPlan)}`;
+      const url = `${API_URL}/agentaos/pay-now/checkout?plan=${encodeURIComponent(selectedPlan)}`;
       const res = await apiFetch(url);
       const data = await res.json().catch(() => ({}));
 

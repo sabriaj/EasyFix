@@ -238,7 +238,9 @@
 
         if (!data?.success || !firma) throw new Error("Not found");
 
-        if (firma.payment_status === "active" || firma.payment_status === "paid" || firma.payment_status === "trial") {
+        const premiumCheckout = new URLSearchParams(window.location.search).get("payment") === "agentaos-premium";
+        const premiumConfirmed = firma.plan === "premium" && ["active", "paid", "trial"].includes(firma.payment_status);
+        if (premiumCheckout ? premiumConfirmed : (firma.payment_status === "active" || firma.payment_status === "paid" || firma.payment_status === "trial")) {
           setVisualState("success");
 
           if (firma.plan === "premium") {
@@ -258,7 +260,7 @@
           return true;
         }
 
-        statusText.textContent = t("in_process", { status: (firma.payment_status || "pending") });
+        statusText.textContent = t("in_process", { status: (premiumCheckout && !premiumConfirmed ? "payment pending confirmation" : (firma.payment_status || "pending")) });
         return false;
       } catch (error) {
         setVisualState("error");
